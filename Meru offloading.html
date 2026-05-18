@@ -203,7 +203,20 @@
                         <form id="workLogForm">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Employee Name</label>
-                                <input type="text" id="employeeName" class="form-control" placeholder="e.g., John Doe" required>
+                                <select id="employeeName" class="form-select" required>
+                                    <option value="" disabled selected>Select a member</option>
+                                    <option value="Bornie">Bornie</option>
+                                    <option value="Ian">Ian</option>
+                                    <option value="Festo">Festo</option>
+                                    <option value="Duncan">Duncan</option>
+                                    <option value="James">James</option>
+                                    <option value="Muriuki">Muriuki</option>
+                                    <option value="Phini">Phini</option>
+                                    <option value="Thuranira">Thuranira</option>
+                                    <option value="Christopha">Christopha</option>
+                                    <option value="Brian">Brian</option>
+                                    <option value="Eliud">Eliud</option>
+                                </select>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Vehicle Number Plate</label>
@@ -356,7 +369,6 @@
             document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
         }, 1000);
 
-        // Helper shortcut function for navigation drop down selectors
         function filterByStatusSelector(statusType) {
             document.getElementById('tableStatusSelector').value = statusType;
             handleLiveSearchFilter();
@@ -367,7 +379,7 @@
             e.preventDefault(); 
             
             const submitBtn = document.getElementById('submitBtn');
-            const employeeName = document.getElementById('employeeName').value.trim();
+            const employeeName = document.getElementById('employeeName').value;
             const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
@@ -403,7 +415,7 @@
                 amountPaid: 0,    
                 datePaid: null,
                 timePaid: null,
-                timestampCreated: Date.now(), // High fidelity sorting key
+                timestampCreated: Date.now(), 
                 timeCreatedStr: currentTimeStr
             };
 
@@ -414,7 +426,7 @@
             })
             .then(response => response.json())
             .then(() => {
-                document.getElementById('employeeName').value = '';
+                document.getElementById('employeeName').selectedIndex = 0; // Reset dropdown selection
                 document.getElementById('vehiclePlate').value = '';
                 document.getElementById('totalBoxes').value = '';
                 document.getElementById('paidBoxes').value = '';
@@ -465,7 +477,6 @@
             });
         }
 
-        // Live calculation loops for top indicator analytics engine cards
         function calculateDashboardAnalytics() {
             let runningTotalBoxes = 0;
             let runningTotalPayout = 0;
@@ -485,7 +496,6 @@
             document.getElementById('statPendingCount').innerText = runningPendingCount;
         }
 
-        // TIME AND DATE SYSTEM RECORDING EXTRACTION EXTRA FACTOR
         function extractActivityTrackingTimestamps() {
             if (globalLogsArray.length === 0) {
                 document.getElementById('activityLastEntered').innerHTML = "<span class='text-muted fw-normal'>No records logged</span>";
@@ -493,7 +503,6 @@
                 return;
             }
 
-            // 1. Find last entered item based on chronological creation token
             const sortedByCreated = [...globalLogsArray].sort((a, b) => {
                 const timeA = a.timestampCreated || 0;
                 const timeB = b.timestampCreated || 0;
@@ -505,10 +514,8 @@
                 <span class="text-primary">${escapeHtml(lastEntered.employeeName)}</span> 
                 (${escapeHtml(lastEntered.vehiclePlate)}) on ${formatDateDisplay(lastEntered.dateWorked)}${enteredTimeText}`;
 
-            // 2. Find last paid item based on standard digital sequence tracking keys
             const paidLogsOnly = globalLogsArray.filter(log => log.isPaid && log.timestampPaid);
             if (paidLogsOnly.length === 0) {
-                // Fallback check to find basic payment dates if modern token key is missing
                 const simplePaidLogs = globalLogsArray.filter(log => log.isPaid && log.datePaid);
                 if (simplePaidLogs.length === 0) {
                     document.getElementById('activityLastPaid').innerHTML = "<span class='text-muted fw-normal'>No payments processed yet</span>";
@@ -529,7 +536,6 @@
             }
         }
 
-        // LIVE FILTER REAL-TIME ENGINE EXTRACTION METHOD
         function handleLiveSearchFilter() {
             const query = document.getElementById('tableSearchInput').value.trim().toLowerCase();
             const statusFilter = document.getElementById('tableStatusSelector').value;
@@ -631,7 +637,7 @@
                 amountPaid: totalEarnings,
                 datePaid: stringifiedDatePaid,
                 timePaid: currentTimePaidStr,
-                timestampPaid: Date.now() // Track precisely for the "Last activity banner"
+                timestampPaid: Date.now() 
             };
 
             fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
