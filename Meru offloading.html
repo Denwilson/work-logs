@@ -105,23 +105,6 @@
             border-radius: 8px;
             font-size: 0.85rem;
         }
-
-        /* Explicit layout configuration adjustments for the PDF print container engine */
-        .pdf-header {
-            display: none;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
-        .pdf-footer {
-            display: none;
-            margin-top: 30px;
-            font-size: 0.8rem;
-            text-align: center;
-            color: #666;
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -264,7 +247,7 @@
                             <label class="form-label fw-semibold">End Date</label>
                             <input type="date" id="filterEndDate" class="form-control">
                         </div>
-                        <button type="button" class="btn btn-dark w-100 py-2 fw-bold" onclick="generatePDF()">
+                        <button type="button" id="pdfBtn" class="btn btn-dark w-100 py-2 fw-bold" onclick="generatePDF()">
                             <i class="bi bi-download me-2"></i>Download PDF Report
                         </button>
                     </div>
@@ -312,13 +295,7 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm bg-white" id="pdfPrintArea">
-                    
-                    <div class="pdf-header" id="pdfHeader">
-                        <h2 style="color: #0d6efd; margin-bottom: 5px; font-weight: bold;">Meru Offload Summary Report</h2>
-                        <p style="margin: 0; color: #333; font-size: 0.95rem;" id="pdfMetadata">Generated on: </p>
-                    </div>
-
+                <div class="card shadow-sm bg-white">
                     <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
                         <h5 class="mb-0">
                             <i class="bi bi-collection-fill me-2"></i>Saved Work Logs 
@@ -347,11 +324,6 @@
                             No records found matching your filter selections.
                         </div>
                     </div>
-
-                    <div class="pdf-footer" id="pdfFooter">
-                        <p>Meru Offload Logistics Management System — Generated securely from the cloud archive.</p>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -371,7 +343,6 @@
 
         document.getElementById('dateWorked').valueAsDate = new Date();
 
-        // RUNNING LIVE DIGITAL CLOCK IN NAVBAR MENU
         setInterval(() => {
             const now = new Date();
             document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -382,7 +353,6 @@
             handleLiveSearchFilter();
         }
 
-        // Toggles visibility and requirement configurations of the custom paid amount field
         function togglePaidBoxesInput() {
             const selection = document.getElementById('paidBoxesSelection').value;
             const customContainer = document.getElementById('customPaidBoxesContainer');
@@ -399,7 +369,6 @@
             }
         }
 
-        // Save entry form module configuration rules
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
             
@@ -409,9 +378,8 @@
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
             
-            // Resolve paid boxes amount based on layout dropdown choice
             const selectionMode = document.getElementById('paidBoxesSelection').value;
-            let paidBoxes = totalBoxes; // Defaults to All
+            let paidBoxes = totalBoxes;
 
             if (selectionMode === "CUSTOM") {
                 paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
@@ -421,7 +389,6 @@
                 }
             }
 
-            // DUPLICATE RECORD PROTECTION ALGORITHM
             const isDuplicate = globalLogsArray.some(log => 
                 log.employeeName.toLowerCase() === employeeName.toLowerCase() &&
                 log.vehiclePlate.toLowerCase() === vehiclePlate.toLowerCase() &&
@@ -540,11 +507,7 @@
                 return;
             }
 
-            const sortedByCreated = [...globalLogsArray].sort((a, b) => {
-                const timeA = a.timestampCreated || 0;
-                const timeB = b.timestampCreated || 0;
-                return timeB - timeA; 
-            });
+            const sortedByCreated = [...globalLogsArray].sort((a, b) => (b.timestampCreated || 0) - (a.timestampCreated || 0));
             const lastEntered = sortedByCreated[0];
             const enteredTimeText = lastEntered.timeCreatedStr ? ` at ${lastEntered.timeCreatedStr}` : '';
             document.getElementById('activityLastEntered').innerHTML = `
@@ -694,6 +657,7 @@
             }
         }
 
+        // HIGH-PERFORMANCE CLONING PDF GENERATION ENGINE
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
@@ -716,50 +680,109 @@
                 return;
             }
 
-            displayLogs(filteredLogs);
+            const pdfBtn = document.getElementById('pdfBtn');
+            pdfBtn.disabled = true;
+            pdfBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Generating...`;
 
+            // 1. Create a detached off-screen container for rendering
+            const workerContainer = document.createElement('div');
+            workerContainer.style.padding = '20px';
+            workerContainer.style.backgroundColor = '#ffffff';
+            workerContainer.style.fontFamily = 'Arial, sans-serif';
+
+            // 2. Generate clean custom metadata header matching target rules
             const currentDateTime = new Date();
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-            if (nameFilter) metaInfo += ` \nEmployee Search Filter: "${document.getElementById('filterName').value}"`;
+            if (nameFilter) metaInfo += `<br>Employee Filter: "${document.getElementById('filterName').value}"`;
             if (startDate || endDate) {
-                metaInfo += ` \nLog Date Range Covered: [ ${startDate ? formatDateDisplay(startDate) : 'Earliest History'} ] to [ ${endDate ? formatDateDisplay(endDate) : 'Latest Present'} ]`;
+                metaInfo += `<br>Date Scope: [ ${startDate ? formatDateDisplay(startDate) : 'Beginning'} ] to [ ${endDate ? formatDateDisplay(endDate) : 'Present'} ]`;
             }
-            document.getElementById('pdfMetadata').innerText = metaInfo;
 
-            const element = document.getElementById('pdfPrintArea');
-            const pdfHeader = document.getElementById('pdfHeader');
-            const pdfFooter = document.getElementById('pdfFooter');
-            const actionElements = document.querySelectorAll('.no-print');
+            const reportHeaderHTML = `
+                <div style="border-bottom: 3px solid #0d6efd; padding-bottom: 12px; margin-bottom: 20px;">
+                    <h2 style="color: #0d6efd; font-weight: bold; margin: 0 0 5px 0; font-size: 24px;">Meru Offload Summary Report</h2>
+                    <p style="margin: 0; color: #555; font-size: 13px; line-height: 1.4;">${metaInfo}</p>
+                </div>
+            `;
+            workerContainer.innerHTML += reportHeaderHTML;
 
-            pdfHeader.style.display = 'block';
-            pdfFooter.style.display = 'block';
-            actionElements.forEach(el => el.style.display = 'none');
+            // 3. Build a production structured isolated data table layout 
+            let tableRowsHTML = '';
+            filteredLogs.sort((a, b) => b.dateWorked.localeCompare(a.dateWorked));
 
+            filteredLogs.forEach(log => {
+                let statusString = `<span style="color: #df9b00; font-weight: bold;">UNPAID</span>`;
+                if (log.isPaid) {
+                    const timePaidText = log.timePaid ? ` at ${log.timePaid}` : '';
+                    statusString = `<span style="color: #198754; font-weight: bold;">PAID</span><br>
+                                    <small style="color: #198754; font-size:11px;">Ksh ${Number(log.amountPaid).toLocaleString()}<br>${formatDateDisplay(log.datePaid)}${timePaidText}</small>`;
+                }
+
+                tableRowsHTML += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 10px 8px; vertical-align: top; width: 30%;">
+                            <div style="font-weight: bold; color: #1e293b; font-size: 14px;">${escapeHtml(log.employeeName)}</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${escapeHtml(log.vehiclePlate)}</div>
+                        </td>
+                        <td style="padding: 10px 8px; vertical-align: top; color: #475569; font-size: 13px; width: 25%;">
+                            ${formatDateDisplay(log.dateWorked)}
+                            ${log.timeCreatedStr ? `<br><small style="color: #94a3b8; font-size: 11px;">${log.timeCreatedStr}</small>` : ''}
+                        </td>
+                        <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 20%;">
+                            <span style="color: #64748b;">Offload:</span> <strong>${log.totalBoxes}</strong><br>
+                            <span style="color: #64748b;">Payable:</span> <strong style="color: #0d6efd;">${log.paidBoxes}</strong>
+                        </td>
+                        <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 25%;">${statusString}</td>
+                    </tr>
+                `;
+            });
+
+            const tableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; text-align: left;">
+                    <thead>
+                        <tr style="background-color: #f8fafc; border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 13px;">
+                            <th style="padding: 10px 8px; font-weight: 600;">Employee / Vehicle</th>
+                            <th style="padding: 10px 8px; font-weight: 600;">Date Worked</th>
+                            <th style="padding: 10px 8px; font-weight: 600;">Boxes</th>
+                            <th style="padding: 10px 8px; font-weight: 600;">Status Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHTML}
+                    </tbody>
+                </table>
+            `;
+            workerContainer.innerHTML += tableHTML;
+
+            // 4. Append clean tracking system verification footers
+            workerContainer.innerHTML += `
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 30px; text-align: center; color: #64748b; font-size: 11px;">
+                    <p style="margin: 0;">Meru Offload Logistics Management System — Generated securely from cloud archive.</p>
+                </div>
+            `;
+
+            // 5. Execute explicit processing configuration parameters
             const options = {
-                margin:       [12, 10, 15, 10], 
+                margin:       [15, 15, 15, 15], 
                 filename:     `Meru_Offload_Report_${currentDateTime.toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(options).from(element).save()
+            html2pdf().set(options).from(workerContainer).save()
             .then(() => {
-                pdfHeader.style.display = 'none';
-                pdfFooter.style.display = 'none';
-                actionElements.forEach(el => el.style.display = '');
-                handleLiveSearchFilter(); 
+                pdfBtn.disabled = false;
+                pdfBtn.innerHTML = `<i class="bi bi-download me-2"></i>Download PDF Report`;
             })
             .catch(err => {
-                console.error("PDF Printing Error: ", err);
-                pdfHeader.style.display = 'none';
-                pdfFooter.style.display = 'none';
-                actionElements.forEach(el => el.style.display = '');
-                handleLiveSearchFilter();
+                console.error("PDF Processing Error: ", err);
+                alert("Failed to render document safely.");
+                pdfBtn.disabled = false;
+                pdfBtn.innerHTML = `<i class="bi bi-download me-2"></i>Download PDF Report`;
             });
         }
 
-        // Formats date explicitly from YYYY-MM-DD to DD/MM/YYYY
         function formatDateDisplay(dateString) {
             if (!dateString) return "";
             const parts = dateString.split('-');
