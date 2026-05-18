@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work Log Management System</title>
+    <title>Shared Work Log Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { background-color: #f8f9fa; }
         .card { border-radius: 12px; }
@@ -21,6 +22,19 @@
         .box-count {
             font-size: 0.9rem;
         }
+        .pdf-header {
+            display: none;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .pdf-footer {
+            display: none;
+            margin-top: 30px;
+            font-size: 0.8rem;
+            text-align: center;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -28,7 +42,7 @@
     <div class="container my-5">
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-primary text-white py-3">
                         <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Offloading Work</h5>
                     </div>
@@ -54,28 +68,57 @@
                                 <label class="form-label fw-semibold">Boxes Supposed to be Paid</label>
                                 <input type="number" id="paidBoxes" class="form-control" min="0" placeholder="Boxes to pay for" required>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
+                            <button type="submit" id="submitBtn" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
                         </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+                    <div class="card-header bg-info text-white py-3">
+                        <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Filter by Employee Name</label>
+                            <input type="text" id="filterName" class="form-control" placeholder="Leave blank for all employees">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Start Date</label>
+                            <input type="date" id="filterStartDate" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">End Date</label>
+                            <input type="date" id="filterEndDate" class="form-control">
+                        </div>
+                        <button type="button" class="btn btn-dark w-100 py-2 fw-bold" onclick="generatePDF()">
+                            <i class="bi bi-download me-2"></i>Download PDF Report
+                        </button>
                     </div>
                 </div>
             </div>
 
             <div class="col-lg-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-collection-fill me-2"></i>Saved Work Logs <small class="text-muted fs-6">(Sorted Newest to Oldest)</small></h5>
-                        <button class="btn btn-outline-danger btn-sm text-white" onclick="clearAllData()">Clear All Records</button>
+                <div class="card shadow-sm border-0" id="pdfPrintArea">
+                    https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/
+                    <div class="pdf-header" id="pdfHeader">
+                        <h2 style="color: #0d6efd; margin-bottom: 5px;">Work Log Summary Report</h2>
+                        <p style="margin: 0; color: #555;" id="pdfMetadata">Generated on: </p>
+                    </div>
+
+                    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
+                        <h5 class="mb-0"><i class="bi bi-collection-fill me-2"></i>Shared Work Logs <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span></h5>
+                        <button class="btn btn-outline-danger btn-sm text-white" onclick="clearAllData()">Clear All Cloud Records</button>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0" id="mainLogsTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Employee / Vehicle</th>
                                         <th>Date Worked</th>
                                         <th>Boxes Layout</th>
                                         <th>Status & Payment Details</th>
-                                        <th class="text-center">Action</th>
+                                        <th class="text-center no-print">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="logTableBody">
@@ -87,27 +130,44 @@
                             No records found. Enter details on the left to save.
                         </div>
                     </div>
+
+                    <div class="pdf-footer" id="pdfFooter">
+                        <p>Work Log Management System — End of Report</p>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Set default date to today's date automatically
+        // PASTE YOUR COPIED FIREBASE REALTIME DATABASE URL HERE INSIDE THE QUOTES
+        // Make sure it ends with a forward slash /
+        const FIREBASE_URL = "https://your-project-id-default-rtdb.firebaseio.com/";
+
+        // Global array memory to hold entries pulled down from cloud
+        let globalLogsArray = [];
+
         document.getElementById('dateWorked').valueAsDate = new Date();
 
         // Listen for form submission
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving to Cloud...";
 
-            const employeeName = document.getElementById('employeeName').value;
-            const vehiclePlate = document.getElementById('vehiclePlate').value;
+            const employeeName = document.getElementById('employeeName').value.trim();
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
             const paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
 
+            const recordId = "log_" + Date.now(); // Unique alpha-numeric ID node for Firebase key
+
             const newLog = {
-                id: Date.now(), 
+                id: recordId, 
                 employeeName,
                 vehiclePlate,
                 dateWorked, 
@@ -118,22 +178,61 @@
                 datePaid: null    
             };
 
-            let currentLogs = JSON.parse(localStorage.getItem('workLogs')) || [];
-            currentLogs.push(newLog);
-            localStorage.setItem('workLogs', JSON.stringify(currentLogs));
-
-            // Clear entry fields
-            document.getElementById('employeeName').value = '';
-            document.getElementById('vehiclePlate').value = '';
-            document.getElementById('totalBoxes').value = '';
-            document.getElementById('paidBoxes').value = '';
-
-            displayLogs();
+            // Write record instantly directly into cloud database via HTTP PUT request
+            fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(newLog),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(() => {
+                document.getElementById('employeeName').value = '';
+                document.getElementById('vehiclePlate').value = '';
+                document.getElementById('totalBoxes').value = '';
+                document.getElementById('paidBoxes').value = '';
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Record";
+                
+                fetchLogsFromCloud(); // Refresh data for all connected users
+            })
+            .catch(error => {
+                console.error("Firebase Error: ", error);
+                alert("Failed to connect to cloud. Check internet connection.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Record";
+            });
         });
 
-        // Function to display and sort the stored records
-        function displayLogs() {
-            const currentLogs = JSON.parse(localStorage.getItem('workLogs')) || [];
+        // Function to pull records down from the shared cloud database
+        function fetchLogsFromCloud() {
+            const spinner = document.getElementById('loadingSpinner');
+            if(spinner) spinner.classList.remove('d-none');
+
+            fetch(`${FIREBASE_URL}logs.json`)
+            .then(response => response.json())
+            .then(data => {
+                globalLogsArray = [];
+                if (data) {
+                    // Convert object nodes mapped key collection from Firebase into iterable array format
+                    Object.keys(data).forEach(key => {
+                        if(data[key] !== null) {
+                            globalLogsArray.push(data[key]);
+                        }
+                    });
+                }
+                if(spinner) spinner.classList.add('d-none');
+                displayLogs();
+            })
+            .catch(error => {
+                console.error("Fetch failed: ", error);
+                if(spinner) spinner.innerText = "Offline Mode";
+            });
+        }
+
+        // Function to display and sort records
+        function displayLogs(filteredData = null) {
+            const currentLogs = filteredData || globalLogsArray;
             const tableBody = document.getElementById('logTableBody');
             const noDataMessage = document.getElementById('noDataMessage');
 
@@ -153,11 +252,10 @@
                 return 0;
             });
 
-            // Loop through the cleanly sorted entries
             currentLogs.forEach(log => {
                 let rowClass = "";
                 let statusAndPaymentCell = "";
-                let deleteActionCell = "<td></td>"; 
+                let deleteActionCell = "<td class='no-print'></td>"; 
 
                 if (log.isPaid) {
                     rowClass = "class='disabled-row'";
@@ -172,16 +270,17 @@
                         </div>`;
                     
                     deleteActionCell = `
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-danger" onclick="deleteIndividualRecord(${log.id})" title="Delete entry">
+                        <td class="text-center no-print">
+                            <button class="btn btn-sm btn-danger" onclick="deleteIndividualRecord('${log.id}')" title="Delete entry">
                                 <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>`;
                 } else {
                     statusAndPaymentCell = `
-                        <button class="btn btn-sm btn-outline-warning text-dark fw-semibold" onclick="markAsPaid(${log.id}, ${log.paidBoxes})">
+                        <button class="btn btn-sm btn-outline-warning text-dark fw-semibold no-print" onclick="markAsPaid('${log.id}', ${log.paidBoxes})">
                             <i class="bi bi-hourglass-split me-1"></i> Mark Paid
-                        </button>`;
+                        </button>
+                        <span class="badge bg-warning text-dark text-uppercase d-none d-print-inline-block">Unpaid</span>`;
                 }
 
                 const row = `
@@ -205,7 +304,7 @@
             });
         }
 
-        // Action Function: Instant payout calculation based strictly on 1 KES per 1 paidBox
+        // Action Function: Instant checkout transaction updated directly into cloud
         function markAsPaid(recordId, paidBoxes) {
             const totalEarnings = paidBoxes * 1; 
 
@@ -215,30 +314,92 @@
             const day = String(today.getDate()).padStart(2, '0');
             const stringifiedDatePaid = `${year}-${month}-${day}`;
 
-            let currentLogs = JSON.parse(localStorage.getItem('workLogs')) || [];
-            
-            currentLogs = currentLogs.map(log => {
-                if (log.id === recordId) {
-                    log.isPaid = true;
-                    log.amountPaid = totalEarnings;
-                    log.datePaid = stringifiedDatePaid;
-                }
-                return log;
-            });
+            const paymentUpdates = {
+                isPaid: true,
+                amountPaid: totalEarnings,
+                datePaid: stringifiedDatePaid
+            };
 
-            localStorage.setItem('workLogs', JSON.stringify(currentLogs));
-            displayLogs();
+            // Send PATCH request to modify specifically this node inside database cloud path
+            fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify(paymentUpdates),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchLogsFromCloud();
+            });
         }
 
-        // Action Function: Safely delete an individual record
+        // Action Function: Safely delete an individual record out of cloud completely
         function deleteIndividualRecord(recordId) {
-            if (confirm("Are you sure you want to permanently delete this paid work record?")) {
-                let currentLogs = JSON.parse(localStorage.getItem('workLogs')) || [];
-                currentLogs = currentLogs.filter(log => log.id !== recordId);
-                
-                localStorage.setItem('workLogs', JSON.stringify(currentLogs));
-                displayLogs();
+            if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
+                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                    method: 'DELETE'
+                })
+                .then(() => {
+                    fetchLogsFromCloud();
+                });
             }
+        }
+
+        // Generate Document PDF based on cloud data arrays
+        function generatePDF() {
+            if (globalLogsArray.length === 0) {
+                alert("There are no records to export.");
+                return;
+            }
+
+            const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+
+            const filteredLogs = globalLogsArray.filter(log => {
+                if (nameFilter && !log.employeeName.toLowerCase().includes(nameFilter)) return false;
+                if (startDate && log.dateWorked < startDate) return false;
+                if (endDate && log.dateWorked > endDate) return false;
+                return true;
+            });
+
+            if (filteredLogs.length === 0) {
+                alert("No records match your filter choices.");
+                return;
+            }
+
+            displayLogs(filteredLogs);
+
+            const todayStr = new Date().toLocaleDateString('en-GB');
+            let metaInfo = `Generated on: ${todayStr}`;
+            if (nameFilter) metaInfo += ` | Employee: ${document.getElementById('filterName').value}`;
+            if (startDate || endDate) {
+                metaInfo += ` | Period: ${startDate ? formatDateDisplay(startDate) : 'Beginning'} to ${endDate ? formatDateDisplay(endDate) : 'Present'}`;
+            }
+            document.getElementById('pdfMetadata').innerText = metaInfo;
+
+            const element = document.getElementById('pdfPrintArea');
+            const pdfHeader = document.querySelector('.pdf-header');
+            const pdfFooter = document.querySelector('.pdf-footer');
+            const actionElements = document.querySelectorAll('.no-print');
+
+            pdfHeader.style.display = 'block';
+            pdfFooter.style.display = 'block';
+            actionElements.forEach(el => el.style.display = 'none');
+
+            const options = {
+                margin:       10,
+                filename:     `Shared_Work_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(options).from(element).save().then(() => {
+                pdfHeader.style.display = 'none';
+                pdfFooter.style.display = 'none';
+                actionElements.forEach(el => el.style.display = '');
+                displayLogs(); 
+            });
         }
 
         // Helper function to turn "YYYY-MM-DD" into "DD/MM/YYYY" display
@@ -256,16 +417,20 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Wipes all data
+        // Wipes all data on cloud path node root
         function clearAllData() {
-            if (confirm("Warning: Are you sure you want to clear the entire record database on this device? This cannot be undone.")) {
-                localStorage.removeItem('workLogs');
-                displayLogs();
+            if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
+                fetch(`${FIREBASE_URL}logs.json`, {
+                    method: 'DELETE'
+                })
+                .then(() => {
+                    fetchLogsFromCloud();
+                });
             }
         }
 
-        // Run automatically on open
-        displayLogs();
+        // Automatically fetch data from cloud immediately upon page load execution
+        fetchLogsFromCloud();
     </script>
 </body>
 </html>
