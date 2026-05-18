@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en font-monospace">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,51 +41,56 @@
             transform: translateY(-2px);
         }
 
-        /* PREMIUM NAVIGATION DESIGN RULES */
+        /* PREMIUM RESTRUCTURED NAVIGATION MENU DESIGN */
         .custom-navbar {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-            border-bottom: 3px solid #ffc107;
-            padding: 8px 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            border-bottom: 4px solid #ffc107;
+            padding: 12px 0;
         }
         .nav-branding {
-            font-size: 1.35rem;
-            letter-spacing: 1px;
+            font-size: 1.45rem;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-        }
-        .menu-pill-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 30px;
-            padding: 6px 14px;
-            color: #f8fafc !important;
-            font-size: 0.82rem;
-            font-weight: 500;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s ease;
         }
-        .menu-pill-btn:hover {
-            background: rgba(255, 193, 7, 0.15);
+        .menu-pill-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: #e2e8f0 !important;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: all 0.25s ease-in-out;
+        }
+        .menu-pill-btn:hover, .menu-pill-btn:focus {
+            background: rgba(255, 193, 7, 0.12);
             border-color: #ffc107;
             color: #ffc107 !important;
         }
+        .menu-pill-btn i {
+            font-size: 1.05rem;
+        }
         .database-pulse-badge {
-            background: rgba(25, 135, 84, 0.12);
+            background: rgba(25, 135, 84, 0.15);
             border: 1px solid rgba(25, 135, 84, 0.4);
-            border-radius: 30px;
-            padding: 6px 14px;
-            font-size: 0.82rem;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
             color: #20c997;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
         .pulse-dot {
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background-color: #198754;
             border-radius: 50%;
             display: inline-block;
@@ -108,34 +113,40 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar shadow no-print">
+    <nav class="navbar navbar-expand-xl navbar-dark custom-navbar shadow no-print">
         <div class="container">
-            <a class="navbar-brand fw-bold nav-branding text-white" href="#">
-                <i class="bi bi-grid-1x2-fill me-2 text-warning"></i>Meru <span class="text-warning">Offload</span>
+            <a class="navbar-brand fw-bold nav-branding text-white me-4" href="#">
+                <img src="https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=80&auto=format&fit=crop&q=80" alt="Logo" width="32" height="32" class="d-inline-block align-text-top me-2 rounded">
+                Meru <span class="text-warning">Offload</span>
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-2 id="mainNavMenu">
+                <ul class="navbar-nav me-auto mb-2 mb-xl-0 gap-2" id="mainNavMenu">
                     <li class="nav-item dropdown">
                         <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-layers"></i> Operations
+                            <i class="bi bi-collection-fill text-primary"></i> Filter Archives
                         </a>
-                        <ul class="dropdown-menu shadow border-0" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
-                            <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
-                            <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2 text-success"></i> Settled Claims</a></li>
+                        <ul class="dropdown-menu shadow border-0 p-2 mt-2" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
+                            <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
+                            <li><a class="dropdown-item py-2 rounded text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="renderAttendanceUiList()">
+                            <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="navActiveCount" class="badge bg-info text-dark ms-2 px-2 rounded-pill">0 Active</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#advanceModal">
-                            <i class="bi bi-cash-coin"></i> Cash Advances
+                            <i class="bi bi-cash-coin text-danger"></i> Advances
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#rateModal">
-                            <i class="bi bi-gear-fill"></i> Box Rate (<span id="menuCurrentRate">Ksh 1</span>)
+                            <i class="bi bi-currency-exchange text-success"></i> Rate (<span id="menuCurrentRate" class="text-warning">Ksh 1</span>)
                         </a>
                     </li>
                     <li class="nav-item">
@@ -145,26 +156,26 @@
                     </li>
                     <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#truckModal" onclick="buildTruckAnalytics()">
-                            <i class="bi bi-truck"></i> Truck Logs
+                            <i class="bi bi-truck text-light"></i> Trucks
                         </a>
                     </li>
                     <li class="nav-item">
-                        <span class="menu-pill-btn text-light" style="cursor: default;">
-                            <i class="bi bi-clock"></i> <span id="navLiveClock">00:00:00 AM</span>
+                        <span class="menu-pill-btn text-light shadow-sm" style="cursor: default; background: rgba(255,255,255,0.02);">
+                            <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">00:00:00 AM</span>
                         </span>
                     </li>
                 </ul>
 
-                <ul class="navbar-nav ms-auto align-items-lg-center gap-2 mt-2 mt-lg-0">
+                <ul class="navbar-nav ms-auto align-items-xl-center gap-2 mt-2 mt-xl-0">
                     <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" onclick="fetchLogsFromCloud(); return false;">
+                        <a class="menu-pill-btn bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
                             <i class="bi bi-arrow-clockwise"></i> Force Sync
                         </a>
                     </li>
-                    <li class="nav-item ms-lg-1">
+                    <li class="nav-item ms-xl-1">
                         <div class="database-pulse-badge">
                             <span class="pulse-dot"></span>
-                            <span>Cloud Live Node</span>
+                            <span>Cloud Terminal</span>
                         </div>
                     </li>
                 </ul>
@@ -211,22 +222,10 @@
                         <form id="workLogForm">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Employee Name</label>
-                                <select id="employeeName" class="form-select employee-dropdown-list" required>
+                                <select id="employeeName" class="form-select text-dark" required>
                                     <option value="" disabled selected>Select member</option>
-                                    <option value="Bornie">Bornie</option>
-                                    <option value="Brian">Brian</option>
-                                    <option value="Christopha">Christopha</option>
-                                    <option value="Duncan">Duncan</option>
-                                    <option value="DW">DW</option>
-                                    <option value="Eliud">Eliud</option>
-                                    <option value="Festo">Festo</option>
-                                    <option value="Ian">Ian</option>
-                                    <option value="James">James</option>
-                                    <option value="Muriuki">Muriuki</option>
-                                    <option value="Phini">Phini</option>
-                                    <option value="Roy">Roy</option>
-                                    <option value="Thuranira">Thuranira</option>
                                 </select>
+                                <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle"></i> Showing active checked-in members only.</div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Vehicle Number Plate</label>
@@ -355,6 +354,24 @@
         </div>
     </div>
 
+    <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check-fill me-2"></i>Daily Shift Check-In</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="p-3 bg-light border-bottom text-muted small d-flex justify-content-between align-items-center">
+                        <span>Check workers <span class="text-success fw-bold">ON</span> to add them to the selection entry form.</span>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-2 small fw-bold text-uppercase" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All Off</button>
+                    </div>
+                    <ul class="list-group list-group-flush" id="attendanceListBody"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="advanceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -472,12 +489,16 @@
 
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
+        const MASTER_EMPLOYEES = ["Bornie", "Brian", "Christopha", "Duncan", "DW", "Eliud", "Festo", "Ian", "James", "Muriuki", "Phini", "Roy", "Thuranira"];
+        
         let globalLogsArray = [];
         let globalAdvancesObj = {};
+        let globalAttendanceObj = {};
         let currentPricePerBox = 1;
 
         document.getElementById('dateWorked').valueAsDate = new Date();
 
+        // Standard live digital clock refresh rate sequence
         setInterval(() => {
             const now = new Date();
             document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -513,12 +534,119 @@
             currentPricePerBox = targetRate;
             document.getElementById('menuCurrentRate').innerText = `Ksh ${targetRate}`;
             
-            // Close rate modal dynamically
             const modalElement = document.getElementById('rateModal');
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
             if(modalInstance) modalInstance.hide();
             
             calculateDashboardAnalytics();
+            handleLiveSearchFilter();
+        }
+
+        function renderAttendanceUiList() {
+            const listBody = document.getElementById('attendanceListBody');
+            listBody.innerHTML = '';
+
+            MASTER_EMPLOYEES.forEach(worker => {
+                const isChecked = globalAttendanceObj[worker] === true;
+                listBody.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                        <span class="fw-bold ${isChecked ? 'text-dark' : 'text-muted text-decoration-line-through'}">${worker}</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" style="cursor:pointer;" 
+                                ${isChecked ? 'checked' : ''} onchange="toggleAttendanceState('${worker}', this.checked)">
+                        </div>
+                    </li>`;
+            });
+        }
+
+        function toggleAttendanceState(worker, isPresent) {
+            globalAttendanceObj[worker] = isPresent;
+            
+            fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(isPresent),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(() => {
+                rebuildDynamicFormDropdowns();
+                updateAttendanceBadgeCounter();
+            });
+        }
+
+        function resetAllAttendanceOffManually() {
+            if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
+                const clearPromises = MASTER_EMPLOYEES.map(worker => {
+                    globalAttendanceObj[worker] = false;
+                    return fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                        method: 'PUT',
+                        body: JSON.stringify(false),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                });
+
+                Promise.all(clearPromises).then(() => {
+                    renderAttendanceUiList();
+                    rebuildDynamicFormDropdowns();
+                    updateAttendanceBadgeCounter();
+                });
+            }
+        }
+
+        function updateAttendanceBadgeCounter() {
+            let activeCount = 0;
+            MASTER_EMPLOYEES.forEach(emp => {
+                if(globalAttendanceObj[emp] === true) activeCount++;
+            });
+            document.getElementById('navActiveCount').innerText = `${activeCount} Active`;
+        }
+
+        function rebuildDynamicFormDropdowns() {
+            const dropdown = document.getElementById('employeeName');
+            dropdown.innerHTML = '<option value="" disabled selected>Select member</option>';
+
+            MASTER_EMPLOYEES.forEach(worker => {
+                if(globalAttendanceObj[worker] === true) {
+                    dropdown.innerHTML += `<option value="${worker}">${worker}</option>`;
+                }
+            });
+        }
+
+        function processDailyAttendanceResetChecking(attendanceData) {
+            const todayDateStr = new Date().toISOString().slice(0, 10); // Format: YYYY-MM-DD
+            
+            let lastResetDateNode = attendanceData ? attendanceData.lastResetDate : null;
+            let rosterNode = (attendanceData && attendanceData.roster) ? attendanceData.roster : {};
+
+            if (lastResetDateNode !== todayDateStr) {
+                console.log(" New calendar shift detected. Executing system wide attendance reset wipeout...");
+                
+                const resetRoster = {};
+                MASTER_EMPLOYEES.forEach(worker => {
+                    resetRoster[worker] = false; 
+                });
+
+                const freshAttendancePayload = {
+                    lastResetDate: todayDateStr,
+                    roster: resetRoster
+                };
+
+                fetch(`${FIREBASE_URL}attendance.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(freshAttendancePayload),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(() => {
+                    globalAttendanceObj = resetRoster;
+                    updateAttendanceBadgeCounter();
+                    rebuildDynamicFormDropdowns();
+                });
+            } else {
+                MASTER_EMPLOYEES.forEach(worker => {
+                    globalAttendanceObj[worker] = rosterNode[worker] === true;
+                });
+                updateAttendanceBadgeCounter();
+                rebuildDynamicFormDropdowns();
+            }
         }
 
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
@@ -600,7 +728,6 @@
             });
         });
 
-        // CASH ADVANCES MANAGEMENT LOGIC
         document.getElementById('advanceForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const worker = document.getElementById('advanceWorkerName').value;
@@ -650,7 +777,7 @@
             });
 
             if(trackerCount === 0) {
-                container.innerHTML = `<li class="text-center py-3 text-muted list-group-item">No records found matching your filter selections.</li>`;
+                container.innerHTML = `<li class="text-center py-3 text-muted list-group-item">No active layout advances given out.</li>`;
             }
         }
 
@@ -658,17 +785,19 @@
             const spinner = document.getElementById('loadingSpinner');
             if(spinner) {
                 spinner.classList.remove('d-none');
-                spinner.innerText = "Loading cloud... ";
+                spinner.innerText = "Loading cloud...";
             }
 
-            // Sync structural advances nodes
-            fetch(`${FIREBASE_URL}advances.json`)
+            fetch(`${FIREBASE_URL}attendance.json`)
+            .then(res => res.json())
+            .then(attData => {
+                processDailyAttendanceResetChecking(attData);
+                return fetch(`${FIREBASE_URL}advances.json`);
+            })
             .then(res => res.json())
             .then(advData => {
                 globalAdvancesObj = advData || {};
                 renderAdvancesUiList();
-
-                // Fetch operational system log nodes
                 return fetch(`${FIREBASE_URL}logs.json`);
             })
             .then(response => response.json())
@@ -712,7 +841,6 @@
                 }
             });
 
-            // Adjust global unpaid metrics dynamically against pending open balance sheets
             Object.keys(globalAdvancesObj).forEach(worker => {
                 runningTotalUnpaid -= parseFloat(globalAdvancesObj[worker] || 0);
             });
@@ -888,7 +1016,7 @@
                     const localCalculatedEarnings = parseInt(log.paidBoxes || 0, 10) * currentPricePerBox;
                     statusAndPaymentCell = `
                         <button class="btn btn-sm btn-outline-warning text-dark fw-semibold no-print" onclick="markAsPaid('${log.id}', ${localCalculatedEarnings})">
-                            <i class="bi bi-hourglass-split me-1"></i> Mark Paid (Ksh ${localCalculatedEarnings})
+                            <i class="bi bi-hourglass-split me-1"></i> Mark Paid
                         </button>
                         <span class="badge bg-warning text-dark text-uppercase d-none d-print-inline-block">Unpaid</span>`;
                 }
