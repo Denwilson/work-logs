@@ -67,6 +67,7 @@
             gap: 8px;
             text-decoration: none;
             transition: all 0.25s ease-in-out;
+            white-space: nowrap;
         }
         .menu-pill-btn:hover, .menu-pill-btn:focus {
             background: rgba(255, 193, 7, 0.12);
@@ -87,6 +88,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
         .pulse-dot {
             width: 9px;
@@ -113,9 +115,9 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-xl navbar-dark custom-navbar shadow no-print">
-        <div class="container">
-            <a class="navbar-brand fw-bold nav-branding text-white me-4" href="#">
+    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar shadow no-print">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand fw-bold nav-branding text-white me-3" href="#">
                 <img src="https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=80&auto=format&fit=crop&q=80" alt="Logo" width="32" height="32" class="d-inline-block align-text-top me-2 rounded">
                 Meru <span class="text-warning">Offload</span>
             </a>
@@ -123,7 +125,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-xl-0 gap-2" id="mainNavMenu">
+                <ul class="navbar-nav align-items-lg-center gap-2 me-auto mb-2 mb-lg-0">
                     <li class="nav-item dropdown">
                         <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-collection-fill text-primary"></i> Filter Archives
@@ -137,16 +139,6 @@
                     <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="renderAttendanceUiList()">
                             <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="navActiveCount" class="badge bg-info text-dark ms-2 px-2 rounded-pill">0 Active</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#advanceModal">
-                            <i class="bi bi-cash-coin text-danger"></i> Advances
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#rateModal">
-                            <i class="bi bi-currency-exchange text-success"></i> Rate (<span id="menuCurrentRate" class="text-warning">Ksh 1</span>)
                         </a>
                     </li>
                     <li class="nav-item">
@@ -164,15 +156,16 @@
                             <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">00:00:00 AM</span>
                         </span>
                     </li>
+                    <span id="menuCurrentRate" class="d-none">Ksh 1</span>
                 </ul>
 
-                <ul class="navbar-nav ms-auto align-items-xl-center gap-2 mt-2 mt-xl-0">
+                <ul class="navbar-nav align-items-lg-center gap-2 mt-2 mt-lg-0">
                     <li class="nav-item">
                         <a class="menu-pill-btn bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
                             <i class="bi bi-arrow-clockwise"></i> Force Sync
                         </a>
                     </li>
-                    <li class="nav-item ms-xl-1">
+                    <li class="nav-item">
                         <div class="database-pulse-badge">
                             <span class="pulse-dot"></span>
                             <span>Cloud Terminal</span>
@@ -498,7 +491,6 @@
 
         document.getElementById('dateWorked').valueAsDate = new Date();
 
-        // Standard live digital clock refresh rate sequence
         setInterval(() => {
             const now = new Date();
             document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -611,42 +603,13 @@
             });
         }
 
-        function processDailyAttendanceResetChecking(attendanceData) {
-            const todayDateStr = new Date().toISOString().slice(0, 10); // Format: YYYY-MM-DD
-            
-            let lastResetDateNode = attendanceData ? attendanceData.lastResetDate : null;
+        function processStaticAttendanceLoading(attendanceData) {
             let rosterNode = (attendanceData && attendanceData.roster) ? attendanceData.roster : {};
-
-            if (lastResetDateNode !== todayDateStr) {
-                console.log(" New calendar shift detected. Executing system wide attendance reset wipeout...");
-                
-                const resetRoster = {};
-                MASTER_EMPLOYEES.forEach(worker => {
-                    resetRoster[worker] = false; 
-                });
-
-                const freshAttendancePayload = {
-                    lastResetDate: todayDateStr,
-                    roster: resetRoster
-                };
-
-                fetch(`${FIREBASE_URL}attendance.json`, {
-                    method: 'PUT',
-                    body: JSON.stringify(freshAttendancePayload),
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(() => {
-                    globalAttendanceObj = resetRoster;
-                    updateAttendanceBadgeCounter();
-                    rebuildDynamicFormDropdowns();
-                });
-            } else {
-                MASTER_EMPLOYEES.forEach(worker => {
-                    globalAttendanceObj[worker] = rosterNode[worker] === true;
-                });
-                updateAttendanceBadgeCounter();
-                rebuildDynamicFormDropdowns();
-            }
+            MASTER_EMPLOYEES.forEach(worker => {
+                globalAttendanceObj[worker] = rosterNode[worker] === true;
+            });
+            updateAttendanceBadgeCounter();
+            rebuildDynamicFormDropdowns();
         }
 
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
@@ -654,7 +617,7 @@
             
             const submitBtn = document.getElementById('submitBtn');
             const employeeName = document.getElementById('employeeName').value;
-            const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim().toUpperCase();
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
             
@@ -791,7 +754,7 @@
             fetch(`${FIREBASE_URL}attendance.json`)
             .then(res => res.json())
             .then(attData => {
-                processDailyAttendanceResetChecking(attData);
+                processStaticAttendanceLoading(attData);
                 return fetch(`${FIREBASE_URL}advances.json`);
             })
             .then(res => res.json())
