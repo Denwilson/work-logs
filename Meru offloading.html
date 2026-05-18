@@ -98,7 +98,6 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
         }
 
-        /* LIVE ACTIVITY BANNER STYLES */
         .activity-banner {
             background-color: #ffffff;
             border-left: 4px solid #6c757d;
@@ -118,16 +117,36 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-2 ps-lg-3">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-2 id="mainNavMenu">
                     <li class="nav-item dropdown">
                         <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-layers"></i> Operations Summary
+                            <i class="bi bi-layers"></i> Operations
                         </a>
                         <ul class="dropdown-menu shadow border-0" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
                             <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
                             <li><a class="dropdown-item py-2" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2 text-success"></i> Settled Claims</a></li>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#advanceModal">
+                            <i class="bi bi-cash-coin"></i> Cash Advances
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#rateModal">
+                            <i class="bi bi-gear-fill"></i> Box Rate (<span id="menuCurrentRate">Ksh 1</span>)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#leaderboardModal" onclick="buildLeaderboard()">
+                            <i class="bi bi-trophy-fill text-warning"></i> Leaderboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#truckModal" onclick="buildTruckAnalytics()">
+                            <i class="bi bi-truck"></i> Truck Logs
+                        </a>
                     </li>
                     <li class="nav-item">
                         <span class="menu-pill-btn text-light" style="cursor: default;">
@@ -156,22 +175,28 @@
     <div class="container my-4 main-content">
         
         <div class="row g-3 mb-4 no-print">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #0d6efd;">
                     <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
-                    <div class="fs-3 fw-bold text-dark" id="statTotalBoxes">0</div>
+                    <div class="fs-4 fw-bold text-dark" id="statTotalBoxes">0</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #198754;">
                     <div class="text-muted small fw-bold text-uppercase">Total Paid Out</div>
-                    <div class="fs-3 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
+                    <div class="fs-4 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #dc3545;">
+                    <div class="text-muted small fw-bold text-uppercase">Total Unpaid Owed</div>
+                    <div class="fs-4 fw-bold text-danger" id="statTotalUnpaid">Ksh 0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #ffc107;">
                     <div class="text-muted small fw-bold text-uppercase">Pending Payout Logs</div>
-                    <div class="fs-3 fw-bold text-warning" id="statPendingCount">0</div>
+                    <div class="fs-4 fw-bold text-warning" id="statPendingCount">0</div>
                 </div>
             </div>
         </div>
@@ -186,7 +211,7 @@
                         <form id="workLogForm">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Employee Name</label>
-                                <select id="employeeName" class="form-select" required>
+                                <select id="employeeName" class="form-select employee-dropdown-list" required>
                                     <option value="" disabled selected>Select member</option>
                                     <option value="Bornie">Bornie</option>
                                     <option value="Brian">Brian</option>
@@ -199,6 +224,7 @@
                                     <option value="James">James</option>
                                     <option value="Muriuki">Muriuki</option>
                                     <option value="Phini">Phini</option>
+                                    <option value="Roy">Roy</option>
                                     <option value="Thuranira">Thuranira</option>
                                 </select>
                             </div>
@@ -329,6 +355,113 @@
         </div>
     </div>
 
+    <div class="modal fade" id="advanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-cash-coin me-2 text-warning"></i>Manage Cash Advances</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="advanceForm" class="mb-4">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <select id="advanceWorkerName" class="form-select" required>
+                                    <option value="" disabled selected>Select Worker</option>
+                                    <option value="Bornie">Bornie</option>
+                                    <option value="Brian">Brian</option>
+                                    <option value="Christopha">Christopha</option>
+                                    <option value="Duncan">Duncan</option>
+                                    <option value="DW">DW</option>
+                                    <option value="Eliud">Eliud</option>
+                                    <option value="Festo">Festo</option>
+                                    <option value="Ian">Ian</option>
+                                    <option value="James">James</option>
+                                    <option value="Muriuki">Muriuki</option>
+                                    <option value="Phini">Phini</option>
+                                    <option value="Roy">Roy</option>
+                                    <option value="Thuranira">Thuranira</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" id="advanceAmount" class="form-control" placeholder="Amount (Ksh)" min="1" required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-warning w-100"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                    <h6>Active Outstanding Advances</h6>
+                    <ul class="list-group" id="advanceListContainer"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="rateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i>Box Payout Rate</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Price per Box (Ksh)</label>
+                        <input type="number" id="configBoxRateInput" class="form-control" value="1" min="0.1" step="0.1">
+                    </div>
+                    <button class="btn btn-success w-100" onclick="updateGlobalBoxRate()">Apply Rate Updates</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="leaderboardModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-trophy-fill me-2"></i>Team Performance Leaderboard</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px;" class="text-center">Rank</th>
+                                <th>Worker</th>
+                                <th class="text-end pe-4">Total Boxes Removed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="truckModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="bi bi-truck me-2"></i>Vehicle Offload Breakdowns</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">Vehicle Plate</th>
+                                <th class="text-center">Trips Handled</th>
+                                <th class="text-end pe-4">Total Offloaded Vol</th>
+                            </tr>
+                        </thead>
+                        <tbody id="truckTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
             <small>&copy; 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
@@ -340,6 +473,8 @@
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         let globalLogsArray = [];
+        let globalAdvancesObj = {};
+        let currentPricePerBox = 1;
 
         document.getElementById('dateWorked').valueAsDate = new Date();
 
@@ -367,6 +502,23 @@
                 customInput.required = false;
                 customInput.value = '';
             }
+        }
+
+        function updateGlobalBoxRate() {
+            const targetRate = parseFloat(document.getElementById('configBoxRateInput').value);
+            if(isNaN(targetRate) || targetRate <= 0) {
+                alert("Please declare a valid box premium value setup.");
+                return;
+            }
+            currentPricePerBox = targetRate;
+            document.getElementById('menuCurrentRate').innerText = `Ksh ${targetRate}`;
+            
+            // Close rate modal dynamically
+            const modalElement = document.getElementById('rateModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if(modalInstance) modalInstance.hide();
+            
+            calculateDashboardAnalytics();
         }
 
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
@@ -448,14 +600,77 @@
             });
         });
 
+        // CASH ADVANCES MANAGEMENT LOGIC
+        document.getElementById('advanceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const worker = document.getElementById('advanceWorkerName').value;
+            const amt = parseFloat(document.getElementById('advanceAmount').value);
+            
+            if(!worker || isNaN(amt) || amt <= 0) return;
+
+            const existingAdvance = globalAdvancesObj[worker] || 0;
+            const updatedTotal = existingAdvance + amt;
+
+            fetch(`${FIREBASE_URL}advances/${worker}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedTotal),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(() => {
+                document.getElementById('advanceAmount').value = '';
+                fetchLogsFromCloud();
+            });
+        });
+
+        function removeWorkerAdvanceRecord(worker) {
+            if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
+                fetch(`${FIREBASE_URL}advances/${worker}.json`, { method: 'DELETE' })
+                .then(() => fetchLogsFromCloud());
+            }
+        }
+
+        function renderAdvancesUiList() {
+            const container = document.getElementById('advanceListContainer');
+            container.innerHTML = '';
+            
+            let trackerCount = 0;
+            Object.keys(globalAdvancesObj).forEach(worker => {
+                const amount = globalAdvancesObj[worker];
+                if(amount > 0) {
+                    trackerCount++;
+                    container.innerHTML += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div><strong class="text-dark">${worker}</strong></div>
+                            <div>
+                                <span class="badge bg-danger rounded-pill me-2 fs-6">Ksh ${amount.toLocaleString()}</span>
+                                <button class="btn btn-sm btn-outline-secondary py-0" onclick="removeWorkerAdvanceRecord('${worker}')"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </li>`;
+                }
+            });
+
+            if(trackerCount === 0) {
+                container.innerHTML = `<li class="text-center py-3 text-muted list-group-item">No records found matching your filter selections.</li>`;
+            }
+        }
+
         function fetchLogsFromCloud() {
             const spinner = document.getElementById('loadingSpinner');
             if(spinner) {
                 spinner.classList.remove('d-none');
-                spinner.innerText = "Loading cloud...";
+                spinner.innerText = "Loading cloud... ";
             }
 
-            fetch(`${FIREBASE_URL}logs.json`)
+            // Sync structural advances nodes
+            fetch(`${FIREBASE_URL}advances.json`)
+            .then(res => res.json())
+            .then(advData => {
+                globalAdvancesObj = advData || {};
+                renderAdvancesUiList();
+
+                // Fetch operational system log nodes
+                return fetch(`${FIREBASE_URL}logs.json`);
+            })
             .then(response => response.json())
             .then(data => {
                 globalLogsArray = [];
@@ -484,6 +699,7 @@
         function calculateDashboardAnalytics() {
             let runningTotalBoxes = 0;
             let runningTotalPayout = 0;
+            let runningTotalUnpaid = 0;
             let runningPendingCount = 0;
 
             globalLogsArray.forEach(log => {
@@ -491,13 +707,85 @@
                 if (log.isPaid) {
                     runningTotalPayout += parseFloat(log.amountPaid || 0);
                 } else {
+                    runningTotalUnpaid += (parseInt(log.paidBoxes || 0, 10) * currentPricePerBox);
                     runningPendingCount++;
                 }
             });
 
+            // Adjust global unpaid metrics dynamically against pending open balance sheets
+            Object.keys(globalAdvancesObj).forEach(worker => {
+                runningTotalUnpaid -= parseFloat(globalAdvancesObj[worker] || 0);
+            });
+
             document.getElementById('statTotalBoxes').innerText = runningTotalBoxes.toLocaleString();
             document.getElementById('statTotalPaid').innerText = "Ksh " + runningTotalPayout.toLocaleString();
+            document.getElementById('statTotalUnpaid').innerText = "Ksh " + (runningTotalUnpaid < 0 ? 0 : runningTotalUnpaid).toLocaleString();
             document.getElementById('statPendingCount').innerText = runningPendingCount;
+        }
+
+        function buildLeaderboard() {
+            const boxesMap = {};
+            globalLogsArray.forEach(log => {
+                const name = log.employeeName || "Unknown";
+                boxesMap[name] = (boxesMap[name] || 0) + parseInt(log.totalBoxes || 0, 10);
+            });
+
+            const sortedArray = Object.keys(boxesMap).map(name => {
+                return { name: name, boxes: boxesMap[name] };
+            }).sort((a,b) => b.boxes - a.boxes);
+
+            const tbody = document.getElementById('leaderboardTableBody');
+            tbody.innerHTML = '';
+            
+            sortedArray.forEach((item, index) => {
+                let badge = `<span class="badge bg-secondary">${index+1}</span>`;
+                if(index === 0) badge = `🏆`;
+                if(index === 1) badge = `🥈`;
+                if(index === 2) badge = `🥉`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-center fw-bold">${badge}</td>
+                        <td class="fw-bold text-dark">${item.name}</td>
+                        <td class="text-end pe-4 fw-bold text-primary">${item.boxes.toLocaleString()} boxes</td>
+                    </tr>`;
+            });
+
+            if(sortedArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No operational volume tracked.</td></tr>`;
+            }
+        }
+
+        function buildTruckAnalytics() {
+            const truckMap = {};
+            globalLogsArray.forEach(log => {
+                const plate = (log.vehiclePlate || "Unknown").toUpperCase().trim();
+                if(!truckMap[plate]) {
+                    truckMap[plate] = { trips: 0, boxes: 0 };
+                }
+                truckMap[plate].trips += 1;
+                truckMap[plate].boxes += parseInt(log.totalBoxes || 0, 10);
+            });
+
+            const sortedTrucks = Object.keys(truckMap).map(plate => {
+                return { plate: plate, trips: truckMap[plate].trips, boxes: truckMap[plate].boxes };
+            }).sort((a,b) => b.boxes - a.boxes);
+
+            const tbody = document.getElementById('truckTableBody');
+            tbody.innerHTML = '';
+
+            sortedTrucks.forEach(truck => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 font-monospace fw-bold text-dark">${truck.plate}</td>
+                        <td class="text-center badge-pill text-secondary fw-semibold">${truck.trips} runs</td>
+                        <td class="text-end pe-4 fw-bold text-success">${truck.boxes.toLocaleString()}</td>
+                    </tr>`;
+            });
+
+            if(sortedTrucks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">No logistics trucks logged.</td></tr>`;
+            }
         }
 
         function extractActivityTrackingTimestamps() {
@@ -597,9 +885,10 @@
                             </button>
                         </td>`;
                 } else {
+                    const localCalculatedEarnings = parseInt(log.paidBoxes || 0, 10) * currentPricePerBox;
                     statusAndPaymentCell = `
-                        <button class="btn btn-sm btn-outline-warning text-dark fw-semibold no-print" onclick="markAsPaid('${log.id}', ${log.paidBoxes || 0})">
-                            <i class="bi bi-hourglass-split me-1"></i> Mark Paid
+                        <button class="btn btn-sm btn-outline-warning text-dark fw-semibold no-print" onclick="markAsPaid('${log.id}', ${localCalculatedEarnings})">
+                            <i class="bi bi-hourglass-split me-1"></i> Mark Paid (Ksh ${localCalculatedEarnings})
                         </button>
                         <span class="badge bg-warning text-dark text-uppercase d-none d-print-inline-block">Unpaid</span>`;
                 }
@@ -628,15 +917,14 @@
             });
         }
 
-        function markAsPaid(recordId, paidBoxes) {
-            const totalEarnings = paidBoxes * 1; 
+        function markAsPaid(recordId, explicitTotalEarnings) {
             const today = new Date();
             const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
             const paymentUpdates = {
                 isPaid: true,
-                amountPaid: totalEarnings,
+                amountPaid: explicitTotalEarnings,
                 datePaid: stringifiedDatePaid,
                 timePaid: currentTimePaidStr,
                 timestampPaid: Date.now() 
@@ -659,7 +947,6 @@
             }
         }
 
-        // FULL DATA SANITIZED PRINT ENGINE FOR UNLIMITED RECORDS
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
@@ -670,7 +957,6 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
 
-            // Strict Filter Validation: empty selection handles complete data correctly
             const filteredLogs = globalLogsArray.filter(log => {
                 const empName = log.employeeName || '';
                 if (nameFilter && !empName.toLowerCase().includes(nameFilter)) return false;
@@ -688,13 +974,11 @@
             pdfBtn.disabled = true;
             pdfBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Generating...`;
 
-            // 1. Memory Container Assembly
             const workerContainer = document.createElement('div');
             workerContainer.style.padding = '20px';
             workerContainer.style.backgroundColor = '#ffffff';
             workerContainer.style.fontFamily = 'Arial, sans-serif';
 
-            // 2. Metadata Context Builder
             const currentDateTime = new Date();
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
             if (nameFilter) metaInfo += `<br>Employee Filter: "${document.getElementById('filterName').value}"`;
@@ -713,12 +997,11 @@
                 </div>
             `;
 
-            // 3. String Builder Processing Loop with Strict Fallbacks
             let tableRowsHTML = '';
             filteredLogs.sort((a, b) => (b.dateWorked || '').localeCompare(a.dateWorked || ''));
 
             filteredLogs.forEach(log => {
-                let statusString = `<span style="color: #df9b00; font-weight: bold;">UNPAID</span>`;
+                let statusString = `<span style="color: #dc3545; font-weight: bold;">UNPAID</span>`;
                 if (log.isPaid) {
                     const timePaidText = log.timePaid ? ` at ${log.timePaid}` : '';
                     statusString = `<span style="color: #198754; font-weight: bold;">PAID</span><br>
@@ -766,10 +1049,9 @@
                 </div>
             `;
 
-            // 4. Output Generation Execution
             const options = {
                 margin:       [15, 15, 15, 15], 
-                filename:     `Meru_Offload_All_Report_${currentDateTime.toISOString().slice(0,10)}.pdf`,
+                filename:     `Meru_Offload_Report_${currentDateTime.toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -782,7 +1064,7 @@
             })
             .catch(err => {
                 console.error("PDF Processing Failure: ", err);
-                alert("Failed to render document safely due to dataset compilation limits.");
+                alert("Failed to render document safely.");
                 pdfBtn.disabled = false;
                 pdfBtn.innerHTML = `<i class="bi bi-download me-2"></i>Download PDF Report`;
             });
