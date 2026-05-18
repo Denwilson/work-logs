@@ -22,6 +22,7 @@
         .box-count {
             font-size: 0.9rem;
         }
+        /* Document header and footer rules configured explicitly for the PDF layout */
         .pdf-header {
             display: none;
             margin-bottom: 20px;
@@ -99,14 +100,17 @@
 
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0" id="pdfPrintArea">
-                    https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/
+                    
                     <div class="pdf-header" id="pdfHeader">
                         <h2 style="color: #0d6efd; margin-bottom: 5px;">Work Log Summary Report</h2>
                         <p style="margin: 0; color: #555;" id="pdfMetadata">Generated on: </p>
                     </div>
 
                     <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
-                        <h5 class="mb-0"><i class="bi bi-collection-fill me-2"></i>Shared Work Logs <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span></h5>
+                        <h5 class="mb-0">
+                            <i class="bi bi-collection-fill me-2"></i>Shared Work Logs 
+                            <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span>
+                        </h5>
                         <button class="btn btn-outline-danger btn-sm text-white" onclick="clearAllData()">Clear All Cloud Records</button>
                     </div>
                     <div class="card-body p-0">
@@ -141,11 +145,10 @@
     </div>
 
     <script>
-        // PASTE YOUR COPIED FIREBASE REALTIME DATABASE URL HERE INSIDE THE QUOTES
-        // Make sure it ends with a forward slash /
-        const FIREBASE_URL = "https://your-project-id-default-rtdb.firebaseio.com/";
+        // Integrated your specific production URL endpoint directly 
+        const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
 
-        // Global array memory to hold entries pulled down from cloud
+        // Runtime local cache lookup list
         let globalLogsArray = [];
 
         document.getElementById('dateWorked').valueAsDate = new Date();
@@ -164,7 +167,7 @@
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
             const paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
 
-            const recordId = "log_" + Date.now(); // Unique alpha-numeric ID node for Firebase key
+            const recordId = "log_" + Date.now(); 
 
             const newLog = {
                 id: recordId, 
@@ -178,7 +181,7 @@
                 datePaid: null    
             };
 
-            // Write record instantly directly into cloud database via HTTP PUT request
+            // Write into your custom Europe cloud node path via direct rest calls
             fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
                 method: 'PUT',
                 body: JSON.stringify(newLog),
@@ -194,27 +197,29 @@
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Save Record";
                 
-                fetchLogsFromCloud(); // Refresh data for all connected users
+                fetchLogsFromCloud(); 
             })
             .catch(error => {
                 console.error("Firebase Error: ", error);
-                alert("Failed to connect to cloud. Check internet connection.");
+                alert("Cloud sync failure. Please review database access rules setup.");
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Save Record";
             });
         });
 
-        // Function to pull records down from the shared cloud database
+        // Pull collection logs matrix data down from shared node roots
         function fetchLogsFromCloud() {
             const spinner = document.getElementById('loadingSpinner');
-            if(spinner) spinner.classList.remove('d-none');
+            if(spinner) {
+                spinner.classList.remove('d-none');
+                spinner.innerText = "Loading cloud...";
+            }
 
             fetch(`${FIREBASE_URL}logs.json`)
             .then(response => response.json())
             .then(data => {
                 globalLogsArray = [];
                 if (data) {
-                    // Convert object nodes mapped key collection from Firebase into iterable array format
                     Object.keys(data).forEach(key => {
                         if(data[key] !== null) {
                             globalLogsArray.push(data[key]);
@@ -226,11 +231,14 @@
             })
             .catch(error => {
                 console.error("Fetch failed: ", error);
-                if(spinner) spinner.innerText = "Offline Mode";
+                if(spinner) {
+                    spinner.classList.remove('d-none');
+                    spinner.innerText = "Offline Mode";
+                }
             });
         }
 
-        // Function to display and sort records
+        // Render sorted row list dynamically
         function displayLogs(filteredData = null) {
             const currentLogs = filteredData || globalLogsArray;
             const tableBody = document.getElementById('logTableBody');
@@ -245,7 +253,6 @@
                 noDataMessage.classList.add('d-none');
             }
 
-            // Sort logs strictly by date worked (Newest Date first)
             currentLogs.sort((a, b) => {
                 if (a.dateWorked < b.dateWorked) return 1;
                 if (a.dateWorked > b.dateWorked) return -1;
@@ -304,7 +311,7 @@
             });
         }
 
-        // Action Function: Instant checkout transaction updated directly into cloud
+        // Action Function: Instant payout execution synced directly up to cloud nodes
         function markAsPaid(recordId, paidBoxes) {
             const totalEarnings = paidBoxes * 1; 
 
@@ -320,7 +327,6 @@
                 datePaid: stringifiedDatePaid
             };
 
-            // Send PATCH request to modify specifically this node inside database cloud path
             fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
                 method: 'PATCH',
                 body: JSON.stringify(paymentUpdates),
@@ -332,7 +338,7 @@
             });
         }
 
-        // Action Function: Safely delete an individual record out of cloud completely
+        // Action Function: Complete deletion of targeted single document row item
         function deleteIndividualRecord(recordId) {
             if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
                 fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
@@ -344,7 +350,7 @@
             }
         }
 
-        // Generate Document PDF based on cloud data arrays
+        // Fixed Engine Processing Task Block: PDF Generation Canvas Builder
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
@@ -355,6 +361,7 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
 
+            // Run conditional validation filter loops
             const filteredLogs = globalLogsArray.filter(log => {
                 if (nameFilter && !log.employeeName.toLowerCase().includes(nameFilter)) return false;
                 if (startDate && log.dateWorked < startDate) return false;
@@ -367,6 +374,7 @@
                 return;
             }
 
+            // Lock list visually to matching records only for printing
             displayLogs(filteredLogs);
 
             const todayStr = new Date().toLocaleDateString('en-GB');
@@ -378,27 +386,39 @@
             document.getElementById('pdfMetadata').innerText = metaInfo;
 
             const element = document.getElementById('pdfPrintArea');
-            const pdfHeader = document.querySelector('.pdf-header');
-            const pdfFooter = document.querySelector('.pdf-footer');
+            const pdfHeader = document.getElementById('pdfHeader');
+            const pdfFooter = document.getElementById('pdfFooter');
             const actionElements = document.querySelectorAll('.no-print');
 
+            // Temporarily present printing aesthetics blocks
             pdfHeader.style.display = 'block';
             pdfFooter.style.display = 'block';
             actionElements.forEach(el => el.style.display = 'none');
 
             const options = {
                 margin:       10,
-                filename:     `Shared_Work_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                filename:     `Work_Log_Report_${new Date().toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(options).from(element).save().then(() => {
+            // Trigger document download canvas conversion
+            html2pdf().set(options).from(element).save()
+            .then(() => {
+                // Revert interface view cleanly back to operational status dashboard
                 pdfHeader.style.display = 'none';
                 pdfFooter.style.display = 'none';
                 actionElements.forEach(el => el.style.display = '');
                 displayLogs(); 
+            })
+            .catch(err => {
+                console.error("PDF Printing Error: ", err);
+                // Recovery cleanup fail safe
+                pdfHeader.style.display = 'none';
+                pdfFooter.style.display = 'none';
+                actionElements.forEach(el => el.style.display = '');
+                displayLogs();
             });
         }
 
@@ -417,7 +437,7 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Wipes all data on cloud path node root
+        // Drop global data nodes
         function clearAllData() {
             if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
                 fetch(`${FIREBASE_URL}logs.json`, {
@@ -429,7 +449,7 @@
             }
         }
 
-        // Automatically fetch data from cloud immediately upon page load execution
+        // Load collection context immediately
         fetchLogsFromCloud();
     </script>
 </body>
