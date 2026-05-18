@@ -204,18 +204,18 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Employee Name</label>
                                 <select id="employeeName" class="form-select" required>
-                                    <option value="" disabled selected>Select a member</option>
+                                    <option value="" disabled selected>Select member</option>
                                     <option value="Bornie">Bornie</option>
-                                    <option value="Ian">Ian</option>
-                                    <option value="Festo">Festo</option>
+                                    <option value="Brian">Brian</option>
+                                    <option value="Christopha">Christopha</option>
                                     <option value="Duncan">Duncan</option>
+                                    <option value="Eliud">Eliud</option>
+                                    <option value="Festo">Festo</option>
+                                    <option value="Ian">Ian</option>
                                     <option value="James">James</option>
                                     <option value="Muriuki">Muriuki</option>
                                     <option value="Phini">Phini</option>
                                     <option value="Thuranira">Thuranira</option>
-                                    <option value="Christopha">Christopha</option>
-                                    <option value="Brian">Brian</option>
-                                    <option value="Eliud">Eliud</option>
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -232,7 +232,14 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Boxes Supposed to be Paid</label>
-                                <input type="number" id="paidBoxes" class="form-control" min="0" placeholder="Boxes to pay for" required>
+                                <select id="paidBoxesSelection" class="form-select" onchange="togglePaidBoxesInput()" required>
+                                    <option value="ALL" selected>All</option>
+                                    <option value="CUSTOM">Enter Amount Manually...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 d-none" id="customPaidBoxesContainer">
+                                <label class="form-label fw-semibold text-primary">Specify Boxes to Pay</label>
+                                <input type="number" id="paidBoxes" class="form-control border-primary" min="0" placeholder="Boxes to pay for">
                             </div>
                             <button type="submit" id="submitBtn" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
                         </form>
@@ -374,6 +381,23 @@
             handleLiveSearchFilter();
         }
 
+        // Toggles visibility and requirement configurations of the custom paid amount field
+        function togglePaidBoxesInput() {
+            const selection = document.getElementById('paidBoxesSelection').value;
+            const customContainer = document.getElementById('customPaidBoxesContainer');
+            const customInput = document.getElementById('paidBoxes');
+
+            if (selection === "CUSTOM") {
+                customContainer.classList.remove('d-none');
+                customInput.required = true;
+                customInput.focus();
+            } else {
+                customContainer.classList.add('d-none');
+                customInput.required = false;
+                customInput.value = '';
+            }
+        }
+
         // Save entry form module configuration rules
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
@@ -383,7 +407,18 @@
             const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
-            const paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
+            
+            // Resolve paid boxes amount based on layout dropdown choice
+            const selectionMode = document.getElementById('paidBoxesSelection').value;
+            let paidBoxes = totalBoxes; // Defaults to All
+
+            if (selectionMode === "CUSTOM") {
+                paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
+                if (isNaN(paidBoxes)) {
+                    alert("Please fill in a valid custom amount of boxes to pay.");
+                    return;
+                }
+            }
 
             // DUPLICATE RECORD PROTECTION ALGORITHM
             const isDuplicate = globalLogsArray.some(log => 
@@ -426,10 +461,11 @@
             })
             .then(response => response.json())
             .then(() => {
-                document.getElementById('employeeName').selectedIndex = 0; // Reset dropdown selection
+                document.getElementById('employeeName').selectedIndex = 0; 
                 document.getElementById('vehiclePlate').value = '';
                 document.getElementById('totalBoxes').value = '';
-                document.getElementById('paidBoxes').value = '';
+                document.getElementById('paidBoxesSelection').value = 'ALL';
+                togglePaidBoxesInput();
                 
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Save Record";
@@ -722,6 +758,7 @@
             });
         }
 
+        // Formats date explicitly from YYYY-MM-DD to DD/MM/YYYY
         function formatDateDisplay(dateString) {
             if (!dateString) return "";
             const parts = dateString.split('-');
