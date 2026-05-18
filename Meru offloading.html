@@ -3,16 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shared Work Log Management System</title>
+    <title>Meru Offload Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 12px; }
+        body { 
+            background-color: #f4f6f9; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+        }
+        .card { 
+            border-radius: 12px; 
+            border: none;
+        }
         .disabled-row {
-            background-color: #f1f3f5 !important;
-            opacity: 0.85;
+            background-color: #f8fafc !important;
+            opacity: 0.9;
         }
         .payment-details {
             font-size: 0.8rem;
@@ -22,7 +33,72 @@
         .box-count {
             font-size: 0.9rem;
         }
-        /* Document header and footer rules configured explicitly for the PDF layout */
+        .stat-card {
+            border-left: 4px solid #0d6efd;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* PREMIUM NAVIGATION DESIGN RULES */
+        .custom-navbar {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+            border-bottom: 3px solid #ffc107;
+            padding: 12px 0;
+        }
+        .nav-branding {
+            font-size: 1.35rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .menu-pill-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            padding: 6px 16px;
+            color: #f8fafc !important;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .menu-pill-btn:hover {
+            background: rgba(255, 193, 7, 0.15);
+            border-color: #ffc107;
+            color: #ffc107 !important;
+        }
+        .database-pulse-badge {
+            background: rgba(25, 135, 84, 0.12);
+            border: 1px solid rgba(25, 135, 84, 0.4);
+            border-radius: 30px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            color: #20c997;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #198754;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+            animation: pulse-animation 1.8s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+
+        /* Explicit layout configuration adjustments for the PDF print container engine */
         .pdf-header {
             display: none;
             margin-bottom: 20px;
@@ -35,17 +111,67 @@
             font-size: 0.8rem;
             text-align: center;
             color: #666;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container my-5">
+    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar shadow no-print">
+        <div class="container">
+            <a class="navbar-brand fw-bold nav-branding text-white" href="#">
+                <i class="bi bi-truck-flatbed me-2 text-warning"></i>Meru <span class="text-warning">Offload</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-2 mt-3 mt-lg-0">
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" onclick="fetchLogsFromCloud(); return false;">
+                            <i class="bi bi-arrow-clockwise"></i> Force Sync
+                        </a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <div class="database-pulse-badge">
+                            <span class="pulse-dot"></span>
+                            <span>Cloud Live Node</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4 main-content">
+        
+        <div class="row g-3 mb-4 no-print">
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #0d6efd;">
+                    <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
+                    <div class="fs-3 fw-bold text-dark" id="statTotalBoxes">0</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #198754;">
+                    <div class="text-muted small fw-bold text-uppercase">Total Paid Out</div>
+                    <div class="fs-3 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #ffc107;">
+                    <div class="text-muted small fw-bold text-uppercase">Pending Payout Logs</div>
+                    <div class="fs-3 fw-bold text-warning" id="statPendingCount">0</div>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card shadow-sm mb-4 bg-white">
                     <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Offloading Work</h5>
+                        <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Work Entry</h5>
                     </div>
                     <div class="card-body p-4">
                         <form id="workLogForm">
@@ -74,7 +200,7 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+                <div class="card shadow-sm sticky-top bg-white" style="top: 20px;">
                     <div class="card-header bg-info text-white py-3">
                         <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
                     </div>
@@ -99,20 +225,46 @@
             </div>
 
             <div class="col-lg-8">
-                <div class="card shadow-sm border-0" id="pdfPrintArea">
+                
+                <div class="card shadow-sm mb-3 p-3 bg-white no-print">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="tableSearchInput" class="form-control border-start-0 bg-light" placeholder="Search employee or plate layout..." onkeyup="handleLiveSearchFilter()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted small">Status</span>
+                                <select id="tableStatusSelector" class="form-select bg-light" onchange="handleLiveSearchFilter()">
+                                    <option value="ALL">Show All Statuses</option>
+                                    <option value="PAID">Paid Records Only</option>
+                                    <option value="UNPAID">Unpaid Records Only</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-md-end">
+                            <span class="text-muted small fw-semibold" id="displayedRowsCounter">Showing 0 entries</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm bg-white" id="pdfPrintArea">
                     
                     <div class="pdf-header" id="pdfHeader">
-                        <h2 style="color: #0d6efd; margin-bottom: 5px;">Work Log Summary Report</h2>
-                        <p style="margin: 0; color: #555;" id="pdfMetadata">Generated on: </p>
+                        <h2 style="color: #0d6efd; margin-bottom: 5px; font-weight: bold;">Meru Offload Summary Report</h2>
+                        <p style="margin: 0; color: #333; font-size: 0.95rem;" id="pdfMetadata">Generated on: </p>
                     </div>
 
                     <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
                         <h5 class="mb-0">
-                            <i class="bi bi-collection-fill me-2"></i>Shared Work Logs 
+                            <i class="bi bi-collection-fill me-2"></i>Saved Work Logs 
                             <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span>
                         </h5>
-                        <button class="btn btn-outline-danger btn-sm text-white" onclick="clearAllData()">Clear All Cloud Records</button>
+                        <button class="btn btn-outline-danger btn-sm text-white shadow-sm" onclick="clearAllData()">Clear All Cloud Records</button>
                     </div>
+                    
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" id="mainLogsTable">
@@ -125,18 +277,17 @@
                                         <th class="text-center no-print">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="logTableBody">
-                                    </tbody>
+                                <tbody id="logTableBody"></tbody>
                             </table>
                         </div>
                         <div id="noDataMessage" class="text-center py-5 text-muted">
                             <i class="bi bi-folder-x display-4 d-block mb-2"></i>
-                            No records found. Enter details on the left to save.
+                            No records found matching your filter selections.
                         </div>
                     </div>
 
                     <div class="pdf-footer" id="pdfFooter">
-                        <p>Work Log Management System — End of Report</p>
+                        <p>Meru Offload Logistics Management System — Generated securely from the cloud archive.</p>
                     </div>
 
                 </div>
@@ -144,31 +295,47 @@
         </div>
     </div>
 
-    <script>
-        // Integrated your specific production URL endpoint directly 
-        const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
+    <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
+        <div class="container">
+            <small>&copy; 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
+        </div>
+    </footer>
 
-        // Runtime local cache lookup list
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         let globalLogsArray = [];
 
         document.getElementById('dateWorked').valueAsDate = new Date();
 
-        // Listen for form submission
+        // Save entry form module configuration rules
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
             
             const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Saving to Cloud...";
-
             const employeeName = document.getElementById('employeeName').value.trim();
             const vehiclePlate = document.getElementById('vehiclePlate').value.trim();
             const dateWorked = document.getElementById('dateWorked').value;
             const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
             const paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10);
 
-            const recordId = "log_" + Date.now(); 
+            // DUPLICATE RECORD PROTECTION ALGORITHM
+            const isDuplicate = globalLogsArray.some(log => 
+                log.employeeName.toLowerCase() === employeeName.toLowerCase() &&
+                log.vehiclePlate.toLowerCase() === vehiclePlate.toLowerCase() &&
+                log.dateWorked === dateWorked
+            );
 
+            if (isDuplicate) {
+                alert(`⚠️ DUPLICATE ENTRY BLOCKED!\n\nA record already exists for "${employeeName}" working on vehicle "${vehiclePlate}" on date ${formatDateDisplay(dateWorked)}.`);
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving to Cloud...";
+
+            const recordId = "log_" + Date.now(); 
             const newLog = {
                 id: recordId, 
                 employeeName,
@@ -181,7 +348,6 @@
                 datePaid: null    
             };
 
-            // Write into your custom Europe cloud node path via direct rest calls
             fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
                 method: 'PUT',
                 body: JSON.stringify(newLog),
@@ -200,14 +366,13 @@
                 fetchLogsFromCloud(); 
             })
             .catch(error => {
-                console.error("Firebase Error: ", error);
-                alert("Cloud sync failure. Please review database access rules setup.");
+                console.error("Firebase Sync Error: ", error);
+                alert("Cloud sync failure. Verify internet access configurations.");
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Save Record";
             });
         });
 
-        // Pull collection logs matrix data down from shared node roots
         function fetchLogsFromCloud() {
             const spinner = document.getElementById('loadingSpinner');
             if(spinner) {
@@ -227,10 +392,12 @@
                     });
                 }
                 if(spinner) spinner.classList.add('d-none');
-                displayLogs();
+                
+                calculateDashboardAnalytics();
+                handleLiveSearchFilter();
             })
             .catch(error => {
-                console.error("Fetch failed: ", error);
+                console.error("Fetch failure error: ", error);
                 if(spinner) {
                     spinner.classList.remove('d-none');
                     spinner.innerText = "Offline Mode";
@@ -238,7 +405,48 @@
             });
         }
 
-        // Render sorted row list dynamically
+        // Live calculation loops for top indicator analytics engine cards
+        function calculateDashboardAnalytics() {
+            let runningTotalBoxes = 0;
+            let runningTotalPayout = 0;
+            let runningPendingCount = 0;
+
+            globalLogsArray.forEach(log => {
+                runningTotalBoxes += parseInt(log.totalBoxes || 0, 10);
+                if (log.isPaid) {
+                    runningTotalPayout += parseFloat(log.amountPaid || 0);
+                } else {
+                    runningPendingCount++;
+                }
+            });
+
+            document.getElementById('statTotalBoxes').innerText = runningTotalBoxes.toLocaleString();
+            document.getElementById('statTotalPaid').innerText = "Ksh " + runningTotalPayout.toLocaleString();
+            document.getElementById('statPendingCount').innerText = runningPendingCount;
+        }
+
+        // LIVE FILTER REAL-TIME ENGINE EXTRACTION METHOD
+        function handleLiveSearchFilter() {
+            const query = document.getElementById('tableSearchInput').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('tableStatusSelector').value;
+
+            const matchingFilteredArray = globalLogsArray.filter(log => {
+                // Match search string query criteria rule checks
+                const matchesSearch = log.employeeName.toLowerCase().includes(query) || 
+                                      log.vehiclePlate.toLowerCase().includes(query);
+                
+                // Match select status filter configuration rules
+                let matchesStatus = true;
+                if (statusFilter === "PAID") matchesStatus = log.isPaid === true;
+                if (statusFilter === "UNPAID") matchesStatus = log.isPaid === false;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            document.getElementById('displayedRowsCounter').innerText = `Showing ${matchingFilteredArray.length} entries`;
+            displayLogs(matchingFilteredArray);
+        }
+
         function displayLogs(filteredData = null) {
             const currentLogs = filteredData || globalLogsArray;
             const tableBody = document.getElementById('logTableBody');
@@ -253,11 +461,7 @@
                 noDataMessage.classList.add('d-none');
             }
 
-            currentLogs.sort((a, b) => {
-                if (a.dateWorked < b.dateWorked) return 1;
-                if (a.dateWorked > b.dateWorked) return -1;
-                return 0;
-            });
+            currentLogs.sort((a, b) => b.dateWorked.localeCompare(a.dateWorked));
 
             currentLogs.forEach(log => {
                 let rowClass = "";
@@ -266,7 +470,6 @@
 
                 if (log.isPaid) {
                     rowClass = "class='disabled-row'";
-                    
                     statusAndPaymentCell = `
                         <div>
                             <span class="badge bg-success text-uppercase mb-1"><i class="bi bi-check-circle-fill me-1"></i> Paid</span>
@@ -311,15 +514,10 @@
             });
         }
 
-        // Action Function: Instant payout execution synced directly up to cloud nodes
         function markAsPaid(recordId, paidBoxes) {
             const totalEarnings = paidBoxes * 1; 
-
             const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const stringifiedDatePaid = `${year}-${month}-${day}`;
+            const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
             const paymentUpdates = {
                 isPaid: true,
@@ -332,25 +530,18 @@
                 body: JSON.stringify(paymentUpdates),
                 headers: { 'Content-Type': 'application/json' }
             })
-            .then(response => response.json())
-            .then(() => {
-                fetchLogsFromCloud();
-            });
+            .then(() => fetchLogsFromCloud());
         }
 
-        // Action Function: Complete deletion of targeted single document row item
         function deleteIndividualRecord(recordId) {
             if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
                 fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
                     method: 'DELETE'
                 })
-                .then(() => {
-                    fetchLogsFromCloud();
-                });
+                .then(() => fetchLogsFromCloud());
             }
         }
 
-        // Fixed Engine Processing Task Block: PDF Generation Canvas Builder
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
@@ -361,7 +552,6 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
 
-            // Run conditional validation filter loops
             const filteredLogs = globalLogsArray.filter(log => {
                 if (nameFilter && !log.employeeName.toLowerCase().includes(nameFilter)) return false;
                 if (startDate && log.dateWorked < startDate) return false;
@@ -374,14 +564,13 @@
                 return;
             }
 
-            // Lock list visually to matching records only for printing
             displayLogs(filteredLogs);
 
-            const todayStr = new Date().toLocaleDateString('en-GB');
-            let metaInfo = `Generated on: ${todayStr}`;
-            if (nameFilter) metaInfo += ` | Employee: ${document.getElementById('filterName').value}`;
+            const currentDateTime = new Date();
+            let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+            if (nameFilter) metaInfo += ` \nEmployee Search Filter: "${document.getElementById('filterName').value}"`;
             if (startDate || endDate) {
-                metaInfo += ` | Period: ${startDate ? formatDateDisplay(startDate) : 'Beginning'} to ${endDate ? formatDateDisplay(endDate) : 'Present'}`;
+                metaInfo += ` \nLog Date Range Covered: [ ${startDate ? formatDateDisplay(startDate) : 'Earliest History'} ] to [ ${endDate ? formatDateDisplay(endDate) : 'Latest Present'} ]`;
             }
             document.getElementById('pdfMetadata').innerText = metaInfo;
 
@@ -390,66 +579,52 @@
             const pdfFooter = document.getElementById('pdfFooter');
             const actionElements = document.querySelectorAll('.no-print');
 
-            // Temporarily present printing aesthetics blocks
             pdfHeader.style.display = 'block';
             pdfFooter.style.display = 'block';
             actionElements.forEach(el => el.style.display = 'none');
 
             const options = {
-                margin:       10,
-                filename:     `Work_Log_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                margin:       [12, 10, 15, 10], 
+                filename:     `Meru_Offload_Report_${currentDateTime.toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Trigger document download canvas conversion
             html2pdf().set(options).from(element).save()
             .then(() => {
-                // Revert interface view cleanly back to operational status dashboard
                 pdfHeader.style.display = 'none';
                 pdfFooter.style.display = 'none';
                 actionElements.forEach(el => el.style.display = '');
-                displayLogs(); 
+                handleLiveSearchFilter(); 
             })
             .catch(err => {
                 console.error("PDF Printing Error: ", err);
-                // Recovery cleanup fail safe
                 pdfHeader.style.display = 'none';
                 pdfFooter.style.display = 'none';
                 actionElements.forEach(el => el.style.display = '');
-                displayLogs();
+                handleLiveSearchFilter();
             });
         }
 
-        // Helper function to turn "YYYY-MM-DD" into "DD/MM/YYYY" display
         function formatDateDisplay(dateString) {
             if (!dateString) return "";
             const parts = dateString.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`; 
-            }
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`; 
             return dateString;
         }
 
-        // Helper function to prevent script injection
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Drop global data nodes
         function clearAllData() {
             if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
-                fetch(`${FIREBASE_URL}logs.json`, {
-                    method: 'DELETE'
-                })
-                .then(() => {
-                    fetchLogsFromCloud();
-                });
+                fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
+                .then(() => fetchLogsFromCloud());
             }
         }
 
-        // Load collection context immediately
         fetchLogsFromCloud();
     </script>
 </body>
