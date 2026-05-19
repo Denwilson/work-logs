@@ -207,7 +207,7 @@
 
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="card shadow-sm mb-4 bg-white">
+                <div class="card shadow-sm mb-4 bg-white no-print">
                     <div class="card-header bg-primary text-white py-3">
                         <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Work Entry</h5>
                     </div>
@@ -248,7 +248,7 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm sticky-top bg-white" style="top: 20px;">
+                <div class="card shadow-sm sticky-top bg-white no-print" style="top: 20px;">
                     <div class="card-header bg-info text-white py-3">
                         <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
                     </div>
@@ -265,6 +265,23 @@
                             <label class="form-label fw-semibold">End Date</label>
                             <input type="date" id="filterEndDate" class="form-control">
                         </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold d-block">Claim Settlement Status</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="pdfStatusChoice" id="pdfChoiceAll" value="ALL" checked>
+                                <label class="form-check-label small fw-semibold text-dark" for="pdfChoiceAll">All Logs</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="pdfStatusChoice" id="pdfChoicePaid" value="PAID">
+                                <label class="form-check-label small fw-semibold text-success" for="pdfChoicePaid">Paid Only</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="pdfStatusChoice" id="pdfChoiceUnpaid" value="UNPAID">
+                                <label class="form-check-label small fw-semibold text-danger" for="pdfChoiceUnpaid">Unpaid Only</label>
+                            </div>
+                        </div>
+
                         <button type="button" id="pdfBtn" class="btn btn-dark w-100 py-2 fw-bold" onclick="generatePDF()">
                             <i class="bi bi-download me-2"></i>Download PDF Report
                         </button>
@@ -1038,41 +1055,31 @@
             }
         }
 
+        // ============================================
+        // ROBUST REENGINEERED PDF GENERATOR FUNCTION
+        // ============================================
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
                 return;
             }
 
-            // ASK THE USER FOR THE REPORT TYPE SELECTION VIA PROMPT
-            let reportChoice = prompt(
-                "Which report records would you like to download?\n\n" +
-                "Type 'PAID' for paid records\n" +
-                "Type 'UNPAID' for unpaid records\n" +
-                "Type 'ALL' (or leave blank) for complete history:", 
-                "ALL"
-            );
-
-            // Cancel configuration handling
-            if (reportChoice === null) return; 
-
-            reportChoice = reportChoice.trim().toUpperCase();
-            if (reportChoice !== "PAID" && reportChoice !== "UNPAID") {
-                reportChoice = "ALL"; 
-            }
+            // READ VALUE FROM THE INSTALLED RADIO INPUT BUTTON SELECTION
+            const statusRadioSelection = document.querySelector('input[name="pdfStatusChoice"]:checked');
+            let reportChoice = statusRadioSelection ? statusRadioSelection.value : "ALL";
 
             const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
 
-            // FILTER THE LOGS ARRAY ACCORDING TO BOTH INPUT FILTERS AND THE EXPLICIT CHOICE PROMPT
+            // FILTER THE LOGS ARRAY ACCORDING TO BOTH INPUT FILTERS AND THE SELECTION CHOSEN
             const filteredLogs = globalLogsArray.filter(log => {
                 const empName = log.employeeName || '';
                 if (nameFilter && !empName.toLowerCase().includes(nameFilter)) return false;
                 if (startDate && log.dateWorked < startDate) return false;
                 if (endDate && log.dateWorked > endDate) return false;
                 
-                // Status filtering verification
+                // Status checking
                 if (reportChoice === "PAID" && !log.isPaid) return false;
                 if (reportChoice === "UNPAID" && log.isPaid) return false;
                 
@@ -1088,97 +1095,117 @@
             pdfBtn.disabled = true;
             pdfBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Generating...`;
 
+            // Isolated background compilation layer to avoid styling overrides
             const workerContainer = document.createElement('div');
-            workerContainer.style.padding = '20px';
+            workerContainer.style.padding = '35px';
             workerContainer.style.backgroundColor = '#ffffff';
             workerContainer.style.fontFamily = 'Arial, sans-serif';
 
             const currentDateTime = new Date();
             
-            // Build dynamic text status context label
             let statusScopeLabel = "Complete Historic Archive";
             if (reportChoice === "PAID") statusScopeLabel = "Settled Paid Log Claims Only";
             if (reportChoice === "UNPAID") statusScopeLabel = "Outstanding Unpaid Claims Only";
 
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
             metaInfo += `<br>Record Scope: <strong>${statusScopeLabel}</strong>`;
-            
-            if (nameFilter) metaInfo += `<br>Employee Filter: "${document.getElementById('filterName').value}"`;
-            else metaInfo += `<br>Employee Filter: All Team Members`;
+            metaInfo += `<br>Employee Filter: ${nameFilter ? '"' + document.getElementById('filterName').value + '"' : 'All Team Members'}`;
             
             if (startDate || endDate) {
                 metaInfo += `<br>Date Scope: [ ${startDate ? formatDateDisplay(startDate) : 'Beginning'} ] to [ ${endDate ? formatDateDisplay(endDate) : 'Present'} ]`;
             } else {
-                metaInfo += `<br>Date Range: All Dates`;
+                metaInfo += `<br>Date Range: All Logged Records`;
             }
 
             workerContainer.innerHTML += `
-                <div style="border-bottom: 3px solid #0d6efd; padding-bottom: 12px; margin-bottom: 20px;">
+                <div style="border-bottom: 3px solid #0d6efd; padding-bottom: 14px; margin-bottom: 25px;">
                     <h2 style="color: #0d6efd; font-weight: bold; margin: 0 0 5px 0; font-size: 24px;">Meru Offload Summary Report</h2>
-                    <p style="margin: 0; color: #555; font-size: 13px; line-height: 1.4;">${metaInfo}</p>
+                    <p style="margin: 0; color: #475569; font-size: 13px; line-height: 1.5;">${metaInfo}</p>
                 </div>
             `;
 
             let tableRowsHTML = '';
+            let totalReportBoxes = 0;
+            let totalReportAmount = 0;
+
             filteredLogs.sort((a, b) => (b.dateWorked || '').localeCompare(a.dateWorked || ''));
 
             filteredLogs.forEach(log => {
                 let statusString = `<span style="color: #dc3545; font-weight: bold;">UNPAID</span>`;
+                let calculatedRowEarnings = parseInt(log.paidBoxes || 0, 10) * currentPricePerBox;
+
+                totalReportBoxes += parseInt(log.totalBoxes || 0, 10);
+
                 if (log.isPaid) {
+                    calculatedRowEarnings = parseFloat(log.amountPaid || 0);
+                    totalReportAmount += calculatedRowEarnings;
                     const timePaidText = log.timePaid ? ` at ${log.timePaid}` : '';
                     statusString = `<span style="color: #198754; font-weight: bold;">PAID</span><br>
-                                    <small style="color: #198754; font-size:11px;">Ksh ${Number(log.amountPaid || 0).toLocaleString()}<br>${formatDateDisplay(log.datePaid || "")}${timePaidText}</small>`;
+                                    <small style="color: #198754; font-size:11px;">Ksh ${Number(calculatedRowEarnings).toLocaleString()}<br>${formatDateDisplay(log.datePaid || "")}${timePaidText}</small>`;
+                } else {
+                    totalReportAmount += calculatedRowEarnings;
+                    statusString = `<span style="color: #b45309; font-weight: bold;">UNPAID</span><br>
+                                    <small style="color: #b45309; font-size:11px;">Owed: Ksh ${Number(calculatedRowEarnings).toLocaleString()}</small>`;
                 }
 
                 tableRowsHTML += `
                     <tr style="border-bottom: 1px solid #e2e8f0;">
                         <td style="padding: 10px 8px; vertical-align: top; width: 30%;">
-                            <div style="font-weight: bold; color: #1e293b; font-size: 14px;">${escapeHtml(log.employeeName || "-")}</div>
-                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${escapeHtml(log.vehiclePlate || "-")}</div>
+                            <div style="font-weight: bold; color: #1e293b; font-size: 13px;">${escapeHtml(log.employeeName || "-")}</div>
+                            <div style="font-size: 11px; color: #64748b; font-family: monospace; margin-top: 2px;">${escapeHtml(log.vehiclePlate || "-")}</div>
                         </td>
-                        <td style="padding: 10px 8px; vertical-align: top; color: #475569; font-size: 13px; width: 25%;">
+                        <td style="padding: 10px 8px; vertical-align: top; color: #475569; font-size: 12px; width: 25%;">
                             ${formatDateDisplay(log.dateWorked || "")}
                             ${log.timeCreatedStr ? `<br><small style="color: #94a3b8; font-size: 11px;">${log.timeCreatedStr}</small>` : ''}
                         </td>
-                        <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 20%;">
+                        <td style="padding: 10px 8px; vertical-align: top; font-size: 12px; width: 20%;">
                             <span style="color: #64748b;">Offload:</span> <strong>${log.totalBoxes || 0}</strong><br>
                             <span style="color: #64748b;">Payable:</span> <strong style="color: #0d6efd;">${log.paidBoxes || 0}</strong>
                         </td>
-                        <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 25%;">${statusString}</td>
+                        <td style="padding: 10px 8px; vertical-align: top; font-size: 12px; width: 25%;">${statusString}</td>
                     </tr>
                 `;
             });
 
+            // ADD HIGHLY DETAILED REPORT FINANCIAL HIGHLIGHTS SECTION INSIDE THE PDF
             workerContainer.innerHTML += `
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; text-align: left;">
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; text-align: left;">
                     <thead>
                         <tr style="background-color: #f8fafc; border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 13px;">
                             <th style="padding: 10px 8px; font-weight: 600;">Employee / Vehicle</th>
                             <th style="padding: 10px 8px; font-weight: 600;">Date Worked</th>
-                            <th style="padding: 10px 8px; font-weight: 600;">Boxes</th>
+                            <th style="padding: 10px 8px; font-weight: 600;">Boxes Layout</th>
                             <th style="padding: 10px 8px; font-weight: 600;">Status Details</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${tableRowsHTML}
                     </tbody>
+                    <tfoot>
+                        <tr style="background-color: #f8fafc; border-top: 2px solid #cbd5e1; font-size: 13px; font-weight: bold;">
+                            <td colspan="2" style="padding: 12px 8px; text-align: right; color: #334155;">Report Totals Summary:</td>
+                            <td style="padding: 12px 8px; color: #0d6efd;">Boxes: ${totalReportBoxes.toLocaleString()}</td>
+                            <td style="padding: 12px 8px; color: #198754;">Val: Ksh ${totalReportAmount.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
                 </table>
             `;
 
             workerContainer.innerHTML += `
-                <div style="border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 30px; text-align: center; color: #64748b; font-size: 11px;">
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 15px; margin-top: 40px; text-align: center; color: #64748b; font-size: 11px;">
                     <p style="margin: 0;">Meru Offload Logistics Management System — Generated securely from cloud archive.</p>
                 </div>
             `;
 
             const options = {
-                margin:       [15, 15, 15, 15], 
+                margin:       [12, 12, 12, 12], 
                 filename:     `Meru_Offload_Report_${reportChoice.toLowerCase()}_${currentDateTime.toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
+            // Execute isolated render matrix chain cleanly
             html2pdf().set(options).from(workerContainer).save()
             .then(() => {
                 pdfBtn.disabled = false;
