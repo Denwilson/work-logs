@@ -100,7 +100,7 @@
             animation: pulse-animation 1.8s infinite;
         }
         @keyframes pulse-animation {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            0 { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
         }
@@ -1038,6 +1038,7 @@
             }
         }
 
+        /* FIXED COMPREHENSIVE GENERATION METHOD FOR HUGE DATA ARCHIVES */
         function generatePDF() {
             if (globalLogsArray.length === 0) {
                 alert("There are no records to export.");
@@ -1065,10 +1066,12 @@
             pdfBtn.disabled = true;
             pdfBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Generating...`;
 
+            // Setup dedicated rendering canvas element context structure
             const workerContainer = document.createElement('div');
-            workerContainer.style.padding = '20px';
+            workerContainer.style.padding = '10px';
             workerContainer.style.backgroundColor = '#ffffff';
             workerContainer.style.fontFamily = 'Arial, sans-serif';
+            workerContainer.style.width = '100%';
 
             const currentDateTime = new Date();
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
@@ -1099,8 +1102,9 @@
                                     <small style="color: #198754; font-size:11px;">Ksh ${Number(log.amountPaid || 0).toLocaleString()}<br>${formatDateDisplay(log.datePaid || "")}${timePaidText}</small>`;
                 }
 
+                // Force layout configurations ensuring rows do not splinter across sheet partitions mid-line
                 tableRowsHTML += `
-                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                         <td style="padding: 10px 8px; vertical-align: top; width: 30%;">
                             <div style="font-weight: bold; color: #1e293b; font-size: 14px;">${escapeHtml(log.employeeName || "-")}</div>
                             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${escapeHtml(log.vehiclePlate || "-")}</div>
@@ -1135,17 +1139,19 @@
             `;
 
             workerContainer.innerHTML += `
-                <div style="border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 30px; text-align: center; color: #64748b; font-size: 11px;">
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 30px; text-align: center; color: #64748b; font-size: 11px; page-break-inside: avoid;">
                     <p style="margin: 0;">Meru Offload Logistics Management System — Generated securely from cloud archive.</p>
                 </div>
             `;
 
+            // Active advanced compilation pagination layout configurations
             const options = {
-                margin:       [15, 15, 15, 15], 
+                margin:       [10, 10, 10, 10], 
                 filename:     `Meru_Offload_Report_${currentDateTime.toISOString().slice(0,10)}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
             };
 
             html2pdf().set(options).from(workerContainer).save()
