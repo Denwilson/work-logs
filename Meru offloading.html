@@ -14,7 +14,6 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            /* Prevents the fixed navbar from overlapping content */
             padding-top: 85px; 
         }
         .main-content {
@@ -58,7 +57,7 @@
             animation: MultiColorNavbarAnimation 60s ease infinite;
             border-bottom: 4px solid #ffc107;
             padding: 12px 0;
-            z-index: 1030; /* Ensures it stays on top of other elements */
+            z-index: 1030; 
         }
         @keyframes MultiColorNavbarAnimation {
             0% { background-position: 0% 50%; }
@@ -111,7 +110,6 @@
             white-space: nowrap;
         }
         
-        /* NETWORK CONTROLLED BLINKING INDICATOR DOT */
         .pulse-dot {
             width: 10px;
             height: 10px;
@@ -142,7 +140,6 @@
             font-size: 0.85rem;
         }
         
-        /* Ensure layout alignment inside printing output ignores fixed navbar offset */
         @media print {
             body {
                 padding-top: 0 !important;
@@ -163,6 +160,11 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav align-items-lg-center gap-2 me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()">
+                            <i class="bi bi-people-fill text-warning"></i> Manage Team
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-collection-fill text-primary"></i> Filter Archives
@@ -383,6 +385,46 @@
         </div>
     </div>
 
+    <div class="modal fade" id="rosterRegistryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill text-warning me-2"></i>System Member Registry</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="card bg-light border p-3 mb-4">
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill me-1 text-primary"></i>Register New Member</h6>
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <input type="text" id="newRegistryWorkerName" class="form-control" placeholder="Enter full worker name">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add Member</button>
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2"><i class="bi bi-shield-exclamation"></i> Names must be unique. Existing records will be protected.</small>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-2">Configured Roster Members</h6>
+                    <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Full Name</th>
+                                    <th class="text-center no-print" style="width: 100px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rosterRegistryTableBody">
+                                <tr><td colspan="2" class="text-center py-3 text-muted">Loading registry components...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade no-print" id="securityLockModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 shadow">
@@ -476,11 +518,11 @@
 
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
-        const MASTER_EMPLOYEES = ["Bornie", "Brian", "Christopha", "Duncan", "DW", "Eliud", "Festo", "Ian", "James", "Muriuki", "Phini", "Roy", "Thuranira"];
         const SECRET_CODE = "den1472";
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
         
         let globalLogsArray = [];
+        let masterDynamicWorkersArray = [];
         let globalAttendanceObj = {};
         let currentPricePerBox = 1;
         let pendingActionCallback = null;
@@ -493,13 +535,11 @@
                 if(e.key === 'Enter') submitSecurityVerification();
             });
 
-            // REAL-TIME NETWORK MONITOR SETUP
             window.addEventListener('online', updateNetworkIndicatorStatus);
             window.addEventListener('offline', updateNetworkIndicatorStatus);
-            updateNetworkIndicatorStatus(); // Initial setup run
+            updateNetworkIndicatorStatus(); 
         });
 
-        // Smart Connection Sentinel Monitor
         function updateNetworkIndicatorStatus() {
             const dot = document.getElementById('terminalPulseDot');
             const label = document.getElementById('terminalBadgeText');
@@ -515,7 +555,6 @@
             }
         }
 
-        // 45 Minute Security Gate System
         function runWithSecurityGate(callbackAction) {
             const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
             const now = Date.now();
@@ -559,7 +598,6 @@
             }
         }
 
-        // Live Clock Loop
         document.getElementById('dateWorked').valueAsDate = new Date();
         setInterval(() => {
             const now = new Date();
@@ -587,27 +625,114 @@
             }
         }
 
+        /* DYNAMIC WORKER REGISTRY CONTROLLER BLOCK */
+        function renderRosterRegistryManagementTable() {
+            const tbody = document.getElementById('rosterRegistryTableBody');
+            tbody.innerHTML = '';
+
+            if (masterDynamicWorkersArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No active members configured.</td></tr>`;
+                return;
+            }
+
+            // Sort alphabetically for clean visualization
+            const sortedRegistry = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+
+            sortedRegistry.forEach(worker => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 fw-bold text-dark">${escapeHtml(worker.name)}</td>
+                        <td class="text-center no-print">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistryCloud('${worker.id}', '${escapeHtml(worker.name)}')">
+                                <i class="bi bi-person-x-fill"></i> Drop
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function addNewWorkerToRegistryCloud() {
+            const inputField = document.getElementById('newRegistryWorkerName');
+            const targetName = inputField.value.trim();
+
+            if (!targetName) {
+                alert("Please type a valid employee name before saving.");
+                return;
+            }
+
+            // UNQUENCHABLE DUPLICATION CONSTRAINT RADAR
+            const nameExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === targetName.toLowerCase());
+            if (nameExists) {
+                alert(`Operation Blocked! A member named "${targetName}" is already registered inside the system database.`);
+                return;
+            }
+
+            runWithSecurityGate(() => {
+                const newId = "emp_" + Date.now();
+                const employeeObject = { id: newId, name: targetName };
+
+                fetch(`${FIREBASE_URL}employees/${newId}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(employeeObject),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(() => {
+                    inputField.value = '';
+                    fetchLogsFromCloud(); // Re-trigger root architecture refresh
+                    setTimeout(() => renderRosterRegistryManagementTable(), 400);
+                })
+                .catch(() => alert("Database transmission sync dropped. Check connection."));
+            });
+        }
+
+        function removeWorkerFromRegistryCloud(firebaseId, cleanName) {
+            if (confirm(`Completely drop "${cleanName}" from active rosters?\n\nAll historical work metrics, payments, and generated logs remain locked safely inside database architecture.`)) {
+                runWithSecurityGate(() => {
+                    // 1. Remove from baseline global workforce node
+                    const dropEmployeePromise = fetch(`${FIREBASE_URL}employees/${firebaseId}.json`, { method: 'DELETE' });
+                    // 2. Clear out check-in properties if any
+                    const dropAttendancePromise = fetch(`${FIREBASE_URL}attendance/roster/${cleanName}.json`, { method: 'DELETE' });
+
+                    Promise.all([dropEmployeePromise, dropAttendancePromise])
+                    .then(() => {
+                        fetchLogsFromCloud(); 
+                        setTimeout(() => renderRosterRegistryManagementTable(), 400);
+                    })
+                    .catch(() => alert("Error updating registry clusters."));
+                });
+            }
+        }
+
         function renderAttendanceUiList() {
             const listBody = document.getElementById('attendanceListBody');
             listBody.innerHTML = '';
 
-            MASTER_EMPLOYEES.forEach(worker => {
-                const isChecked = globalAttendanceObj[worker] === true;
+            if (masterDynamicWorkersArray.length === 0) {
+                listBody.innerHTML = `<li class="list-group-item text-center py-3 text-muted">No members registered in database.</li>`;
+                return;
+            }
+
+            const sortedWorkers = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+
+            sortedWorkers.forEach(worker => {
+                const isChecked = globalAttendanceObj[worker.name] === true;
                 listBody.innerHTML += `
                     <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                        <span class="fw-bold ${isChecked ? 'text-dark' : 'text-muted text-decoration-line-through'}">${worker}</span>
+                        <span class="fw-bold ${isChecked ? 'text-dark' : 'text-muted text-decoration-line-through'}">${escapeHtml(worker.name)}</span>
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" role="switch" style="cursor:pointer;" 
-                                ${isChecked ? 'checked' : ''} onchange="toggleAttendanceState('${worker}', this.checked)">
+                                ${isChecked ? 'checked' : ''} onchange="toggleAttendanceState('${worker.name}', this.checked)">
                         </div>
                     </li>`;
             });
         }
 
-        function toggleAttendanceState(worker, isPresent) {
+        function toggleAttendanceState(workerName, isPresent) {
             runWithSecurityGate(() => {
-                let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
-                globalAttendanceObj[worker] = isPresent;
+                let url = `${FIREBASE_URL}attendance/roster/${workerName}.json`;
+                globalAttendanceObj[workerName] = isPresent;
 
                 fetch(url, {
                     method: 'PUT',
@@ -620,7 +745,7 @@
                 })
                 .catch(() => {
                     alert("Network Error updating cloud roster.");
-                    globalAttendanceObj[worker] = !isPresent;
+                    globalAttendanceObj[workerName] = !isPresent;
                     renderAttendanceUiList();
                 });
             });
@@ -629,9 +754,9 @@
         function resetAllAttendanceOffManually() {
             if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
                 runWithSecurityGate(() => {
-                    const clearPromises = MASTER_EMPLOYEES.map(worker => {
-                        globalAttendanceObj[worker] = false;
-                        let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
+                    const clearPromises = masterDynamicWorkersArray.map(worker => {
+                        globalAttendanceObj[worker.name] = false;
+                        let url = `${FIREBASE_URL}attendance/roster/${worker.name}.json`;
                         return fetch(url, {
                             method: 'PUT',
                             body: JSON.stringify(false),
@@ -650,8 +775,8 @@
 
         function updateAttendanceBadgeCounter() {
             let activeCount = 0;
-            MASTER_EMPLOYEES.forEach(emp => {
-                if(globalAttendanceObj[emp] === true) activeCount++;
+            masterDynamicWorkersArray.forEach(emp => {
+                if(globalAttendanceObj[emp.name] === true) activeCount++;
             });
             document.getElementById('navActiveCount').innerText = `${activeCount} Active`;
         }
@@ -660,17 +785,19 @@
             const dropdown = document.getElementById('employeeName');
             dropdown.innerHTML = '<option value="" disabled selected>Select member</option>';
 
-            MASTER_EMPLOYEES.forEach(worker => {
-                if(globalAttendanceObj[worker] === true) {
-                    dropdown.innerHTML += `<option value="${worker}">${worker}</option>`;
+            const sortedWorkers = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            sortedWorkers.forEach(worker => {
+                if(globalAttendanceObj[worker.name] === true) {
+                    dropdown.innerHTML += `<option value="${escapeHtml(worker.name)}">${escapeHtml(worker.name)}</option>`;
                 }
             });
         }
 
         function processStaticAttendanceLoading(attendanceData) {
             let rosterNode = (attendanceData && attendanceData.roster) ? attendanceData.roster : {};
-            MASTER_EMPLOYEES.forEach(worker => {
-                globalAttendanceObj[worker] = rosterNode[worker] === true;
+            globalAttendanceObj = {}; // Clear old traces
+            masterDynamicWorkersArray.forEach(worker => {
+                globalAttendanceObj[worker.name] = rosterNode[worker.name] === true;
             });
             updateAttendanceBadgeCounter();
             rebuildDynamicFormDropdowns();
@@ -764,10 +891,23 @@
                 spinner.innerText = "Loading cloud...";
             }
 
-            fetch(`${FIREBASE_URL}attendance.json`)
+            // 1. Fetch Dynamic Employee Registry Array first
+            fetch(`${FIREBASE_URL}employees.json`)
+            .then(res => res.json())
+            .then(employeesData => {
+                masterDynamicWorkersArray = [];
+                if (employeesData) {
+                    Object.keys(employeesData).forEach(k => {
+                        if (employeesData[k]) masterDynamicWorkersArray.push(employeesData[k]);
+                    });
+                }
+                // 2. Fetch attendance states
+                return fetch(`${FIREBASE_URL}attendance.json`);
+            })
             .then(res => res.json())
             .then(attData => {
                 processStaticAttendanceLoading(attData);
+                // 3. Fetch log database rows
                 return fetch(`${FIREBASE_URL}logs.json`);
             })
             .then(response => response.json())
@@ -840,7 +980,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td class="text-center fw-bold">${badge}</td>
-                        <td class="fw-bold text-dark">${item.name}</td>
+                        <td class="fw-bold text-dark">${escapeHtml(item.name)}</td>
                         <td class="text-end pe-4 fw-bold text-primary">${item.boxes.toLocaleString()} boxes</td>
                     </tr>`;
             });
