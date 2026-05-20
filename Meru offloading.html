@@ -42,12 +42,20 @@
             transform: translateY(-2px);
         }
 
-        /* PREMIUM NAVIGATION MENU DESIGN */
+        /* 10-COLOR MIX GRADIENT LOOP NAVBAR DESIGN */
         .custom-navbar {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            background: linear-gradient(135deg, #0f172a, #1e3a8a, #134e5e, #701a75, #9a3412, #065f46, #1e1b4b, #311042, #581c87, #034f84);
+            background-size: 1000% 1000%;
+            animation: MultiColorNavbarAnimation 28s ease infinite;
             border-bottom: 4px solid #ffc107;
             padding: 12px 0;
         }
+        @keyframes MultiColorNavbarAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .nav-branding {
             font-size: 1.45rem;
             letter-spacing: 1.5px;
@@ -56,8 +64,8 @@
             align-items: center;
         }
         .menu-pill-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 8px;
             padding: 8px 16px;
             color: #e2e8f0 !important;
@@ -71,39 +79,50 @@
             white-space: nowrap;
         }
         .menu-pill-btn:hover, .menu-pill-btn:focus {
-            background: rgba(255, 193, 7, 0.12);
+            background: rgba(255, 193, 7, 0.15);
             border-color: #ffc107;
             color: #ffc107 !important;
         }
         .menu-pill-btn i {
             font-size: 1.05rem;
         }
+        
         .database-pulse-badge {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid rgba(255, 193, 7, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             padding: 8px 16px;
             font-size: 0.85rem;
-            color: #ffc107;
+            color: #ffffff;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             white-space: nowrap;
         }
+        
+        /* NETWORK CONTROLLED BLINKING INDICATOR DOT */
         .pulse-dot {
-            width: 9px;
-            height: 9px;
-            background-color: #ffc107;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
-            animation: pulse-animation 1.8s infinite;
+            transition: all 0.3s ease;
         }
-        @keyframes pulse-animation {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        .pulse-dot.online {
+            background-color: #20c997;
+            box-shadow: 0 0 0 0 rgba(32, 201, 151, 0.7);
+            animation: online-pulse-animation 1.6s infinite;
+        }
+        .pulse-dot.offline {
+            background-color: #dc3545 !important;
+            animation: none !important;
+            box-shadow: none !important;
+        }
+        @keyframes online-pulse-animation {
+            0% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(32, 201, 151, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(32, 201, 151, 0); }
+            100% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(32, 201, 151, 0); }
         }
 
         .activity-banner {
@@ -143,11 +162,6 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#advanceModal" onclick="renderAdvancesUiList()">
-                            <i class="bi bi-cash-coin text-warning"></i> Advances
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#leaderboardModal" onclick="buildLeaderboard()">
                             <i class="bi bi-trophy-fill text-warning"></i> Leaderboard
                         </a>
@@ -171,8 +185,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <div class="database-pulse-badge" id="terminalBadge" style="background: rgba(25, 135, 84, 0.15); border-color: rgba(25, 135, 84, 0.4); color: #20c997;">
-                            <span class="pulse-dot" id="terminalPulseDot" style="background-color: #198754;"></span>
+                        <div class="database-pulse-badge" id="terminalBadge">
+                            <span class="pulse-dot online" id="terminalPulseDot"></span>
                             <span id="terminalBadgeText">System Live</span>
                         </div>
                     </li>
@@ -254,7 +268,7 @@
                 </div>
 
                 <div class="card shadow-sm sticky-top bg-white" style="top: 20px;">
-                    <div class="card-header bg-info text-white py-3">
+                    <div class="card-header bg-dark text-white py-3">
                         <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
                     </div>
                     <div class="card-body p-4">
@@ -270,7 +284,7 @@
                             <label class="form-label fw-semibold">End Date</label>
                             <input type="date" id="filterEndDate" class="form-control">
                         </div>
-                        <button type="button" id="pdfBtn" class="btn btn-dark w-100 py-2 fw-bold" onclick="generatePDF()">
+                        <button type="button" id="pdfBtn" class="btn btn-primary w-100 py-2 fw-bold" onclick="generatePDF()">
                             <i class="bi bi-download me-2"></i>Download PDF Report
                         </button>
                     </div>
@@ -359,7 +373,7 @@
                     <h6 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Verify Identity</h6>
                 </div>
                 <div class="modal-body text-center p-3">
-                    <p class="small text-muted mb-2">Enter secret code to authorize this database changes.</p>
+                    <p class="small text-muted mb-2">Enter secret code to authorize database changes.</p>
                     <input type="password" id="secretSecurityCodeInput" class="form-control text-center fw-bold fs-5 tracking-widest border-2" placeholder="••••••••" autocomplete="off">
                     <div class="text-danger small fw-bold mt-2 d-none" id="securityModalErrorMsg">⚠️ Invalid Code! Try Again.</div>
                 </div>
@@ -380,53 +394,10 @@
                 </div>
                 <div class="modal-body p-0">
                     <div class="p-3 bg-light border-bottom text-muted small d-flex justify-content-between align-items-center">
-                        <span>Check workers <span class="text-success fw-bold">ON</span> to add them to the selection entry form.</span>
+                        <span>Check workers <span class="text-success fw-bold">ON</span> to add them to entry form.</span>
                         <button class="btn btn-xs btn-outline-danger py-0 px-2 small fw-bold text-uppercase" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All Off</button>
                     </div>
                     <ul class="list-group list-group-flush" id="attendanceListBody"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="advanceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title"><i class="bi bi-cash-coin me-2 text-warning"></i>Manage Cash Advances</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="advanceForm" class="mb-4">
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <select id="advanceWorkerName" class="form-select" required>
-                                    <option value="" disabled selected>Select Worker</option>
-                                    <option value="Bornie">Bornie</option>
-                                    <option value="Brian">Brian</option>
-                                    <option value="Christopha">Christopha</option>
-                                    <option value="Duncan">Duncan</option>
-                                    <option value="DW">DW</option>
-                                    <option value="Eliud">Eliud</option>
-                                    <option value="Festo">Festo</option>
-                                    <option value="Ian">Ian</option>
-                                    <option value="James">James</option>
-                                    <option value="Muriuki">Muriuki</option>
-                                    <option value="Phini">Phini</option>
-                                    <option value="Roy">Roy</option>
-                                    <option value="Thuranira">Thuranira</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="number" id="advanceAmount" class="form-control" placeholder="Amount (Ksh)" min="1" required>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-warning w-100"><i class="bi bi-plus-lg"></i></button>
-                            </div>
-                        </div>
-                    </form>
-                    <h6>Active Outstanding Advances</h6>
-                    <ul class="list-group" id="advanceListContainer"></ul>
                 </div>
             </div>
         </div>
@@ -490,10 +461,9 @@
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const MASTER_EMPLOYEES = ["Bornie", "Brian", "Christopha", "Duncan", "DW", "Eliud", "Festo", "Ian", "James", "Muriuki", "Phini", "Roy", "Thuranira"];
         const SECRET_CODE = "den1472";
-        const SESSION_DURATION_MS = 45 * 60 * 1000; // 45 Minutes in milliseconds
+        const SESSION_DURATION_MS = 45 * 60 * 1000; 
         
         let globalLogsArray = [];
-        let globalAdvancesObj = {};
         let globalAttendanceObj = {};
         let currentPricePerBox = 1;
         let pendingActionCallback = null;
@@ -502,22 +472,40 @@
         document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
             
-            // Listen for 'Enter' key inside code field
             document.getElementById('secretSecurityCodeInput').addEventListener('keydown', (e) => {
                 if(e.key === 'Enter') submitSecurityVerification();
             });
+
+            // REAL-TIME NETWORK MONITOR SETUP
+            window.addEventListener('online', updateNetworkIndicatorStatus);
+            window.addEventListener('offline', updateNetworkIndicatorStatus);
+            updateNetworkIndicatorStatus(); // Initial setup run
         });
 
-        // 45 Minute Expiry Session Guard
+        // Smart Connection Sentinel Monitor
+        function updateNetworkIndicatorStatus() {
+            const dot = document.getElementById('terminalPulseDot');
+            const label = document.getElementById('terminalBadgeText');
+            
+            if (navigator.onLine) {
+                dot.classList.remove('offline');
+                dot.classList.add('online');
+                label.innerText = "System Live";
+            } else {
+                dot.classList.remove('online');
+                dot.classList.add('offline');
+                label.innerText = "System Offline";
+            }
+        }
+
+        // 45 Minute Security Gate System
         function runWithSecurityGate(callbackAction) {
             const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
             const now = Date.now();
 
             if (lastSessionVerificationTimestamp && (now - parseInt(lastSessionVerificationTimestamp, 10) < SESSION_DURATION_MS)) {
-                // Session is fresh and within 45 minutes limit
                 callbackAction();
             } else {
-                // Block action, wipe stale storage keys, and throw masked verification box
                 localStorage.removeItem('meru_offload_session_time');
                 pendingActionCallback = callbackAction;
                 document.getElementById('secretSecurityCodeInput').value = '';
@@ -547,7 +535,6 @@
         function cancelSecurityVerification() {
             securityBootstrapModal.hide();
             pendingActionCallback = null;
-            // Clean interface loaders if stuck
             const submitBtn = document.getElementById('submitBtn');
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -555,7 +542,7 @@
             }
         }
 
-        // Live Clock Tick
+        // Live Clock Loop
         document.getElementById('dateWorked').valueAsDate = new Date();
         setInterval(() => {
             const now = new Date();
@@ -639,7 +626,7 @@
                         renderAttendanceUiList();
                         rebuildDynamicFormDropdowns();
                         updateAttendanceBadgeCounter();
-                    }).catch(() => alert("Could not flush server variables. Check line drops."));
+                    }).catch(() => alert("Could not flush server variables."));
                 });
             }
         }
@@ -698,7 +685,7 @@
             );
 
             if (isDuplicate) {
-                alert(`⚠️ DUPLICATE ENTRY BLOCKED!\n\nA record already exists for "${employeeName}" working on vehicle "${vehiclePlate}" on date ${formatDateDisplay(dateWorked)}.`);
+                alert(`⚠️ DUPLICATE ENTRY BLOCKED!\n\nA record already exists for "${employeeName}" on vehicle "${vehiclePlate}" on date ${formatDateDisplay(dateWorked)}.`);
                 return;
             }
 
@@ -746,74 +733,12 @@
                 })
                 .catch(error => {
                     console.error("Firebase Sync Error: ", error);
-                    alert("Cloud Save Error. Please review connections.");
+                    alert("Cloud Save Error.");
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = "Save Record";
                 });
             });
         });
-
-        document.getElementById('advanceForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const worker = document.getElementById('advanceWorkerName').value;
-            const amt = parseFloat(document.getElementById('advanceAmount').value);
-            
-            if(!worker || isNaN(amt) || amt <= 0) return;
-
-            const existingAdvance = globalAdvancesObj[worker] || 0;
-            const updatedTotal = existingAdvance + amt;
-
-            runWithSecurityGate(() => {
-                let url = `${FIREBASE_URL}advances/${worker}.json`;
-                fetch(url, {
-                    method: 'PUT',
-                    body: JSON.stringify(updatedTotal),
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(res => {
-                    document.getElementById('advanceAmount').value = '';
-                    fetchLogsFromCloud();
-                })
-                .catch(() => alert("Access Error mutation logged."));
-            });
-        });
-
-        function removeWorkerAdvanceRecord(worker) {
-            if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
-                runWithSecurityGate(() => {
-                    let url = `${FIREBASE_URL}advances/${worker}.json`;
-                    fetch(url, { method: 'DELETE' })
-                    .then(res => {
-                        fetchLogsFromCloud();
-                    });
-                });
-            }
-        }
-
-        function renderAdvancesUiList() {
-            const container = document.getElementById('advanceListContainer');
-            container.innerHTML = '';
-            
-            let trackerCount = 0;
-            Object.keys(globalAdvancesObj).forEach(worker => {
-                const amount = globalAdvancesObj[worker];
-                if(amount > 0) {
-                    trackerCount++;
-                    container.innerHTML += `
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div><strong class="text-dark">${worker}</strong></div>
-                            <div>
-                                <span class="badge bg-danger rounded-pill me-2 fs-6">Ksh ${amount.toLocaleString()}</span>
-                                <button class="btn btn-sm btn-outline-secondary py-0" onclick="removeWorkerAdvanceRecord('${worker}')"><i class="bi bi-x-lg"></i></button>
-                            </div>
-                        </li>`;
-                }
-            });
-
-            if(trackerCount === 0) {
-                container.innerHTML = `<li class="text-center py-3 text-muted list-group-item">No active layout advances given out.</li>`;
-            }
-        }
 
         function fetchLogsFromCloud() {
             const spinner = document.getElementById('loadingSpinner');
@@ -826,12 +751,6 @@
             .then(res => res.json())
             .then(attData => {
                 processStaticAttendanceLoading(attData);
-                return fetch(`${FIREBASE_URL}advances.json`);
-            })
-            .then(res => res.json())
-            .then(advData => {
-                globalAdvancesObj = advData || {};
-                renderAdvancesUiList();
                 return fetch(`${FIREBASE_URL}logs.json`);
             })
             .then(response => response.json())
@@ -873,10 +792,6 @@
                     runningTotalUnpaid += (parseInt(log.paidBoxes || 0, 10) * currentPricePerBox);
                     runningPendingCount++;
                 }
-            });
-
-            Object.keys(globalAdvancesObj).forEach(worker => {
-                runningTotalUnpaid -= parseFloat(globalAdvancesObj[worker] || 0);
             });
 
             document.getElementById('statTotalBoxes').innerText = runningTotalBoxes.toLocaleString();
@@ -1106,7 +1021,7 @@
         }
 
         function deleteIndividualRecord(recordId) {
-            if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
+            if (confirm("Are you sure you want to permanently delete this paid work record?")) {
                 runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}logs/${recordId}.json`;
                     fetch(url, { method: 'DELETE' })
@@ -1153,7 +1068,7 @@
             });
 
             if (filteredLogs.length === 0) {
-                alert("No records match your selected choices and date configurations.");
+                alert("No records match your selected configs.");
                 return;
             }
 
@@ -1229,25 +1144,6 @@
                 `;
             });
 
-            let advanceRowsHTML = '';
-            let totalAdvancesDeduction = 0;
-
-            Object.keys(globalAdvancesObj).forEach(worker => {
-                const advanceAmt = parseFloat(globalAdvancesObj[worker] || 0);
-                if (advanceAmt > 0) {
-                    if (!nameFilter || worker.toLowerCase().includes(nameFilter)) {
-                        totalAdvancesDeduction += advanceAmt;
-                        advanceRowsHTML += `
-                            <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 13px; color: #b91c1c;">
-                                <td colspan="2" style="padding: 8px; font-weight: 600;">Cash Advance Outstanding Block — ${worker}</td>
-                                <td colspan="2" style="padding: 8px; text-end; font-weight: bold; text-align: right;">- Ksh ${advanceAmt.toLocaleString()}</td>
-                            </tr>`;
-                    }
-                }
-            });
-
-            const finalNetPayoutResult = summaryTotalAmount - totalAdvancesDeduction;
-
             workerContainer.innerHTML += `
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; text-align: left;">
                     <thead>
@@ -1260,21 +1156,14 @@
                     </thead>
                     <tbody>
                         ${tableRowsHTML}
-                        <tr style="background-color: #f1f5f9; border-top: 2px solid #94a3b8; font-size: 13px; color: #1e293b;">
-                            <td colspan="2" style="padding: 10px 8px; font-weight: bold;">Gross Volume & Financial Totals:</td>
-                            <td style="padding: 10px 8px; font-weight: bold;">
-                                Vol: ${summaryTotalBoxes.toLocaleString()}<br>
-                                <span style="color:#0d6efd;">Pay: ${summaryTotalPayableBoxes.toLocaleString()}</span>
-                            </td>
-                            <td style="padding: 10px 8px; font-weight: bold; color: #16a34a;">
-                                Ksh ${summaryTotalAmount.toLocaleString()}
-                            </td>
-                        </tr>
-                        ${advanceRowsHTML}
                         <tr style="background-color: #0f172a; color: #ffffff; font-size: 14px;">
-                            <td colspan="2" style="padding: 12px 8px; font-weight: bold; text-transform: uppercase; letter-spacing:0.5px;">Net Final Balance Summary (Minus Advances):</td>
-                            <td colspan="2" style="padding: 12px 8px; font-weight: bold; text-align: right; font-size: 16px; color: #f59e0b;">
-                                Ksh ${(finalNetPayoutResult < 0 ? 0 : finalNetPayoutResult).toLocaleString()}
+                            <td colspan="2" style="padding: 12px 8px; font-weight: bold; text-transform: uppercase; letter-spacing:0.5px;">Net Final Balance Summary:</td>
+                            <td style="padding: 12px 8px; font-weight: bold; font-size: 13px; color: #94a3b8;">
+                                Vol: ${summaryTotalBoxes.toLocaleString()}<br>
+                                Pay: ${summaryTotalPayableBoxes.toLocaleString()}
+                            </td>
+                            <td style="padding: 12px 8px; font-weight: bold; text-align: right; font-size: 16px; color: #f59e0b; vertical-align: middle;">
+                                Ksh ${summaryTotalAmount.toLocaleString()}
                             </td>
                         </tr>
                     </tbody>
