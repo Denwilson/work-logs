@@ -42,7 +42,7 @@
             transform: translateY(-2px);
         }
 
-        /* PREMIUM RESTRUCTURED NAVIGATION MENU DESIGN */
+        /* PREMIUM NAVIGATION MENU DESIGN */
         .custom-navbar {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
             border-bottom: 4px solid #ffc107;
@@ -79,12 +79,12 @@
             font-size: 1.05rem;
         }
         .database-pulse-badge {
-            background: rgba(25, 135, 84, 0.15);
-            border: 1px solid rgba(25, 135, 84, 0.4);
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
             border-radius: 8px;
             padding: 8px 16px;
             font-size: 0.85rem;
-            color: #20c997;
+            color: #ffc107;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -94,16 +94,16 @@
         .pulse-dot {
             width: 9px;
             height: 9px;
-            background-color: #198754;
+            background-color: #ffc107;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+            box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
             animation: pulse-animation 1.8s infinite;
         }
         @keyframes pulse-animation {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
         }
 
         .activity-banner {
@@ -167,14 +167,14 @@
 
                 <ul class="navbar-nav align-items-lg-center gap-2 mt-2 mt-lg-0">
                     <li class="nav-item">
-                        <a class="menu-pill-btn class=bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
+                        <a class="menu-pill-btn bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
                             <i class="bi bi-arrow-clockwise"></i> Force Sync
                         </a>
                     </li>
                     <li class="nav-item">
                         <div class="database-pulse-badge" id="terminalBadge">
-                            <span class="pulse-dot"></span>
-                            <span id="terminalBadgeText">Cloud Terminal</span>
+                            <span class="pulse-dot" id="terminalPulseDot"></span>
+                            <span id="terminalBadgeText">Connecting Auth...</span>
                         </div>
                     </li>
                 </ul>
@@ -358,7 +358,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-info text-dark">
                     <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check-fill me-2"></i>Daily Shift Check-In</h5>
-                    <button type="button" class="btn-close" data-bs-toggle="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
                     <div class="p-3 bg-light border-bottom text-muted small d-flex justify-content-between align-items-center">
@@ -414,30 +414,12 @@
         </div>
     </div>
 
-    <div class="modal fade" id="rateModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i>Box Payout Rate</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Price per Box (Ksh)</label>
-                        <input type="number" id="configBoxRateInput" class="form-control" value="1" min="0.1" step="0.1">
-                    </div>
-                    <button class="btn btn-success w-100" onclick="updateGlobalBoxRate()">Apply Rate Updates</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="modal fade" id="leaderboardModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title fw-bold"><i class="bi bi-trophy-fill me-2"></i>Team Performance Leaderboard</h5>
-                    <button type="button" class="btn-close" data-bs-toggle="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
                     <table class="table table-striped mb-0 align-middle">
@@ -488,43 +470,63 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Minimal configuration object to initialize auth services correctly
         const firebaseConfig = {
             databaseURL: "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/"
         };
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Administration Verification Gateways
-        window.ensureAdminAuthenticated = function() {
-            return new Promise((resolve, reject) => {
-                if (auth.currentUser && auth.currentUser.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
-                    resolve(true);
-                } else {
-                    const email = prompt("Enter Administrator Email Account:");
-                    if (!email) { reject("Authentication cancelled."); return; }
-                    const password = prompt("Enter Security Console Access Password:");
-                    if (!password) { reject("Authentication cancelled."); return; }
+        // CHANGE THESE TO YOUR SECURE FIREBASE ADMIN USER ACCOUNT DETAILS
+        const ADMIN_EMAIL = "your-email@example.com"; 
+        const ADMIN_PASSWORD = "your-secure-password"; 
 
-                    signInWithEmailAndPassword(auth, email, password)
-                        .then((userCredential) => {
-                            if (userCredential.user.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
-                                document.getElementById('terminalBadgeText').innerText = "Admin Authorized";
-                                document.getElementById('terminalBadge').style.borderColor = "#ffc107";
-                                document.getElementById('terminalBadge').style.color = "#ffc107";
-                                resolve(true);
-                            } else {
-                                reject("Authorized profile mismatched.");
-                            }
-                        })
-                        .catch(err => {
-                            alert("Access Rejected: Invalid administrative payload credentials.");
-                            reject(err);
-                        });
+        // Authenticate the browser session silently on script execution
+        signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD)
+            .then((userCredential) => {
+                if (userCredential.user.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
+                    updateAuthBadgeStatus(true, "Admin Active");
+                } else {
+                    updateAuthBadgeStatus(false, "UID Mismatch");
                 }
+            })
+            .catch(err => {
+                console.error("Auth Failure:", err.message);
+                updateAuthBadgeStatus(false, "Viewer Mode");
             });
+
+        function updateAuthBadgeStatus(isSuccess, messageText) {
+            const badge = document.getElementById('terminalBadge');
+            const badgeText = document.getElementById('terminalBadgeText');
+            const dot = document.getElementById('terminalPulseDot');
+            
+            if (!badge || !badgeText || !dot) return;
+            
+            badgeText.innerText = messageText;
+            if (isSuccess) {
+                badge.style.background = "rgba(25, 135, 84, 0.15)";
+                badge.style.borderColor = "rgba(25, 135, 84, 0.4)";
+                badge.style.color = "#20c997";
+                dot.style.backgroundColor = "#198754";
+                dot.style.boxShadow = "0 0 0 0 rgba(25, 135, 84, 0.7)";
+            } else {
+                badge.style.background = "rgba(108, 117, 125, 0.15)";
+                badge.style.borderColor = "rgba(108, 117, 125, 0.4)";
+                badge.style.color = "#6c757d";
+                dot.style.backgroundColor = "#6c757d";
+                dot.style.boxShadow = "none";
+                dot.style.animation = "none";
+            }
+        }
+
+        // Attach token helper to window context for plain fetch network requests
+        window.getAuthTokenString = function() {
+            if (auth.currentUser) {
+                return auth.currentUser.getIdToken();
+            }
+            return Promise.resolve(null);
         };
     </script>
 
@@ -565,23 +567,6 @@
             }
         }
 
-        function updateGlobalBoxRate() {
-            const targetRate = parseFloat(document.getElementById('configBoxRateInput').value);
-            if(isNaN(targetRate) || targetRate <= 0) {
-                alert("Please declare a valid box premium value setup.");
-                return;
-            }
-            currentPricePerBox = targetRate;
-            document.getElementById('menuCurrentRate').innerText = `Ksh ${targetRate}`;
-            
-            const modalElement = document.getElementById('rateModal');
-            const modalInstance = bootstrap.Modal.getInstance(modalElement);
-            if(modalInstance) modalInstance.hide();
-            
-            calculateDashboardAnalytics();
-            handleLiveSearchFilter();
-        }
-
         function renderAttendanceUiList() {
             const listBody = document.getElementById('attendanceListBody');
             listBody.innerHTML = '';
@@ -600,29 +585,38 @@
         }
 
         function toggleAttendanceState(worker, isPresent) {
-            window.ensureAdminAuthenticated().then(() => {
+            window.getAuthTokenString().then(token => {
+                let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
+                if(token) url += `?auth=${token}`;
+
                 globalAttendanceObj[worker] = isPresent;
-                
-                fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(isPresent),
                     headers: { 'Content-Type': 'application/json' }
                 })
-                .then(() => {
+                .then(res => {
+                    if (!res.ok) throw new Error("Unauthorized");
                     rebuildDynamicFormDropdowns();
                     updateAttendanceBadgeCounter();
+                })
+                .catch(() => {
+                    alert("Write Denied: Admin session missing or invalid rules check.");
+                    globalAttendanceObj[worker] = !isPresent;
+                    renderAttendanceUiList();
                 });
-            }).catch(() => {
-                renderAttendanceUiList(); 
             });
         }
 
         function resetAllAttendanceOffManually() {
-            window.ensureAdminAuthenticated().then(() => {
-                if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
+            if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
+                window.getAuthTokenString().then(token => {
                     const clearPromises = MASTER_EMPLOYEES.map(worker => {
                         globalAttendanceObj[worker] = false;
-                        return fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                        let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
+                        if(token) url += `?auth=${token}`;
+
+                        return fetch(url, {
                             method: 'PUT',
                             body: JSON.stringify(false),
                             headers: { 'Content-Type': 'application/json' }
@@ -633,9 +627,9 @@
                         renderAttendanceUiList();
                         rebuildDynamicFormDropdowns();
                         updateAttendanceBadgeCounter();
-                    });
-                }
-            });
+                    }).catch(() => alert("Operation restricted to database owner."));
+                });
+            }
         }
 
         function updateAttendanceBadgeCounter() {
@@ -697,53 +691,58 @@
                 return;
             }
 
-            window.ensureAdminAuthenticated().then(() => {
-                submitBtn.disabled = true;
-                submitBtn.innerText = "Saving to Cloud...";
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving to Cloud...";
 
-                const recordId = "log_" + Date.now();
-                const now = new Date();
-                const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const recordId = "log_" + Date.now();
+            const now = new Date();
+            const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-                const newLog = {
-                    id: recordId, 
-                    employeeName,
-                    vehiclePlate,
-                    dateWorked, 
-                    totalBoxes,    
-                    paidBoxes,     
-                    isPaid: false,
-                    amountPaid: 0,    
-                    datePaid: null,
-                    timePaid: null,
-                    timestampCreated: Date.now(), 
-                    timeCreatedStr: currentTimeStr
-                };
+            const newLog = {
+                id: recordId, 
+                employeeName,
+                vehiclePlate,
+                dateWorked, 
+                totalBoxes,    
+                paidBoxes,     
+                isPaid: false,
+                amountPaid: 0,    
+                datePaid: null,
+                timePaid: null,
+                timestampCreated: Date.now(), 
+                timeCreatedStr: currentTimeStr
+            };
 
-                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+            window.getAuthTokenString().then(token => {
+                let url = `${FIREBASE_URL}logs/${recordId}.json`;
+                if(token) url += `?auth=${token}`;
+
+                return fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(newLog),
                     headers: { 'Content-Type': 'application/json' }
-                })
-                .then(response => response.json())
-                .then(() => {
-                    document.getElementById('employeeName').selectedIndex = 0; 
-                    document.getElementById('vehiclePlate').value = '';
-                    document.getElementById('totalBoxes').value = '';
-                    document.getElementById('paidBoxesSelection').value = 'ALL';
-                    togglePaidBoxesInput();
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = "Save Record";
-                    
-                    fetchLogsFromCloud(); 
-                })
-                .catch(error => {
-                    console.error("Firebase Sync Error: ", error);
-                    alert("Cloud sync failure. Verify network parameters.");
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = "Save Record";
                 });
+            })
+            .then(response => {
+                if(!response.ok) throw new Error("Unauthorized Database Rules Engine");
+                return response.json();
+            })
+            .then(() => {
+                document.getElementById('employeeName').selectedIndex = 0; 
+                document.getElementById('vehiclePlate').value = '';
+                document.getElementById('totalBoxes').value = '';
+                document.getElementById('paidBoxesSelection').value = 'ALL';
+                togglePaidBoxesInput();
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Record";
+                fetchLogsFromCloud(); 
+            })
+            .catch(error => {
+                console.error("Firebase Sync Error: ", error);
+                alert("Permission Denied: Only the verified admin identity can register new data rows.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Record";
             });
         });
 
@@ -754,29 +753,41 @@
             
             if(!worker || isNaN(amt) || amt <= 0) return;
 
-            window.ensureAdminAuthenticated().then(() => {
-                const existingAdvance = globalAdvancesObj[worker] || 0;
-                const updatedTotal = existingAdvance + amt;
+            const existingAdvance = globalAdvancesObj[worker] || 0;
+            const updatedTotal = existingAdvance + amt;
 
-                fetch(`${FIREBASE_URL}advances/${worker}.json`, {
+            window.getAuthTokenString().then(token => {
+                let url = `${FIREBASE_URL}advances/${worker}.json`;
+                if(token) url += `?auth=${token}`;
+
+                return fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(updatedTotal),
                     headers: { 'Content-Type': 'application/json' }
-                })
-                .then(() => {
-                    document.getElementById('advanceAmount').value = '';
-                    fetchLogsFromCloud();
                 });
-            });
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Forbidden");
+                document.getElementById('advanceAmount').value = '';
+                fetchLogsFromCloud();
+            })
+            .catch(() => alert("Access Denied: Advance mutations restricted."));
         });
 
         function removeWorkerAdvanceRecord(worker) {
-            window.ensureAdminAuthenticated().then(() => {
-                if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
-                    fetch(`${FIREBASE_URL}advances/${worker}.json`, { method: 'DELETE' })
-                    .then(() => fetchLogsFromCloud());
-                }
-            });
+            if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
+                window.getAuthTokenString().then(token => {
+                    let url = `${FIREBASE_URL}advances/${worker}.json`;
+                    if(token) url += `?auth=${token}`;
+
+                    return fetch(url, { method: 'DELETE' });
+                })
+                .then(res => {
+                    if(!res.ok) throw new Error("Forbidden");
+                    fetchLogsFromCloud();
+                })
+                .catch(() => alert("Access Denied: Deletions restricted."));
+            }
         }
 
         function renderAdvancesUiList() {
@@ -808,7 +819,7 @@
             const spinner = document.getElementById('loadingSpinner');
             if(spinner) {
                 spinner.classList.remove('d-none');
-                spinner.innerText = "Loading cloud...";
+                spinner.innerText = "Loading cloud... (Read Public)";
             }
 
             fetch(`${FIREBASE_URL}attendance.json`)
@@ -1069,37 +1080,49 @@
         }
 
         function markAsPaid(recordId, explicitTotalEarnings) {
-            window.ensureAdminAuthenticated().then(() => {
-                const today = new Date();
-                const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const today = new Date();
+            const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-                const paymentUpdates = {
-                    isPaid: true,
-                    amountPaid: explicitTotalEarnings,
-                    datePaid: stringifiedDatePaid,
-                    timePaid: currentTimePaidStr,
-                    timestampPaid: Date.now() 
-                };
+            const paymentUpdates = {
+                isPaid: true,
+                amountPaid: explicitTotalEarnings,
+                datePaid: stringifiedDatePaid,
+                timePaid: currentTimePaidStr,
+                timestampPaid: Date.now() 
+            };
 
-                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+            window.getAuthTokenString().then(token => {
+                let url = `${FIREBASE_URL}logs/${recordId}.json`;
+                if(token) url += `?auth=${token}`;
+
+                return fetch(url, {
                     method: 'PATCH',
                     body: JSON.stringify(paymentUpdates),
                     headers: { 'Content-Type': 'application/json' }
-                })
-                .then(() => fetchLogsFromCloud());
-            });
+                });
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Forbidden");
+                fetchLogsFromCloud();
+            })
+            .catch(() => alert("Access Denied: Only authenticated admins can modify payment statuses."));
         }
 
         function deleteIndividualRecord(recordId) {
-            window.ensureAdminAuthenticated().then(() => {
-                if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
-                    fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
-                        method: 'DELETE'
-                    })
-                    .then(() => fetchLogsFromCloud());
-                }
-            });
+            if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
+                window.getAuthTokenString().then(token => {
+                    let url = `${FIREBASE_URL}logs/${recordId}.json`;
+                    if(token) url += `?auth=${token}`;
+
+                    return fetch(url, { method: 'DELETE' });
+                })
+                .then(res => {
+                    if(!res.ok) throw new Error("Forbidden");
+                    fetchLogsFromCloud();
+                })
+                .catch(() => alert("Access Denied: Row deletion restricted."));
+            }
         }
 
         function generatePDF() {
@@ -1127,16 +1150,13 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
 
-            // FILTER LOGS ARRAY
             const filteredLogs = globalLogsArray.filter(log => {
                 const empName = log.employeeName || '';
                 if (nameFilter && !empName.toLowerCase().includes(nameFilter)) return false;
                 if (startDate && log.dateWorked < startDate) return false;
                 if (endDate && log.dateWorked > endDate) return false;
-                
                 if (reportChoice === "PAID" && !log.isPaid) return false;
                 if (reportChoice === "UNPAID" && log.isPaid) return false;
-                
                 return true;
             });
 
@@ -1155,16 +1175,11 @@
             workerContainer.style.fontFamily = 'Arial, sans-serif';
 
             const currentDateTime = new Date();
-            
-            let statusScopeLabel = "Complete Historic Archive";
-            if (reportChoice === "PAID") statusScopeLabel = "Settled Paid Log Claims Only";
-            if (reportChoice === "UNPAID") statusScopeLabel = "Outstanding Unpaid Claims Only";
+            let statusScopeLabel = reportChoice === "PAID" ? "Settled Paid Log Claims Only" : (reportChoice === "UNPAID" ? "Outstanding Unpaid Claims Only" : "Complete Historic Archive");
 
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
             metaInfo += `<br>Record Scope: <strong>${statusScopeLabel}</strong>`;
-            
-            if (nameFilter) metaInfo += `<br>Employee Filter: "${document.getElementById('filterName').value}"`;
-            else metaInfo += `<br>Employee Filter: All Team Members`;
+            metaInfo += nameFilter ? `<br>Employee Filter: "${document.getElementById('filterName').value}"` : `<br>Employee Filter: All Team Members`;
             
             if (startDate || endDate) {
                 metaInfo += `<br>Date Scope: [ ${startDate ? formatDateDisplay(startDate) : 'Beginning'} ] to [ ${endDate ? formatDateDisplay(endDate) : 'Present'} ]`;
@@ -1222,7 +1237,6 @@
                 `;
             });
 
-            // COMPILING HISTORIC ADVANCES SUB-SEGMENT CALCULATIONS FOR THE GENERATED PDF DATA SCOPE
             let advanceRowsHTML = '';
             let totalAdvancesDeduction = 0;
 
@@ -1314,12 +1328,19 @@
         }
 
         function clearAllData() {
-            window.ensureAdminAuthenticated().then(() => {
-                if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
-                    fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
-                    .then(() => fetchLogsFromCloud());
-                }
-            });
+            if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
+                window.getAuthTokenString().then(token => {
+                    let url = `${FIREBASE_URL}logs.json`;
+                    if(token) url += `?auth=${token}`;
+
+                    return fetch(url, { method: 'DELETE' });
+                })
+                .then(res => {
+                    if(!res.ok) throw new Error("Forbidden");
+                    fetchLogsFromCloud();
+                })
+                .catch(() => alert("Access Denied: Reset operation restricted."));
+            }
         }
 
         fetchLogsFromCloud();
