@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="logo.png">
+    <link class="no-print" rel="icon" type="image/png" href="logo.png">
     <title>Meru Offload</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -167,14 +167,14 @@
 
                 <ul class="navbar-nav align-items-lg-center gap-2 mt-2 mt-lg-0">
                     <li class="nav-item">
-                        <a class="menu-pill-btn bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
+                        <a class="menu-pill-btn class=bg-dark border-secondary" href="#" onclick="fetchLogsFromCloud(); return false;">
                             <i class="bi bi-arrow-clockwise"></i> Force Sync
                         </a>
                     </li>
                     <li class="nav-item">
-                        <div class="database-pulse-badge">
+                        <div class="database-pulse-badge" id="terminalBadge">
                             <span class="pulse-dot"></span>
-                            <span>Cloud Terminal</span>
+                            <span id="terminalBadgeText">Cloud Terminal</span>
                         </div>
                     </li>
                 </ul>
@@ -486,6 +486,48 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Minimal configuration object to initialize auth services correctly
+        const firebaseConfig = {
+            databaseURL: "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Administration Verification Gateways
+        window.ensureAdminAuthenticated = function() {
+            return new Promise((resolve, reject) => {
+                if (auth.currentUser && auth.currentUser.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
+                    resolve(true);
+                } else {
+                    const email = prompt("Enter Administrator Email Account:");
+                    if (!email) { reject("Authentication cancelled."); return; }
+                    const password = prompt("Enter Security Console Access Password:");
+                    if (!password) { reject("Authentication cancelled."); return; }
+
+                    signInWithEmailAndPassword(auth, email, password)
+                        .then((userCredential) => {
+                            if (userCredential.user.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
+                                document.getElementById('terminalBadgeText').innerText = "Admin Authorized";
+                                document.getElementById('terminalBadge').style.borderColor = "#ffc107";
+                                document.getElementById('terminalBadge').style.color = "#ffc107";
+                                resolve(true);
+                            } else {
+                                reject("Authorized profile mismatched.");
+                            }
+                        })
+                        .catch(err => {
+                            alert("Access Rejected: Invalid administrative payload credentials.");
+                            reject(err);
+                        });
+                }
+            });
+        };
+    </script>
+
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const MASTER_EMPLOYEES = ["Bornie", "Brian", "Christopha", "Duncan", "DW", "Eliud", "Festo", "Ian", "James", "Muriuki", "Phini", "Roy", "Thuranira"];
@@ -558,36 +600,42 @@
         }
 
         function toggleAttendanceState(worker, isPresent) {
-            globalAttendanceObj[worker] = isPresent;
-            
-            fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
-                method: 'PUT',
-                body: JSON.stringify(isPresent),
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(() => {
-                rebuildDynamicFormDropdowns();
-                updateAttendanceBadgeCounter();
+            window.ensureAdminAuthenticated().then(() => {
+                globalAttendanceObj[worker] = isPresent;
+                
+                fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(isPresent),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(() => {
+                    rebuildDynamicFormDropdowns();
+                    updateAttendanceBadgeCounter();
+                });
+            }).catch(() => {
+                renderAttendanceUiList(); 
             });
         }
 
         function resetAllAttendanceOffManually() {
-            if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
-                const clearPromises = MASTER_EMPLOYEES.map(worker => {
-                    globalAttendanceObj[worker] = false;
-                    return fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
-                        method: 'PUT',
-                        body: JSON.stringify(false),
-                        headers: { 'Content-Type': 'application/json' }
+            window.ensureAdminAuthenticated().then(() => {
+                if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
+                    const clearPromises = MASTER_EMPLOYEES.map(worker => {
+                        globalAttendanceObj[worker] = false;
+                        return fetch(`${FIREBASE_URL}attendance/roster/${worker}.json`, {
+                            method: 'PUT',
+                            body: JSON.stringify(false),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
                     });
-                });
 
-                Promise.all(clearPromises).then(() => {
-                    renderAttendanceUiList();
-                    rebuildDynamicFormDropdowns();
-                    updateAttendanceBadgeCounter();
-                });
-            }
+                    Promise.all(clearPromises).then(() => {
+                        renderAttendanceUiList();
+                        rebuildDynamicFormDropdowns();
+                        updateAttendanceBadgeCounter();
+                    });
+                }
+            });
         }
 
         function updateAttendanceBadgeCounter() {
@@ -649,51 +697,53 @@
                 return;
             }
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Saving to Cloud...";
+            window.ensureAdminAuthenticated().then(() => {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Saving to Cloud...";
 
-            const recordId = "log_" + Date.now();
-            const now = new Date();
-            const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const recordId = "log_" + Date.now();
+                const now = new Date();
+                const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            const newLog = {
-                id: recordId, 
-                employeeName,
-                vehiclePlate,
-                dateWorked, 
-                totalBoxes,    
-                paidBoxes,     
-                isPaid: false,
-                amountPaid: 0,    
-                datePaid: null,
-                timePaid: null,
-                timestampCreated: Date.now(), 
-                timeCreatedStr: currentTimeStr
-            };
+                const newLog = {
+                    id: recordId, 
+                    employeeName,
+                    vehiclePlate,
+                    dateWorked, 
+                    totalBoxes,    
+                    paidBoxes,     
+                    isPaid: false,
+                    amountPaid: 0,    
+                    datePaid: null,
+                    timePaid: null,
+                    timestampCreated: Date.now(), 
+                    timeCreatedStr: currentTimeStr
+                };
 
-            fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
-                method: 'PUT',
-                body: JSON.stringify(newLog),
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => response.json())
-            .then(() => {
-                document.getElementById('employeeName').selectedIndex = 0; 
-                document.getElementById('vehiclePlate').value = '';
-                document.getElementById('totalBoxes').value = '';
-                document.getElementById('paidBoxesSelection').value = 'ALL';
-                togglePaidBoxesInput();
-                
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
-                
-                fetchLogsFromCloud(); 
-            })
-            .catch(error => {
-                console.error("Firebase Sync Error: ", error);
-                alert("Cloud sync failure. Verify internet access configurations.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
+                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(newLog),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById('employeeName').selectedIndex = 0; 
+                    document.getElementById('vehiclePlate').value = '';
+                    document.getElementById('totalBoxes').value = '';
+                    document.getElementById('paidBoxesSelection').value = 'ALL';
+                    togglePaidBoxesInput();
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "Save Record";
+                    
+                    fetchLogsFromCloud(); 
+                })
+                .catch(error => {
+                    console.error("Firebase Sync Error: ", error);
+                    alert("Cloud sync failure. Verify network parameters.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "Save Record";
+                });
             });
         });
 
@@ -704,25 +754,29 @@
             
             if(!worker || isNaN(amt) || amt <= 0) return;
 
-            const existingAdvance = globalAdvancesObj[worker] || 0;
-            const updatedTotal = existingAdvance + amt;
+            window.ensureAdminAuthenticated().then(() => {
+                const existingAdvance = globalAdvancesObj[worker] || 0;
+                const updatedTotal = existingAdvance + amt;
 
-            fetch(`${FIREBASE_URL}advances/${worker}.json`, {
-                method: 'PUT',
-                body: JSON.stringify(updatedTotal),
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(() => {
-                document.getElementById('advanceAmount').value = '';
-                fetchLogsFromCloud();
+                fetch(`${FIREBASE_URL}advances/${worker}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedTotal),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(() => {
+                    document.getElementById('advanceAmount').value = '';
+                    fetchLogsFromCloud();
+                });
             });
         });
 
         function removeWorkerAdvanceRecord(worker) {
-            if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
-                fetch(`${FIREBASE_URL}advances/${worker}.json`, { method: 'DELETE' })
-                .then(() => fetchLogsFromCloud());
-            }
+            window.ensureAdminAuthenticated().then(() => {
+                if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
+                    fetch(`${FIREBASE_URL}advances/${worker}.json`, { method: 'DELETE' })
+                    .then(() => fetchLogsFromCloud());
+                }
+            });
         }
 
         function renderAdvancesUiList() {
@@ -1015,33 +1069,37 @@
         }
 
         function markAsPaid(recordId, explicitTotalEarnings) {
-            const today = new Date();
-            const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            window.ensureAdminAuthenticated().then(() => {
+                const today = new Date();
+                const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            const paymentUpdates = {
-                isPaid: true,
-                amountPaid: explicitTotalEarnings,
-                datePaid: stringifiedDatePaid,
-                timePaid: currentTimePaidStr,
-                timestampPaid: Date.now() 
-            };
+                const paymentUpdates = {
+                    isPaid: true,
+                    amountPaid: explicitTotalEarnings,
+                    datePaid: stringifiedDatePaid,
+                    timePaid: currentTimePaidStr,
+                    timestampPaid: Date.now() 
+                };
 
-            fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
-                method: 'PATCH',
-                body: JSON.stringify(paymentUpdates),
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(() => fetchLogsFromCloud());
+                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(paymentUpdates),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(() => fetchLogsFromCloud());
+            });
         }
 
         function deleteIndividualRecord(recordId) {
-            if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
-                fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
-                    method: 'DELETE'
-                })
-                .then(() => fetchLogsFromCloud());
-            }
+            window.ensureAdminAuthenticated().then(() => {
+                if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
+                    fetch(`${FIREBASE_URL}logs/${recordId}.json`, {
+                        method: 'DELETE'
+                    })
+                    .then(() => fetchLogsFromCloud());
+                }
+            });
         }
 
         function generatePDF() {
@@ -1256,10 +1314,12 @@
         }
 
         function clearAllData() {
-            if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
-                fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
-                .then(() => fetchLogsFromCloud());
-            }
+            window.ensureAdminAuthenticated().then(() => {
+                if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
+                    fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
+                    .then(() => fetchLogsFromCloud());
+                }
+            });
         }
 
         fetchLogsFromCloud();
