@@ -171,9 +171,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <div class="database-pulse-badge" id="terminalBadge">
-                            <span class="pulse-dot" id="terminalPulseDot"></span>
-                            <span id="terminalBadgeText">Connecting Auth...</span>
+                        <div class="database-pulse-badge" id="terminalBadge" style="background: rgba(25, 135, 84, 0.15); border-color: rgba(25, 135, 84, 0.4); color: #20c997;">
+                            <span class="pulse-dot" id="terminalPulseDot" style="background-color: #198754;"></span>
+                            <span id="terminalBadgeText">System Live</span>
                         </div>
                     </li>
                 </ul>
@@ -352,6 +352,25 @@
         </div>
     </div>
 
+    <div class="modal fade no-print" id="securityLockModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Verify Identity</h6>
+                </div>
+                <div class="modal-body text-center p-3">
+                    <p class="small text-muted mb-2">Enter secret code to authorize this database changes.</p>
+                    <input type="password" id="secretSecurityCodeInput" class="form-control text-center fw-bold fs-5 tracking-widest border-2" placeholder="••••••••" autocomplete="off">
+                    <div class="text-danger small fw-bold mt-2 d-none" id="securityModalErrorMsg">⚠️ Invalid Code! Try Again.</div>
+                </div>
+                <div class="modal-footer p-2 border-0 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-secondary px-3" onclick="cancelSecurityVerification()">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-danger px-3 fw-bold" onclick="submitSecurityVerification()">Verify</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -467,83 +486,77 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-        const firebaseConfig = {
-            databaseURL: "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        // ⚠️ PUT YOUR FIREBASE AUTH CREDENTIALS HERE TO ACTIVATE WRITING PERMISSIONS
-        const ADMIN_EMAIL = "your-email@example.com"; 
-        const ADMIN_PASSWORD = "your-secure-password"; 
-
-        if (ADMIN_EMAIL !== "your-email@example.com") {
-            signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD)
-                .then(() => {
-                    updateAuthBadgeStatus(true, "Admin Active");
-                })
-                .catch(err => {
-                    console.error("Auth Failure:", err.message);
-                    updateAuthBadgeStatus(false, "Auth Error");
-                });
-        } else {
-            // Setup fallback immediately if credentials are unchanged so it doesn't freeze
-            updateAuthBadgeStatus(false, "Viewer Mode");
-        }
-
-        function updateAuthBadgeStatus(isSuccess, messageText) {
-            const badge = document.getElementById('terminalBadge');
-            const badgeText = document.getElementById('terminalBadgeText');
-            const dot = document.getElementById('terminalPulseDot');
-            
-            if (!badge || !badgeText || !dot) return;
-            
-            badgeText.innerText = messageText;
-            if (isSuccess) {
-                badge.style.background = "rgba(25, 135, 84, 0.15)";
-                badge.style.borderColor = "rgba(25, 135, 84, 0.4)";
-                badge.style.color = "#20c997";
-                dot.style.backgroundColor = "#198754";
-                dot.style.boxShadow = "0 0 0 0 rgba(25, 135, 84, 0.7)";
-            } else {
-                badge.style.background = "rgba(108, 117, 125, 0.15)";
-                badge.style.borderColor = "rgba(108, 117, 125, 0.4)";
-                badge.style.color = "#6c757d";
-                dot.style.backgroundColor = "#6c757d";
-                dot.style.boxShadow = "none";
-                dot.style.animation = "none";
-            }
-        }
-
-        // Clean token extractor that never hangs or drops unresolved promises
-        window.getAuthTokenString = async function() {
-            try {
-                if (auth.currentUser) {
-                    return await auth.currentUser.getIdToken();
-                }
-            } catch (e) {
-                console.error("Failed to fetch current user token", e);
-            }
-            return null;
-        };
-    </script>
-
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const MASTER_EMPLOYEES = ["Bornie", "Brian", "Christopha", "Duncan", "DW", "Eliud", "Festo", "Ian", "James", "Muriuki", "Phini", "Roy", "Thuranira"];
+        const SECRET_CODE = "den1472";
+        const SESSION_DURATION_MS = 45 * 60 * 1000; // 45 Minutes in milliseconds
         
         let globalLogsArray = [];
         let globalAdvancesObj = {};
         let globalAttendanceObj = {};
         let currentPricePerBox = 1;
+        let pendingActionCallback = null;
+        let securityBootstrapModal = null;
 
+        document.addEventListener("DOMContentLoaded", () => {
+            securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
+            
+            // Listen for 'Enter' key inside code field
+            document.getElementById('secretSecurityCodeInput').addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') submitSecurityVerification();
+            });
+        });
+
+        // 45 Minute Expiry Session Guard
+        function runWithSecurityGate(callbackAction) {
+            const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
+            const now = Date.now();
+
+            if (lastSessionVerificationTimestamp && (now - parseInt(lastSessionVerificationTimestamp, 10) < SESSION_DURATION_MS)) {
+                // Session is fresh and within 45 minutes limit
+                callbackAction();
+            } else {
+                // Block action, wipe stale storage keys, and throw masked verification box
+                localStorage.removeItem('meru_offload_session_time');
+                pendingActionCallback = callbackAction;
+                document.getElementById('secretSecurityCodeInput').value = '';
+                document.getElementById('securityModalErrorMsg').classList.add('d-none');
+                securityBootstrapModal.show();
+                setTimeout(() => document.getElementById('secretSecurityCodeInput').focus(), 450);
+            }
+        }
+
+        function submitSecurityVerification() {
+            const inputtedValue = document.getElementById('secretSecurityCodeInput').value;
+            if (inputtedValue === SECRET_CODE) {
+                localStorage.setItem('meru_offload_session_time', Date.now().toString());
+                securityBootstrapModal.hide();
+                if(pendingActionCallback) {
+                    const executionMethod = pendingActionCallback;
+                    pendingActionCallback = null;
+                    executionMethod();
+                }
+            } else {
+                document.getElementById('securityModalErrorMsg').classList.remove('d-none');
+                document.getElementById('secretSecurityCodeInput').value = '';
+                document.getElementById('secretSecurityCodeInput').focus();
+            }
+        }
+
+        function cancelSecurityVerification() {
+            securityBootstrapModal.hide();
+            pendingActionCallback = null;
+            // Clean interface loaders if stuck
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Record";
+            }
+        }
+
+        // Live Clock Tick
         document.getElementById('dateWorked').valueAsDate = new Date();
-
         setInterval(() => {
             const now = new Date();
             document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -588,23 +601,21 @@
         }
 
         function toggleAttendanceState(worker, isPresent) {
-            window.getAuthTokenString().then(token => {
+            runWithSecurityGate(() => {
                 let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
-                if(token) url += `?auth=${token}`;
-
                 globalAttendanceObj[worker] = isPresent;
+
                 fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(isPresent),
                     headers: { 'Content-Type': 'application/json' }
                 })
                 .then(res => {
-                    if (!res.ok) throw new Error("Unauthorized");
                     rebuildDynamicFormDropdowns();
                     updateAttendanceBadgeCounter();
                 })
                 .catch(() => {
-                    alert("Write Denied: Admin session missing or invalid rules check.");
+                    alert("Network Error updating cloud roster.");
                     globalAttendanceObj[worker] = !isPresent;
                     renderAttendanceUiList();
                 });
@@ -613,12 +624,10 @@
 
         function resetAllAttendanceOffManually() {
             if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
-                window.getAuthTokenString().then(token => {
+                runWithSecurityGate(() => {
                     const clearPromises = MASTER_EMPLOYEES.map(worker => {
                         globalAttendanceObj[worker] = false;
                         let url = `${FIREBASE_URL}attendance/roster/${worker}.json`;
-                        if(token) url += `?auth=${token}`;
-
                         return fetch(url, {
                             method: 'PUT',
                             body: JSON.stringify(false),
@@ -630,7 +639,7 @@
                         renderAttendanceUiList();
                         rebuildDynamicFormDropdowns();
                         updateAttendanceBadgeCounter();
-                    }).catch(() => alert("Operation restricted to database owner."));
+                    }).catch(() => alert("Could not flush server variables. Check line drops."));
                 });
             }
         }
@@ -666,7 +675,6 @@
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
             
-            const submitBtn = document.getElementById('submitBtn');
             const employeeName = document.getElementById('employeeName').value;
             const vehiclePlate = document.getElementById('vehiclePlate').value.trim().toUpperCase();
             const dateWorked = document.getElementById('dateWorked').value;
@@ -694,58 +702,54 @@
                 return;
             }
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Saving to Cloud...";
+            runWithSecurityGate(() => {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Synchronizing Row...";
 
-            const recordId = "log_" + Date.now();
-            const now = new Date();
-            const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const recordId = "log_" + Date.now();
+                const now = new Date();
+                const currentTimeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            const newLog = {
-                id: recordId, 
-                employeeName,
-                vehiclePlate,
-                dateWorked, 
-                totalBoxes,    
-                paidBoxes,     
-                isPaid: false,
-                amountPaid: 0,    
-                datePaid: null,
-                timePaid: null,
-                timestampCreated: Date.now(), 
-                timeCreatedStr: currentTimeStr
-            };
+                const newLog = {
+                    id: recordId, 
+                    employeeName,
+                    vehiclePlate,
+                    dateWorked, 
+                    totalBoxes,    
+                    paidBoxes,     
+                    isPaid: false,
+                    amountPaid: 0,    
+                    datePaid: null,
+                    timePaid: null,
+                    timestampCreated: Date.now(), 
+                    timeCreatedStr: currentTimeStr
+                };
 
-            window.getAuthTokenString().then(token => {
                 let url = `${FIREBASE_URL}logs/${recordId}.json`;
-                if(token) url += `?auth=${token}`;
-
-                return fetch(url, {
+                fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(newLog),
                     headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(() => {
+                    document.getElementById('employeeName').selectedIndex = 0; 
+                    document.getElementById('vehiclePlate').value = '';
+                    document.getElementById('totalBoxes').value = '';
+                    document.getElementById('paidBoxesSelection').value = 'ALL';
+                    togglePaidBoxesInput();
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "Save Record";
+                    fetchLogsFromCloud(); 
+                })
+                .catch(error => {
+                    console.error("Firebase Sync Error: ", error);
+                    alert("Cloud Save Error. Please review connections.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "Save Record";
                 });
-            })
-            .then(response => {
-                if(!response.ok) throw new Error("Unauthorized Database Rules Engine");
-                return response.json();
-            })
-            .then(() => {
-                document.getElementById('employeeName').selectedIndex = 0; 
-                document.getElementById('vehiclePlate').value = '';
-                document.getElementById('totalBoxes').value = '';
-                document.getElementById('paidBoxesSelection').value = 'ALL';
-                togglePaidBoxesInput();
-                
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
-                fetchLogsFromCloud(); 
-            })
-            .catch(error => {
-                console.error("Firebase Sync Error: ", error);
-                alert("Permission Denied: Make sure your email and password credentials are configured correctly at the bottom script code.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
             });
         });
 
@@ -759,37 +763,30 @@
             const existingAdvance = globalAdvancesObj[worker] || 0;
             const updatedTotal = existingAdvance + amt;
 
-            window.getAuthTokenString().then(token => {
+            runWithSecurityGate(() => {
                 let url = `${FIREBASE_URL}advances/${worker}.json`;
-                if(token) url += `?auth=${token}`;
-
-                return fetch(url, {
+                fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(updatedTotal),
                     headers: { 'Content-Type': 'application/json' }
-                });
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Forbidden");
-                document.getElementById('advanceAmount').value = '';
-                fetchLogsFromCloud();
-            })
-            .catch(() => alert("Access Denied: Advance mutations restricted."));
+                })
+                .then(res => {
+                    document.getElementById('advanceAmount').value = '';
+                    fetchLogsFromCloud();
+                })
+                .catch(() => alert("Access Error mutation logged."));
+            });
         });
 
         function removeWorkerAdvanceRecord(worker) {
             if(confirm(`Clear out all standard cash advances logged against ${worker}?`)) {
-                window.getAuthTokenString().then(token => {
+                runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}advances/${worker}.json`;
-                    if(token) url += `?auth=${token}`;
-
-                    return fetch(url, { method: 'DELETE' });
-                })
-                .then(res => {
-                    if(!res.ok) throw new Error("Forbidden");
-                    fetchLogsFromCloud();
-                })
-                .catch(() => alert("Access Denied: Deletions restricted."));
+                    fetch(url, { method: 'DELETE' })
+                    .then(res => {
+                        fetchLogsFromCloud();
+                    });
+                });
             }
         }
 
@@ -822,7 +819,7 @@
             const spinner = document.getElementById('loadingSpinner');
             if(spinner) {
                 spinner.classList.remove('d-none');
-                spinner.innerText = "Loading cloud... (Read Public)";
+                spinner.innerText = "Loading cloud...";
             }
 
             fetch(`${FIREBASE_URL}attendance.json`)
@@ -1083,48 +1080,40 @@
         }
 
         function markAsPaid(recordId, explicitTotalEarnings) {
-            const today = new Date();
-            const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            runWithSecurityGate(() => {
+                const today = new Date();
+                const stringifiedDatePaid = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const currentTimePaidStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            const paymentUpdates = {
-                isPaid: true,
-                amountPaid: explicitTotalEarnings,
-                datePaid: stringifiedDatePaid,
-                timePaid: currentTimePaidStr,
-                timestampPaid: Date.now() 
-            };
+                const paymentUpdates = {
+                    isPaid: true,
+                    amountPaid: explicitTotalEarnings,
+                    datePaid: stringifiedDatePaid,
+                    timePaid: currentTimePaidStr,
+                    timestampPaid: Date.now() 
+                };
 
-            window.getAuthTokenString().then(token => {
                 let url = `${FIREBASE_URL}logs/${recordId}.json`;
-                if(token) url += `?auth=${token}`;
-
-                return fetch(url, {
+                fetch(url, {
                     method: 'PATCH',
                     body: JSON.stringify(paymentUpdates),
                     headers: { 'Content-Type': 'application/json' }
+                })
+                .then(res => {
+                    fetchLogsFromCloud();
                 });
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Forbidden");
-                fetchLogsFromCloud();
-            })
-            .catch(() => alert("Access Denied: Only authenticated admins can modify payment statuses."));
+            });
         }
 
         function deleteIndividualRecord(recordId) {
             if (confirm("Are you sure you want to permanently delete this paid work record from cloud database?")) {
-                window.getAuthTokenString().then(token => {
+                runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}logs/${recordId}.json`;
-                    if(token) url += `?auth=${token}`;
-
-                    return fetch(url, { method: 'DELETE' });
-                })
-                .then(res => {
-                    if(!res.ok) throw new Error("Forbidden");
-                    fetchLogsFromCloud();
-                })
-                .catch(() => alert("Access Denied: Row deletion restricted."));
+                    fetch(url, { method: 'DELETE' })
+                    .then(res => {
+                        fetchLogsFromCloud();
+                    });
+                });
             }
         }
 
@@ -1332,17 +1321,13 @@
 
         function clearAllData() {
             if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
-                window.getAuthTokenString().then(token => {
+                runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}logs.json`;
-                    if(token) url += `?auth=${token}`;
-
-                    return fetch(url, { method: 'DELETE' });
-                })
-                .then(res => {
-                    if(!res.ok) throw new Error("Forbidden");
-                    fetchLogsFromCloud();
-                })
-                .catch(() => alert("Access Denied: Reset operation restricted."));
+                    fetch(url, { method: 'DELETE' })
+                    .then(res => {
+                        fetchLogsFromCloud();
+                    });
+                });
             }
         }
 
