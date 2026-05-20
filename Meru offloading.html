@@ -162,7 +162,6 @@
                             <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">00:00:00 AM</span>
                         </span>
                     </li>
-                    <span id="menuCurrentRate" class="d-none">Ksh 1</span>
                 </ul>
 
                 <ul class="navbar-nav align-items-lg-center gap-2 mt-2 mt-lg-0">
@@ -470,7 +469,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             databaseURL: "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/"
@@ -479,23 +478,23 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // CHANGE THESE TO YOUR SECURE FIREBASE ADMIN USER ACCOUNT DETAILS
+        // ⚠️ PUT YOUR FIREBASE AUTH CREDENTIALS HERE TO ACTIVATE WRITING PERMISSIONS
         const ADMIN_EMAIL = "your-email@example.com"; 
         const ADMIN_PASSWORD = "your-secure-password"; 
 
-        // Authenticate the browser session silently on script execution
-        signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD)
-            .then((userCredential) => {
-                if (userCredential.user.uid === '5Q9pennln1QsJJUYYXbb0WJJOvz2') {
+        if (ADMIN_EMAIL !== "your-email@example.com") {
+            signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD)
+                .then(() => {
                     updateAuthBadgeStatus(true, "Admin Active");
-                } else {
-                    updateAuthBadgeStatus(false, "UID Mismatch");
-                }
-            })
-            .catch(err => {
-                console.error("Auth Failure:", err.message);
-                updateAuthBadgeStatus(false, "Viewer Mode");
-            });
+                })
+                .catch(err => {
+                    console.error("Auth Failure:", err.message);
+                    updateAuthBadgeStatus(false, "Auth Error");
+                });
+        } else {
+            // Setup fallback immediately if credentials are unchanged so it doesn't freeze
+            updateAuthBadgeStatus(false, "Viewer Mode");
+        }
 
         function updateAuthBadgeStatus(isSuccess, messageText) {
             const badge = document.getElementById('terminalBadge');
@@ -521,12 +520,16 @@
             }
         }
 
-        // Attach token helper to window context for plain fetch network requests
-        window.getAuthTokenString = function() {
-            if (auth.currentUser) {
-                return auth.currentUser.getIdToken();
+        // Clean token extractor that never hangs or drops unresolved promises
+        window.getAuthTokenString = async function() {
+            try {
+                if (auth.currentUser) {
+                    return await auth.currentUser.getIdToken();
+                }
+            } catch (e) {
+                console.error("Failed to fetch current user token", e);
             }
-            return Promise.resolve(null);
+            return null;
         };
     </script>
 
@@ -740,7 +743,7 @@
             })
             .catch(error => {
                 console.error("Firebase Sync Error: ", error);
-                alert("Permission Denied: Only the verified admin identity can register new data rows.");
+                alert("Permission Denied: Make sure your email and password credentials are configured correctly at the bottom script code.");
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Save Record";
             });
