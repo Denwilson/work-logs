@@ -27,9 +27,18 @@
             background-color: #f8fafc !important;
             opacity: 0.9;
         }
+        .cancelled-row {
+            background-color: #fff5f5 !important;
+            border-left: 4px solid #dc3545 !important;
+        }
         .payment-details {
             font-size: 0.8rem;
             color: #198754;
+            font-weight: 600;
+        }
+        .cancellation-details {
+            font-size: 0.8rem;
+            color: #dc3545;
             font-weight: 600;
         }
         .box-count {
@@ -139,6 +148,22 @@
             border-radius: 8px;
             font-size: 0.85rem;
         }
+
+        .interactive-contact {
+            color: #0d6efd;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .interactive-contact:hover {
+            color: #0a58ca;
+        }
+        .copy-toast {
+            font-size: 0.75rem;
+            color: #198754;
+            display: none;
+            margin-top: 2px;
+        }
         
         @media print {
             body {
@@ -160,10 +185,22 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav align-items-lg-center gap-2 me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()" title="Manage Team">
+                    <li class="nav-item dropdown">
+                        <a class="menu-pill-btn dropdown-toggle" href="#" id="peopleDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Team Options">
                             <i class="bi bi-people-fill text-warning m-0"></i>
                         </a>
+                        <ul class="dropdown-menu shadow border-0 p-2 mt-2" aria-labelledby="peopleDropdown">
+                            <li>
+                                <a class="dropdown-item py-2 rounded mb-1" href="#" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()">
+                                    <i class="bi bi-person-gear me-2 text-primary"></i> Manage Team
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item py-2 rounded text-danger" href="#" onclick="launchSecureWorkCancellationPanel(); return false;">
+                                    <i class="bi bi-x-circle me-2"></i> Work Cancellation
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -173,6 +210,7 @@
                             <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
                             <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
                             <li><a class="dropdown-item py-2 rounded text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
+                            <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -206,7 +244,7 @@
                     <li class="nav-item">
                         <div class="database-pulse-badge" id="terminalBadge">
                             <span class="pulse-dot online" id="terminalPulseDot"></span>
-                            <span id="terminalBadgeText">System Live</span>
+                            <span id="terminalBadgeText">Live</span>
                         </div>
                     </li>
                 </ul>
@@ -340,8 +378,9 @@
                                 <span class="input-group-text bg-light text-muted small">Status</span>
                                 <select id="tableStatusSelector" class="form-select bg-light" onchange="handleLiveSearchFilter()">
                                     <option value="ALL">Show All Statuses</option>
-                                    <option value="PAID">Paid Records Only</option>
                                     <option value="UNPAID">Unpaid Records Only</option>
+                                    <option value="PAID">Paid Records Only</option>
+                                    <option value="CANCELLED">Cancelled Records Only</option>
                                 </select>
                             </div>
                         </div>
@@ -368,7 +407,7 @@
                                         <th>Employee / Vehicle</th>
                                         <th>Date Worked</th>
                                         <th>Boxes Layout</th>
-                                        <th>Status & Payment Details</th>
+                                        <th>Status & Details</th>
                                         <th class="text-center no-print">Action</th>
                                     </tr>
                                 </thead>
@@ -389,7 +428,7 @@
         <div class="modal-dialog modal-md">
             <div class="modal-content">
                 <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill text-warning me-2"></i>System Member Registry</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-gear text-warning me-2"></i>System Member Registry</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -417,6 +456,35 @@
                             </thead>
                             <tbody id="rosterRegistryTableBody">
                                 <tr><td colspan="2" class="text-center py-3 text-muted">Loading registry components...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="workCancellationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-x-circle me-2"></i>Work Cancellation Panel</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="small text-muted mb-3"><i class="bi bi-info-circle"></i> Select any logged entry below to apply a cancellation status. Active or paid entries can be cancelled.</p>
+                    <div class="table-responsive border rounded" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th class="ps-3">Worker Name</th>
+                                    <th>Date</th>
+                                    <th>Boxes Removed</th>
+                                    <th class="text-center" style="width: 120px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workCancellationTableBody">
+                                <tr><td colspan="4" class="text-center py-3 text-muted">Loading logged entries...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -485,6 +553,18 @@
         </div>
     </div>
 
+    <div class="modal fade" id="inspectionViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-receipt-cutoff me-2"></i>Log Details</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="inspectionViewModalBody"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="truckModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -527,9 +607,13 @@
         let currentPricePerBox = 1;
         let pendingActionCallback = null;
         let securityBootstrapModal = null;
+        let inspectionBootstrapModal = null;
+        let cancellationBootstrapModal = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
+            inspectionBootstrapModal = new bootstrap.Modal(document.getElementById('inspectionViewModal'));
+            cancellationBootstrapModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
             
             document.getElementById('secretSecurityCodeInput').addEventListener('keydown', (e) => {
                 if(e.key === 'Enter') submitSecurityVerification();
@@ -547,11 +631,11 @@
             if (navigator.onLine) {
                 dot.classList.remove('offline');
                 dot.classList.add('online');
-                label.innerText = "System Live";
+                label.innerText = "Live";
             } else {
                 dot.classList.remove('online');
                 dot.classList.add('offline');
-                label.innerText = "System Offline";
+                label.innerText = "Offline";
             }
         }
 
@@ -625,6 +709,36 @@
             }
         }
 
+        /* ENFORCE SECURITY CHECK ON WORK CANCELLATION BUTTON */
+        function launchSecureWorkCancellationPanel() {
+            runWithSecurityGate(() => {
+                renderWorkCancellationTable();
+                cancellationBootstrapModal.show();
+            });
+        }
+
+        function toggleInteractiveContactDisplay(elementId, hiddenValue) {
+            const element = document.getElementById(elementId);
+            const toast = document.getElementById(elementId + '_toast');
+            
+            if (element.innerHTML.includes(hiddenValue)) {
+                navigator.clipboard.writeText(hiddenValue).then(() => {
+                    toast.style.display = "block";
+                    setTimeout(() => { toast.style.display = "none"; }, 2000);
+                }).catch(err => {
+                    console.error("Clipboard copy failed: ", err);
+                });
+            } else {
+                element.innerHTML = hiddenValue;
+                navigator.clipboard.writeText(hiddenValue).then(() => {
+                    toast.style.display = "block";
+                    setTimeout(() => { toast.style.display = "none"; }, 2000);
+                }).catch(err => {
+                    console.error("Clipboard copy failed: ", err);
+                });
+            }
+        }
+
         /* DYNAMIC WORKER REGISTRY CONTROLLER BLOCK */
         function renderRosterRegistryManagementTable() {
             const tbody = document.getElementById('rosterRegistryTableBody');
@@ -635,7 +749,6 @@
                 return;
             }
 
-            // Sort alphabetically for clean visualization
             const sortedRegistry = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
 
             sortedRegistry.forEach(worker => {
@@ -661,7 +774,6 @@
                 return;
             }
 
-            // UNQUENCHABLE DUPLICATION CONSTRAINT RADAR
             const nameExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === targetName.toLowerCase());
             if (nameExists) {
                 alert(`Operation Blocked! A member named "${targetName}" is already registered inside the system database.`);
@@ -680,7 +792,7 @@
                 .then(res => res.json())
                 .then(() => {
                     inputField.value = '';
-                    fetchLogsFromCloud(); // Re-trigger root architecture refresh
+                    fetchLogsFromCloud(); 
                     setTimeout(() => renderRosterRegistryManagementTable(), 400);
                 })
                 .catch(() => alert("Database transmission sync dropped. Check connection."));
@@ -690,9 +802,7 @@
         function removeWorkerFromRegistryCloud(firebaseId, cleanName) {
             if (confirm(`Completely drop "${cleanName}" from active rosters?\n\nAll historical work metrics, payments, and generated logs remain locked safely inside database architecture.`)) {
                 runWithSecurityGate(() => {
-                    // 1. Remove from baseline global workforce node
                     const dropEmployeePromise = fetch(`${FIREBASE_URL}employees/${firebaseId}.json`, { method: 'DELETE' });
-                    // 2. Clear out check-in properties if any
                     const dropAttendancePromise = fetch(`${FIREBASE_URL}attendance/roster/${cleanName}.json`, { method: 'DELETE' });
 
                     Promise.all([dropEmployeePromise, dropAttendancePromise])
@@ -703,6 +813,115 @@
                     .catch(() => alert("Error updating registry clusters."));
                 });
             }
+        }
+
+        /* WORK CANCELLATION RENDERING OPERATIONS */
+        function renderWorkCancellationTable() {
+            const tbody = document.getElementById('workCancellationTableBody');
+            tbody.innerHTML = '';
+
+            const activeLogs = globalLogsArray.filter(log => !log.isCancelled);
+
+            if (activeLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted"><i class="bi bi-info-circle"></i> No active logs found available for cancellation.</td></tr>`;
+                return;
+            }
+
+            activeLogs.sort((a, b) => (b.dateWorked || '').localeCompare(a.dateWorked || ''));
+
+            activeLogs.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 fw-bold text-dark">${escapeHtml(log.employeeName || "-")} <br><small class="text-muted font-monospace font-xs">${escapeHtml(log.vehiclePlate || "")}</small></td>
+                        <td class="text-secondary fw-semibold small">${formatDateDisplay(log.dateWorked || "")}</td>
+                        <td class="fw-bold text-primary">${log.totalBoxes || 0} boxes</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger fw-bold" onclick="cancelWorkLogRecord('${log.id}', '${escapeHtml(log.employeeName)}')">
+                                <i class="bi bi-x-circle-fill"></i> Cancel
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function cancelWorkLogRecord(recordId, workerName) {
+            if (confirm(`Are you sure you want to mark this work entry for "${workerName}" as CANCELLED?\n\nThis will declare the work void on the dashboard logs list.`)) {
+                runWithSecurityGate(() => {
+                    let url = `${FIREBASE_URL}logs/${recordId}.json`;
+                    
+                    const today = new Date();
+                    const stringifiedDateCancelled = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                    const currentTimeCancelledStr = today.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                    fetch(url, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ 
+                            isCancelled: true,
+                            dateCancelled: stringifiedDateCancelled,
+                            timeCancelled: currentTimeCancelledStr
+                        }),
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(res => res.json())
+                    .then(() => {
+                        fetchLogsFromCloud();
+                        setTimeout(() => renderWorkCancellationTable(), 400);
+                    })
+                    .catch(() => alert("Failed to transmit cancellation status flag to cloud."));
+                });
+            }
+        }
+
+        /* UPDATED INSPECTION DETAILS MODAL RENDERING LOGIC */
+        function showInspectionDetails(logId) {
+            const targetLog = globalLogsArray.find(log => log.id === logId);
+            if(!targetLog) return;
+
+            const modalBody = document.getElementById('inspectionViewModalBody');
+            
+            let statusBlockHtml = "";
+            if(targetLog.isCancelled) {
+                statusBlockHtml = `
+                    <div class="alert alert-danger py-2 text-center mb-3">
+                        <i class="bi bi-x-octagon-fill me-1"></i> <strong>VOIDED / CANCELLED</strong>
+                    </div>
+                    <div class="mb-2 fs-6"><strong>Worker Name:</strong> <span class="text-dark fw-bold">${escapeHtml(targetLog.employeeName || "")}</span></div>
+                    <div class="small mb-2"><strong>Date of Cancellation:</strong> ${formatDateDisplay(targetLog.dateCancelled || "")}</div>
+                    <div class="small mb-2"><strong>Time:</strong> ${targetLog.timeCancelled || ""}</div>
+                    <hr class="my-2">
+                    <div class="p-2 bg-light border rounded small text-secondary shadow-sm">
+                        <i class="bi bi-chat-left-text-fill text-danger me-1"></i> 
+                        This operation transaction row was verified and cancelled safely under administrative supervision by team leader 
+                        <span id="contact_denwilson" class="interactive-contact" onclick="toggleInteractiveContactDisplay('contact_denwilson', '0742960571')">Denwilson</span>
+                        <span id="contact_denwilson_toast" class="copy-toast"><i class="bi bi-check2-circle"></i> Number Copied!</span> 
+                        and system payroll platform manager payer 
+                        <span id="contact_kelvin" class="interactive-contact" onclick="toggleInteractiveContactDisplay('contact_kelvin', '0714026060')">Kelvin</span>.
+                        <span id="contact_kelvin_toast" class="copy-toast"><i class="bi bi-check2-circle"></i> Number Copied!</span>
+                    </div>
+                `;
+            } else if (targetLog.isPaid) {
+                statusBlockHtml = `
+                    <div class="alert alert-success py-2 text-center mb-3">
+                        <i class="bi bi-check-circle-fill me-1"></i> <strong>COMPLETELY SETTLED</strong>
+                    </div>
+                    <div class="small mb-2"><strong>Paid Out:</strong> Ksh ${Number(targetLog.amountPaid || 0).toLocaleString()}</div>
+                    <div class="small mb-2"><strong>Settled On:</strong> ${formatDateDisplay(targetLog.datePaid || "")} ${targetLog.timePaid || ""}</div>
+                    <hr class="my-2">
+                    <div class="small mb-1"><strong>Worker:</strong> ${escapeHtml(targetLog.employeeName || "")}</div>
+                    <div class="small mb-1"><strong>Plate Layout:</strong> ${escapeHtml(targetLog.vehiclePlate || "")}</div>
+                    <div class="small mb-1"><strong>Shift Date:</strong> ${formatDateDisplay(targetLog.dateWorked || "")}</div>
+                    <div class="small mb-1"><strong>Total Removed:</strong> ${targetLog.totalBoxes || 0} boxes</div>
+                    <div class="small mb-1"><strong>Paid Claims Vol:</strong> ${targetLog.paidBoxes || 0} boxes</div>
+                `;
+            }
+
+            modalBody.innerHTML = `
+                ${statusBlockHtml}
+                <div class="text-muted font-monospace mt-3 text-center" style="font-size:10px;">ID: ${targetLog.id}</div>
+            `;
+
+            inspectionBootstrapModal.show();
         }
 
         function renderAttendanceUiList() {
@@ -795,7 +1014,7 @@
 
         function processStaticAttendanceLoading(attendanceData) {
             let rosterNode = (attendanceData && attendanceData.roster) ? attendanceData.roster : {};
-            globalAttendanceObj = {}; // Clear old traces
+            globalAttendanceObj = {}; 
             masterDynamicWorkersArray.forEach(worker => {
                 globalAttendanceObj[worker.name] = rosterNode[worker.name] === true;
             });
@@ -823,6 +1042,7 @@
             }
 
             const isDuplicate = globalLogsArray.some(log => 
+                !log.isCancelled &&
                 (log.employeeName || '').toLowerCase() === employeeName.toLowerCase() &&
                 (log.vehiclePlate || '').toLowerCase() === vehiclePlate.toLowerCase() &&
                 log.dateWorked === dateWorked
@@ -850,9 +1070,12 @@
                     totalBoxes,    
                     paidBoxes,     
                     isPaid: false,
+                    isCancelled: false,
                     amountPaid: 0,    
                     datePaid: null,
                     timePaid: null,
+                    dateCancelled: null,
+                    timeCancelled: null,
                     timestampCreated: Date.now(), 
                     timeCreatedStr: currentTimeStr
                 };
@@ -891,7 +1114,6 @@
                 spinner.innerText = "Loading cloud...";
             }
 
-            // 1. Fetch Dynamic Employee Registry Array first
             fetch(`${FIREBASE_URL}employees.json`)
             .then(res => res.json())
             .then(employeesData => {
@@ -901,13 +1123,11 @@
                         if (employeesData[k]) masterDynamicWorkersArray.push(employeesData[k]);
                     });
                 }
-                // 2. Fetch attendance states
                 return fetch(`${FIREBASE_URL}attendance.json`);
             })
             .then(res => res.json())
             .then(attData => {
                 processStaticAttendanceLoading(attData);
-                // 3. Fetch log database rows
                 return fetch(`${FIREBASE_URL}logs.json`);
             })
             .then(response => response.json())
@@ -942,6 +1162,8 @@
             let runningPendingCount = 0;
 
             globalLogsArray.forEach(log => {
+                if (log.isCancelled) return; 
+
                 runningTotalBoxes += parseInt(log.totalBoxes || 0, 10);
                 if (log.isPaid) {
                     runningTotalPayout += parseFloat(log.amountPaid || 0);
@@ -960,6 +1182,7 @@
         function buildLeaderboard() {
             const boxesMap = {};
             globalLogsArray.forEach(log => {
+                if (log.isCancelled) return; 
                 const name = log.employeeName || "Unknown";
                 boxesMap[name] = (boxesMap[name] || 0) + parseInt(log.totalBoxes || 0, 10);
             });
@@ -993,6 +1216,7 @@
         function buildTruckAnalytics() {
             const truckMap = {};
             globalLogsArray.forEach(log => {
+                if (log.isCancelled) return; 
                 const plate = (log.vehiclePlate || "Unknown").toUpperCase().trim();
                 if(!truckMap[plate]) {
                     truckMap[plate] = { trips: 0, boxes: 0 };
@@ -1023,22 +1247,24 @@
         }
 
         function extractActivityTrackingTimestamps() {
-            if (globalLogsArray.length === 0) {
+            const baselineActiveLogs = globalLogsArray.filter(log => !log.isCancelled);
+
+            if (baselineActiveLogs.length === 0) {
                 document.getElementById('activityLastEntered').innerHTML = "<span class='text-muted fw-normal'>No records logged</span>";
                 document.getElementById('activityLastPaid').innerHTML = "<span class='text-muted fw-normal'>No payments done</span>";
                 return;
             }
 
-            const sortedByCreated = [...globalLogsArray].sort((a, b) => (b.timestampCreated || 0) - (a.timestampCreated || 0));
+            const sortedByCreated = [...baselineActiveLogs].sort((a, b) => (b.timestampCreated || 0) - (a.timestampCreated || 0));
             const lastEntered = sortedByCreated[0];
             const enteredTimeText = lastEntered.timeCreatedStr ? ` at ${lastEntered.timeCreatedStr}` : '';
             document.getElementById('activityLastEntered').innerHTML = `
                 <span class="text-primary">${escapeHtml(lastEntered.employeeName || "-")}</span> 
                 (${escapeHtml(lastEntered.vehiclePlate || "-")}) on ${formatDateDisplay(lastEntered.dateWorked)}${enteredTimeText}`;
 
-            const paidLogsOnly = globalLogsArray.filter(log => log.isPaid && log.timestampPaid);
+            const paidLogsOnly = baselineActiveLogs.filter(log => log.isPaid && log.timestampPaid);
             if (paidLogsOnly.length === 0) {
-                const simplePaidLogs = globalLogsArray.filter(log => log.isPaid && log.datePaid);
+                const simplePaidLogs = baselineActiveLogs.filter(log => log.isPaid && log.datePaid);
                 if (simplePaidLogs.length === 0) {
                     document.getElementById('activityLastPaid').innerHTML = "<span class='text-muted fw-normal'>No payments processed yet</span>";
                 } else {
@@ -1069,8 +1295,9 @@
                                       vehPlate.toLowerCase().includes(query);
                 
                 let matchesStatus = true;
-                if (statusFilter === "PAID") matchesStatus = log.isPaid === true;
-                if (statusFilter === "UNPAID") matchesStatus = log.isPaid === false;
+                if (statusFilter === "PAID") matchesStatus = (log.isPaid === true && !log.isCancelled);
+                if (statusFilter === "UNPAID") matchesStatus = (log.isPaid === false && !log.isCancelled);
+                if (statusFilter === "CANCELLED") matchesStatus = (log.isCancelled === true);
 
                 return matchesSearch && matchesStatus;
             });
@@ -1100,7 +1327,27 @@
                 let statusAndPaymentCell = "";
                 let deleteActionCell = "<td class='no-print'></td>"; 
 
-                if (log.isPaid) {
+                if (log.isCancelled) {
+                    rowClass = "class='cancelled-row'";
+                    const timeCancelText = log.timeCancelled ? ` at ${log.timeCancelled}` : '';
+                    statusAndPaymentCell = `
+                        <div>
+                            <span class="badge bg-danger text-uppercase mb-1"><i class="bi bi-x-octagon-fill me-1"></i> Cancelled</span>
+                        </div>
+                        <div class="cancellation-details">
+                            <i class="bi bi-calendar-x me-1"></i> Voided: <strong>${formatDateDisplay(log.dateCancelled || "")}${timeCancelText}</strong>
+                        </div>`;
+                    deleteActionCell = `
+                        <td class="text-center no-print">
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="showInspectionDetails('${log.id}')" title="View Details">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteIndividualRecord('${log.id}')" title="Permanently delete from database row">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>`;
+                }
+                else if (log.isPaid) {
                     rowClass = "class='disabled-row'";
                     const timePaidText = log.timePaid ? ` at ${log.timePaid}` : '';
                     statusAndPaymentCell = `
@@ -1118,7 +1365,8 @@
                                 <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>`;
-                } else {
+                } 
+                else {
                     const localCalculatedEarnings = parseInt(log.paidBoxes || 0, 10) * currentPricePerBox;
                     statusAndPaymentCell = `
                         <button class="btn btn-sm btn-outline-warning text-dark fw-semibold no-print" onclick="markAsPaid('${log.id}', ${localCalculatedEarnings})">
@@ -1130,7 +1378,7 @@
                 const row = `
                     <tr ${rowClass}>
                         <td>
-                            <div class="fw-bold text-dark">${escapeHtml(log.employeeName || "-")}</div>
+                            <div class="fw-bold text-dark text-wrap">${escapeHtml(log.employeeName || "-")}</div>
                             <small class="text-muted text-uppercase font-monospace bg-light border px-1 rounded" style="font-size: 0.75rem;">
                                 ${escapeHtml(log.vehiclePlate || "-")}
                             </small>
@@ -1178,7 +1426,7 @@
         }
 
         function deleteIndividualRecord(recordId) {
-            if (confirm("Are you sure you want to permanently delete this paid work record?")) {
+            if (confirm("Are you sure you want to permanently delete this work record line item from the cloud?")) {
                 runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}logs/${recordId}.json`;
                     fetch(url, { method: 'DELETE' })
@@ -1199,6 +1447,7 @@
                 "Which report records would you like to download?\n\n" +
                 "Type 'PAID' for paid records\n" +
                 "Type 'UNPAID' for unpaid records\n" +
+                "Type 'CANCELLED' for cancelled records\n" +
                 "Type 'ALL' (or leave blank) for complete history:", 
                 "ALL"
             );
@@ -1206,7 +1455,7 @@
             if (reportChoice === null) return; 
 
             reportChoice = reportChoice.trim().toUpperCase();
-            if (reportChoice !== "PAID" && reportChoice !== "UNPAID") {
+            if (reportChoice !== "PAID" && reportChoice !== "UNPAID" && reportChoice !== "CANCELLED") {
                 reportChoice = "ALL"; 
             }
 
@@ -1219,8 +1468,10 @@
                 if (nameFilter && !empName.toLowerCase().includes(nameFilter)) return false;
                 if (startDate && log.dateWorked < startDate) return false;
                 if (endDate && log.dateWorked > endDate) return false;
-                if (reportChoice === "PAID" && !log.isPaid) return false;
-                if (reportChoice === "UNPAID" && log.isPaid) return false;
+                
+                if (reportChoice === "PAID" && (!log.isPaid || log.isCancelled)) return false;
+                if (reportChoice === "UNPAID" && (log.isPaid || log.isCancelled)) return false;
+                if (reportChoice === "CANCELLED" && !log.isCancelled) return false;
                 return true;
             });
 
@@ -1239,7 +1490,7 @@
             workerContainer.style.fontFamily = 'Arial, sans-serif';
 
             const currentDateTime = new Date();
-            let statusScopeLabel = reportChoice === "PAID" ? "Settled Paid Log Claims Only" : (reportChoice === "UNPAID" ? "Outstanding Unpaid Claims Only" : "Complete Historic Archive");
+            let statusScopeLabel = reportChoice === "PAID" ? "Settled Paid Log Claims Only" : (reportChoice === "UNPAID" ? "Outstanding Unpaid Claims Only" : (reportChoice === "CANCELLED" ? "Voided/Cancelled History Entries" : "Complete Historic Archive"));
 
             let metaInfo = `Report Date: ${currentDateTime.toLocaleDateString('en-GB')} | Report Time: ${currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
             metaInfo += `<br>Record Scope: <strong>${statusScopeLabel}</strong>`;
@@ -1266,6 +1517,25 @@
             let summaryTotalAmount = 0;
 
             filteredLogs.forEach(log => {
+                if (log.isCancelled) {
+                    tableRowsHTML += `
+                        <tr style="border-bottom: 1px solid #e2e8f0; background-color: #fef2f2; text-decoration: line-through; color: #94a3b8;">
+                            <td style="padding: 10px 8px; vertical-align: top; width: 30%;">
+                                <div style="font-weight: bold; font-size: 14px;">${escapeHtml(log.employeeName || "-")}</div>
+                                <div style="font-size: 11px; margin-top: 2px;">${escapeHtml(log.vehiclePlate || "-")}</div>
+                            </td>
+                            <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 25%;">
+                                ${formatDateDisplay(log.dateWorked || "")}
+                            </td>
+                            <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 20%;">
+                                Offload: ${log.totalBoxes || 0}
+                            </td>
+                            <td style="padding: 10px 8px; vertical-align: top; font-size: 13px; width: 25%; color: #dc3545; font-weight: bold;">CANCELLED</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
                 summaryTotalBoxes += parseInt(log.totalBoxes || 0, 10);
                 summaryTotalPayableBoxes += parseInt(log.paidBoxes || 0, 10);
 
@@ -1278,7 +1548,7 @@
                 } else {
                     const unearnedCalc = parseInt(log.paidBoxes || 0, 10) * currentPricePerBox;
                     summaryTotalAmount += unearnedCalc;
-                    statusString = `<span style="color: #dc3545; font-weight: bold;">UNPAID</span><br>
+                    statusString = `<span style="color: #f59e0b; font-weight: bold;">UNPAID</span><br>
                                     <small style="color: #64748b; font-size:11px;">Est: Ksh ${unearnedCalc.toLocaleString()}</small>`;
                 }
 
@@ -1314,7 +1584,7 @@
                     <tbody>
                         ${tableRowsHTML}
                         <tr style="background-color: #0f172a; color: #ffffff; font-size: 14px;">
-                            <td colspan="2" style="padding: 12px 8px; font-weight: bold; text-transform: uppercase; letter-spacing:0.5px;">Net Final Balance Summary:</td>
+                            <td colspan="2" style="padding: 12px 8px; font-weight: bold; text-transform: uppercase; letter-spacing:0.5px;">Net Active Total:</td>
                             <td style="padding: 12px 8px; font-weight: bold; font-size: 13px; color: #94a3b8;">
                                 Vol: ${summaryTotalBoxes.toLocaleString()}<br>
                                 Pay: ${summaryTotalPayableBoxes.toLocaleString()}
