@@ -4,31 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link class="no-print" rel="icon" type="image/png" href="logo.png">
-    <title>Meru Offload</title>
+    <title>Meru Dairy Offload</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --sidebar-width: 260px;
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+        }
+
         body { 
-            background-color: #f4f6f9; 
+            background-color: var(--bg-color); 
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             padding-top: 85px; 
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .main-content {
             flex: 1;
+            transition: all 0.3s ease;
         }
         .card { 
             border-radius: 12px; 
             border: none;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         .disabled-row {
-            background-color: #f8fafc !important;
+            background-color: rgba(248, 250, 252, 0.1) !important;
             opacity: 0.9;
         }
         .cancelled-row {
-            background-color: #fff5f5 !important;
+            background-color: rgba(255, 245, 245, 0.1) !important;
             border-left: 4px solid #dc3545 !important;
         }
         .payment-details {
@@ -50,6 +68,71 @@
         }
         .stat-card:hover {
             transform: translateY(-2px);
+        }
+
+        /* SIDEBAR INTERACTIVE SLIDE DESIGN */
+        .hover-trigger-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 15px;
+            height: 100vh;
+            z-index: 1039;
+            background: transparent;
+        }
+
+        .custom-sidebar {
+            position: fixed;
+            top: 0;
+            left: calc(-1 * var(--sidebar-width));
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #1e293b;
+            color: #ffffff;
+            z-index: 1040;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.15);
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .custom-sidebar.active, .custom-sidebar:hover {
+            left: 0;
+        }
+
+        .sidebar-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-weight: bold;
+            color: #ffc107;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-menu-list {
+            list-style: none;
+            padding: 15px 10px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #e2e8f0;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.08);
+            color: #ffc107;
         }
 
         /* 30-COLOR MIX GRADIENT LOOP FIXED NAVBAR DESIGN */
@@ -101,9 +184,6 @@
             border-color: #ffc107;
             color: #ffc107 !important;
         }
-        .menu-pill-btn i {
-            font-size: 1.05rem;
-        }
         
         .database-pulse-badge {
             background: rgba(255, 255, 255, 0.1);
@@ -143,7 +223,7 @@
         }
 
         .activity-banner {
-            background-color: #ffffff;
+            background-color: var(--card-bg);
             border-left: 4px solid #6c757d;
             border-radius: 8px;
             font-size: 0.85rem;
@@ -155,9 +235,6 @@
             cursor: pointer;
             font-weight: bold;
         }
-        .interactive-contact:hover {
-            color: #0a58ca;
-        }
         .copy-toast {
             font-size: 0.75rem;
             color: #198754;
@@ -166,58 +243,96 @@
         }
         
         @media print {
-            body {
-                padding-top: 0 !important;
-            }
+            body { padding-top: 0 !important; }
+            .custom-sidebar, .hover-trigger-zone { display: none !important; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Left Edge Mouse Detection Trigger Zone -->
+    <div class="hover-trigger-zone" id="sidebarTriggerZone"></div>
+
+    <!-- Separate Slide-out Menu Bar Layout -->
+    <div class="custom-sidebar" id="mainSidebarLayout">
+        <div class="sidebar-header">
+            <i class="bi bi-cpu-fill me-2"></i>SYSTEM OPTIONS
+        </div>
+        <ul class="sidebar-menu-list">
+            <li>
+                <a href="#" class="sidebar-link" onclick="toggleViewLayout('dashboard'); return false;">
+                    <i class="bi bi-speedometer2 text-info"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="#" class="sidebar-link" data-bs-toggle="modal" data-bs-target="#themeSettingsModal">
+                    <i class="bi bi-palette text-warning"></i> Settings (Themes)
+                </a>
+            </li>
+            <li class="dropdown">
+                <a href="#" class="sidebar-link dropdown-toggle" id="sidebarActionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-lightning-charge-fill text-danger"></i> Action
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark shadow border-0 p-2 m-0" aria-labelledby="sidebarActionDropdown">
+                    <li>
+                        <a class="dropdown-item py-2 rounded mb-1" href="#" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()">
+                            <i class="bi bi-person-gear me-2 text-primary"></i> Manage Team
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item py-2 rounded mb-1 text-danger" href="#" onclick="launchSecureWorkCancellationPanel(); return false;">
+                            <i class="bi bi-x-circle me-2"></i> Work Cancellation
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item py-2 rounded" href="#" onclick="alert('Table Filter Preview active below. Select columns inside historical logs view to inspect entries.'); return false;">
+                            <i class="bi bi-file-earmark-medical me-2 text-info"></i> Preview
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <a href="#" class="sidebar-link" toggle-target="message-board-panel" onclick="toggleViewLayout('messages'); return false;">
+                    <i class="bi bi-chat-left-text-fill text-success"></i> Message Board
+                </a>
+            </li>
+            <li>
+                <a href="#" class="sidebar-link" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="renderAttendanceUiList()">
+                    <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="sidebarActiveCount" class="badge bg-info text-dark ms-auto px-2 rounded-pill">0 Active</span>
+                </a>
+            </li>
+            <li class="dropdown">
+                <a href="#" class="sidebar-link dropdown-toggle" id="sidebarFilterDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-collection-fill text-primary"></i> Filter Archives
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark shadow border-0 p-2 m-0" aria-labelledby="sidebarFilterDropdown">
+                    <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
+                    <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
+                    <li><a class="dropdown-item py-2 rounded mb-1 text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
+                    <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Fixed Header Nav Bar Layout -->
     <nav class="navbar navbar-expand-lg navbar-dark custom-navbar fixed-top shadow no-print">
         <div class="container-fluid px-lg-4">
-            <a class="navbar-brand fw-bold nav-branding text-white me-3" href="#">
-                <img src="https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=80&auto=format&fit=crop&q=80" alt="Logo" width="32" height="32" class="d-inline-block align-text-top me-2 rounded">
-                Meru <span class="text-warning">Offload</span>
-            </a>
+            <div class="d-flex align-items-center">
+                <!-- Anchor Toggle Button for Sidebar interaction -->
+                <button class="btn menu-pill-btn me-3" id="sidebarToggleActionBtn" title="Reveal Menu Panel">
+                    <i class="bi bi-list fs-5 m-0 text-warning"></i>
+                </button>
+                <a class="navbar-brand fw-bold nav-branding text-white m-0" href="#">
+                    <img src="https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=80&auto=format&fit=crop&q=80" alt="Logo" width="32" height="32" class="d-inline-block align-text-top me-2 rounded">
+                    Meru Dairy <span class="text-warning">Offload</span>
+                </a>
+            </div>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav align-items-lg-center gap-2 me-auto mb-2 mb-lg-0">
-                    <li class="nav-item dropdown">
-                        <a class="menu-pill-btn dropdown-toggle" href="#" id="peopleDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Team Options">
-                            <i class="bi bi-people-fill text-warning m-0"></i>
-                        </a>
-                        <ul class="dropdown-menu shadow border-0 p-2 mt-2" aria-labelledby="peopleDropdown">
-                            <li>
-                                <a class="dropdown-item py-2 rounded mb-1" href="#" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()">
-                                    <i class="bi bi-person-gear me-2 text-primary"></i> Manage Team
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item py-2 rounded text-danger" href="#" onclick="launchSecureWorkCancellationPanel(); return false;">
-                                    <i class="bi bi-x-circle me-2"></i> Work Cancellation
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="menu-pill-btn dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-collection-fill text-primary"></i> Filter Archives
-                        </a>
-                        <ul class="dropdown-menu shadow border-0 p-2 mt-2" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
-                            <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
-                            <li><a class="dropdown-item py-2 rounded text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
-                            <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="renderAttendanceUiList()">
-                            <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="navActiveCount" class="badge bg-info text-dark ms-2 px-2 rounded-pill">0 Active</span>
-                        </a>
-                    </li>
+                <ul class="navbar-nav align-items-lg-center gap-2 me-auto mb-2 mb-lg-0 ms-lg-3">
                     <li class="nav-item">
                         <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#leaderboardModal" onclick="buildLeaderboard()">
                             <i class="bi bi-trophy-fill text-warning"></i> Leaderboard
@@ -252,178 +367,245 @@
         </div>
     </nav>
 
+    <!-- Content Workspace -->
     <div class="container my-4 main-content">
         
-        <div class="row g-3 mb-4 no-print">
-            <div class="col-md-3">
-                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #0d6efd;">
-                    <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
-                    <div class="fs-4 fw-bold text-dark" id="statTotalBoxes">0</div>
+        <!-- App Primary View: Dashboard Panel Interface -->
+        <div id="view-dashboard-panel">
+            <div class="row g-3 mb-4 no-print">
+                <div class="col-md-3">
+                    <div class="card shadow-sm p-3 stat-card" style="border-left-color: #0d6efd;">
+                        <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
+                        <div class="fs-4 fw-bold" id="statTotalBoxes">0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm p-3 stat-card" style="border-left-color: #198754;">
+                        <div class="text-muted small fw-bold text-uppercase">Total Paid Out</div>
+                        <div class="fs-4 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm p-3 stat-card" style="border-left-color: #dc3545;">
+                        <div class="text-muted small fw-bold text-uppercase">Total Unpaid Owed</div>
+                        <div class="fs-4 fw-bold text-danger" id="statTotalUnpaid">Ksh 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm p-3 stat-card" style="border-left-color: #ffc107;">
+                        <div class="text-muted small fw-bold text-uppercase">Pending Payout Logs</div>
+                        <div class="fs-4 fw-bold text-warning" id="statPendingCount">0</div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #198754;">
-                    <div class="text-muted small fw-bold text-uppercase">Total Paid Out</div>
-                    <div class="fs-4 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white py-3">
+                            <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Work Entry</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form id="workLogForm">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Employee Name</label>
+                                    <select id="employeeName" class="form-select text-dark" required>
+                                        <option value="" disabled selected>Select member</option>
+                                    </select>
+                                    <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle"></i> Showing active checked-in members only.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Vehicle Number Plate</label>
+                                    <input type="text" id="vehiclePlate" class="form-control bg-light text-dark" placeholder="e.g., KAA 123A" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Date of Work</label>
+                                    <input type="date" id="dateWorked" class="form-control bg-light text-dark" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Total Boxes Removed</label>
+                                    <input type="number" id="totalBoxes" class="form-control bg-light text-dark" min="0" placeholder="Total offloaded boxes" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Boxes Supposed to be Paid</label>
+                                    <select id="paidBoxesSelection" class="form-select" onchange="togglePaidBoxesInput()" required>
+                                        <option value="ALL" selected>All</option>
+                                        <option value="CUSTOM">Enter Amount Manually...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3 d-none" id="customPaidBoxesContainer">
+                                    <label class="form-label fw-semibold text-primary">Specify Boxes to Pay</label>
+                                    <input type="number" id="paidBoxes" class="form-control border-primary bg-light text-dark" min="0" placeholder="Boxes to pay for">
+                                </div>
+                                <button type="submit" id="submitBtn" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm sticky-top" style="top: 100px; z-index:10;">
+                        <div class="card-header bg-dark text-white py-3">
+                            <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Filter by Employee Name</label>
+                                <input type="text" id="filterName" class="form-control bg-light text-dark" placeholder="Leave blank for all employees">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Start Date</label>
+                                <input type="date" id="filterStartDate" class="form-control bg-light text-dark">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">End Date</label>
+                                <input type="date" id="filterEndDate" class="form-control bg-light text-dark">
+                            </div>
+                            <button type="button" id="pdfBtn" class="btn btn-primary w-100 py-2 fw-bold" onclick="generatePDF()">
+                                <i class="bi bi-download me-2"></i>Download PDF Report
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #dc3545;">
-                    <div class="text-muted small fw-bold text-uppercase">Total Unpaid Owed</div>
-                    <div class="fs-4 fw-bold text-danger" id="statTotalUnpaid">Ksh 0</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card shadow-sm p-3 stat-card bg-white" style="border-left-color: #ffc107;">
-                    <div class="text-muted small fw-bold text-uppercase">Pending Payout Logs</div>
-                    <div class="fs-4 fw-bold text-warning" id="statPendingCount">0</div>
+
+                <div class="col-lg-8">
+                    <div class="activity-banner shadow-sm p-3 mb-3 no-print row g-2">
+                        <div class="col-md-6 border-end-md">
+                            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                                <i class="bi bi-journal-plus text-primary me-1"></i> Last Entered Record
+                            </div>
+                            <div class="mt-1 fw-semibold" id="activityLastEntered">Loading historical records...</div>
+                        </div>
+                        <div class="col-md-6 ps-md-3">
+                            <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                                <i class="bi bi-cash-check text-success me-1"></i> Last Payment Processed
+                            </div>
+                            <div class="mt-1 fw-semibold" id="activityLastPaid">Loading payment history...</div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3 p-3 no-print">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="tableSearchInput" class="form-control border-start-0 bg-light text-dark" placeholder="Search employee or plate layout..." onkeyup="handleLiveSearchFilter()">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted small">Status</span>
+                                    <select id="tableStatusSelector" class="form-select bg-light text-dark" onchange="handleLiveSearchFilter()">
+                                        <option value="ALL">Show All Statuses</option>
+                                        <option value="UNPAID">Unpaid Records Only</option>
+                                        <option value="PAID">Paid Records Only</option>
+                                        <option value="CANCELLED">Cancelled Records Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-md-end">
+                                <span class="text-muted small fw-semibold" id="displayedRowsCounter">Showing 0 entries</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
+                            <h5 class="mb-0">
+                                <i class="bi bi-collection-fill me-2"></i>Saved Work Logs 
+                                <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span>
+                            </h5>
+                            <button class="btn btn-outline-danger btn-sm text-white shadow-sm" onclick="clearAllData()">Clear Cloud Records</button>
+                        </div>
+                        
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="mainLogsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Employee / Vehicle</th>
+                                            <th>Date Worked</th>
+                                            <th>Boxes Layout</th>
+                                            <th>Status & Details</th>
+                                            <th class="text-center no-print">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div id="noDataMessage" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x display-4 d-block mb-2"></i>
+                                No records found matching your filter selections.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card shadow-sm mb-4 bg-white">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Work Entry</h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <form id="workLogForm">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Employee Name</label>
-                                <select id="employeeName" class="form-select text-dark" required>
-                                    <option value="" disabled selected>Select member</option>
-                                </select>
-                                <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle"></i> Showing active checked-in members only.</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Vehicle Number Plate</label>
-                                <input type="text" id="vehiclePlate" class="form-control" placeholder="e.g., KAA 123A" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Date of Work</label>
-                                <input type="date" id="dateWorked" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Total Boxes Removed</label>
-                                <input type="number" id="totalBoxes" class="form-control" min="0" placeholder="Total offloaded boxes" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Boxes Supposed to be Paid</label>
-                                <select id="paidBoxesSelection" class="form-select" onchange="togglePaidBoxesInput()" required>
-                                    <option value="ALL" selected>All</option>
-                                    <option value="CUSTOM">Enter Amount Manually...</option>
-                                </select>
-                            </div>
-                            <div class="mb-3 d-none" id="customPaidBoxesContainer">
-                                <label class="form-label fw-semibold text-primary">Specify Boxes to Pay</label>
-                                <input type="number" id="paidBoxes" class="form-control border-primary" min="0" placeholder="Boxes to pay for">
-                            </div>
-                            <button type="submit" id="submitBtn" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
-                        </form>
-                    </div>
+        <!-- App View: Live Worker Communications Board Panel -->
+        <div id="view-messages-panel" class="d-none">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots-fill me-2"></i>Leave a System Message</h5>
                 </div>
-
-                <div class="card shadow-sm sticky-top bg-white" style="top: 100px;">
-                    <div class="card-header bg-dark text-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Filter by Employee Name</label>
-                            <input type="text" id="filterName" class="form-control" placeholder="Leave blank for all employees">
+                <div class="card-body p-4">
+                    <form id="messageBoardForm">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Select Your Name</label>
+                                <select id="msgWorkerDropdown" class="form-select bg-light text-dark" required>
+                                    <option value="" disabled selected>Identify worker...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Message Content</label>
+                                <div class="input-group">
+                                    <input type="text" id="msgTextBody" class="form-control bg-light text-dark" placeholder="Type administrative notes or update entries here..." required>
+                                    <button type="submit" class="btn btn-success fw-bold px-4">Post Note</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Start Date</label>
-                            <input type="date" id="filterStartDate" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">End Date</label>
-                            <input type="date" id="filterEndDate" class="form-control">
-                        </div>
-                        <button type="button" id="pdfBtn" class="btn btn-primary w-100 py-2 fw-bold" onclick="generatePDF()">
-                            <i class="bi bi-download me-2"></i>Download PDF Report
-                        </button>
-                    </div>
+                    </form>
                 </div>
             </div>
 
-            <div class="col-lg-8">
-                
-                <div class="activity-banner shadow-sm p-3 mb-3 no-print row g-2">
-                    <div class="col-md-6 border-end-md">
-                        <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
-                            <i class="bi bi-journal-plus text-primary me-1"></i> Last Entered Record
-                        </div>
-                        <div class="text-dark mt-1 fw-semibold" id="activityLastEntered">Loading historical records...</div>
-                    </div>
-                    <div class="col-md-6 ps-md-3">
-                        <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
-                            <i class="bi bi-cash-check text-success me-1"></i> Last Payment Processed
-                        </div>
-                        <div class="text-dark mt-1 fw-semibold" id="activityLastPaid">Loading payment history...</div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Historical Messages Timeline</h5>
+                </div>
+                <div class="card-body p-3">
+                    <div id="messagesContainerTimeline" class="row g-3">
+                        <div class="text-center py-4 text-muted col-12">Loading messages feed node...</div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="card shadow-sm mb-3 p-3 bg-white no-print">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-md-5">
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" id="tableSearchInput" class="form-control border-start-0 bg-light" placeholder="Search employee or plate layout..." onkeyup="handleLiveSearchFilter()">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <span class="input-group-text bg-light text-muted small">Status</span>
-                                <select id="tableStatusSelector" class="form-select bg-light" onchange="handleLiveSearchFilter()">
-                                    <option value="ALL">Show All Statuses</option>
-                                    <option value="UNPAID">Unpaid Records Only</option>
-                                    <option value="PAID">Paid Records Only</option>
-                                    <option value="CANCELLED">Cancelled Records Only</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3 text-md-end">
-                            <span class="text-muted small fw-semibold" id="displayedRowsCounter">Showing 0 entries</span>
-                        </div>
-                    </div>
+    </div>
+
+    <!-- Modal: Settings & Theme Selection -->
+    <div class="modal fade" id="themeSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-palette-fill me-2"></i>Web Themes Settings</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-
-                <div class="card shadow-sm bg-white">
-                    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center no-print">
-                        <h5 class="mb-0">
-                            <i class="bi bi-collection-fill me-2"></i>Saved Work Logs 
-                            <span id="loadingSpinner" class="badge bg-warning text-dark ms-2">Loading cloud...</span>
-                        </h5>
-                        <button class="btn btn-outline-danger btn-sm text-white shadow-sm" onclick="clearAllData()">Clear All Cloud Records</button>
-                    </div>
-                    
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="mainLogsTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Employee / Vehicle</th>
-                                        <th>Date Worked</th>
-                                        <th>Boxes Layout</th>
-                                        <th>Status & Details</th>
-                                        <th class="text-center no-print">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="logTableBody"></tbody>
-                            </table>
-                        </div>
-                        <div id="noDataMessage" class="text-center py-5 text-muted">
-                            <i class="bi bi-folder-x display-4 d-block mb-2"></i>
-                            No records found matching your filter selections.
-                        </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="small text-muted mb-3">Choose global theme view preference</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-outline-dark fw-bold px-3 py-2" onclick="setAppViewTheme('light')">
+                            <i class="bi bi-brightness-high-fill me-1 text-warning"></i> Light Mode
+                        </button>
+                        <button class="btn btn-dark fw-bold px-3 py-2" onclick="setAppViewTheme('dark')">
+                            <i class="bi bi-moon-stars-fill me-1 text-info"></i> Dark Mode
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal: System Member Registry -->
     <div class="modal fade" id="rosterRegistryModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md">
             <div class="modal-content">
@@ -436,13 +618,13 @@
                         <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill me-1 text-primary"></i>Register New Member</h6>
                         <div class="row g-2">
                             <div class="col-md-8">
-                                <input type="text" id="newRegistryWorkerName" class="form-control" placeholder="Enter full worker name">
+                                <input type="text" id="newRegistryWorkerName" class="form-control text-dark bg-white" placeholder="Enter full worker name">
                             </div>
                             <div class="col-md-4">
                                 <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add Member</button>
                             </div>
                         </div>
-                        <small class="text-muted mt-2"><i class="bi bi-shield-exclamation"></i> Names must be unique. Existing records will be protected.</small>
+                        <small class="text-muted mt-2"><i class="bi bi-shield-exclamation"></i> Names must be unique. Existing records protected.</small>
                     </div>
 
                     <h6 class="fw-bold text-dark mb-2">Configured Roster Members</h6>
@@ -464,6 +646,7 @@
         </div>
     </div>
 
+    <!-- Modal: Work Cancellation -->
     <div class="modal fade" id="workCancellationModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -472,7 +655,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="small text-muted mb-3"><i class="bi bi-info-circle"></i> Select any logged entry below to apply a cancellation status. Active or paid entries can be cancelled.</p>
+                    <p class="small text-muted mb-3"><i class="bi bi-info-circle"></i> Apply a cancellation status to any logged record. Voided records preserve original audit visibility.</p>
                     <div class="table-responsive border rounded" style="max-height: 400px; overflow-y: auto;">
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-dark sticky-top">
@@ -493,6 +676,7 @@
         </div>
     </div>
 
+    <!-- Modal: Identity Verification -->
     <div class="modal fade no-print" id="securityLockModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content border-0 shadow">
@@ -512,6 +696,7 @@
         </div>
     </div>
 
+    <!-- Modal: Shift Check-In Attendance -->
     <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -521,7 +706,7 @@
                 </div>
                 <div class="modal-body p-0">
                     <div class="p-3 bg-light border-bottom text-muted small d-flex justify-content-between align-items-center">
-                        <span>Check workers <span class="text-success fw-bold">ON</span> to add them to entry form.</span>
+                        <span>Check workers <span class="text-success fw-bold">ON</span> to show them inside the logging choices list.</span>
                         <button class="btn btn-xs btn-outline-danger py-0 px-2 small fw-bold text-uppercase" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All Off</button>
                     </div>
                     <ul class="list-group list-group-flush" id="attendanceListBody"></ul>
@@ -530,6 +715,7 @@
         </div>
     </div>
 
+    <!-- Modal: Performance Leaderboard -->
     <div class="modal fade" id="leaderboardModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -553,6 +739,7 @@
         </div>
     </div>
 
+    <!-- Modal: Entry Details Inspection -->
     <div class="modal fade" id="inspectionViewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md modal-dialog-centered">
             <div class="modal-content">
@@ -565,6 +752,7 @@
         </div>
     </div>
 
+    <!-- Modal: Truck Deliveries Breakdown -->
     <div class="modal fade" id="truckModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -615,14 +803,68 @@
             inspectionBootstrapModal = new bootstrap.Modal(document.getElementById('inspectionViewModal'));
             cancellationBootstrapModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
             
+            // Retain user's theme selection on boot
+            const activeCachedTheme = localStorage.getItem('meru_web_theme') || 'light';
+            setAppViewTheme(activeCachedTheme);
+
             document.getElementById('secretSecurityCodeInput').addEventListener('keydown', (e) => {
                 if(e.key === 'Enter') submitSecurityVerification();
             });
+
+            // Handle Form Submissions for Message Board Node
+            document.getElementById('messageBoardForm').addEventListener('submit', postWorkerMessageToCloud);
+
+            // Hook Event Listeners for the Dynamic Hover Sidebar Layout
+            setupSidebarInteractions();
 
             window.addEventListener('online', updateNetworkIndicatorStatus);
             window.addEventListener('offline', updateNetworkIndicatorStatus);
             updateNetworkIndicatorStatus(); 
         });
+
+        /* SIDEBAR HOVER ANIMATION HOOKS & CONTROLLERS */
+        function setupSidebarInteractions() {
+            const sb = document.getElementById('mainSidebarLayout');
+            const zone = document.getElementById('sidebarTriggerZone');
+            const btn = document.getElementById('sidebarToggleActionBtn');
+
+            zone.addEventListener('mouseenter', () => sb.classList.add('active'));
+            sb.addEventListener('mouseleave', () => sb.classList.remove('active'));
+            btn.addEventListener('mouseenter', () => sb.classList.add('active'));
+        }
+
+        /* LIGHT & DARK MULTI-THEME ENGINE CONTROLLER */
+        function setAppViewTheme(themeMode) {
+            document.documentElement.setAttribute('data-theme', themeMode);
+            localStorage.setItem('meru_web_theme', themeMode);
+            
+            const inputs = document.querySelectorAll('.form-control, .form-select');
+            inputs.forEach(el => {
+                if (themeMode === 'dark') {
+                    el.classList.add('bg-dark', 'text-white');
+                    el.classList.remove('bg-light', 'text-dark');
+                } else {
+                    el.classList.add('bg-light', 'text-dark');
+                    el.classList.remove('bg-dark', 'text-white');
+                }
+            });
+        }
+
+        /* CLIENT VIEW ROUTER: TOGGLE DASHBOARD VS MESSAGES FEED */
+        function toggleViewLayout(targetLayoutId) {
+            const dash = document.getElementById('view-dashboard-panel');
+            const msgPanel = document.getElementById('view-messages-panel');
+            document.getElementById('mainSidebarLayout').classList.remove('active');
+
+            if(targetLayoutId === 'messages') {
+                dash.classList.add('d-none');
+                msgPanel.classList.remove('d-none');
+                fetchMessagesTimelineFeed();
+            } else {
+                msgPanel.classList.add('d-none');
+                dash.classList.remove('d-none');
+            }
+        }
 
         function updateNetworkIndicatorStatus() {
             const dot = document.getElementById('terminalPulseDot');
@@ -690,6 +932,7 @@
 
         function filterByStatusSelector(statusType) {
             document.getElementById('tableStatusSelector').value = statusType;
+            toggleViewLayout('dashboard');
             handleLiveSearchFilter();
         }
 
@@ -709,8 +952,8 @@
             }
         }
 
-        /* ENFORCE SECURITY CHECK ON WORK CANCELLATION BUTTON */
         function launchSecureWorkCancellationPanel() {
+            document.getElementById('mainSidebarLayout').classList.remove('active');
             runWithSecurityGate(() => {
                 renderWorkCancellationTable();
                 cancellationBootstrapModal.show();
@@ -721,22 +964,11 @@
             const element = document.getElementById(elementId);
             const toast = document.getElementById(elementId + '_toast');
             
-            if (element.innerHTML.includes(hiddenValue)) {
-                navigator.clipboard.writeText(hiddenValue).then(() => {
-                    toast.style.display = "block";
-                    setTimeout(() => { toast.style.display = "none"; }, 2000);
-                }).catch(err => {
-                    console.error("Clipboard copy failed: ", err);
-                });
-            } else {
-                element.innerHTML = hiddenValue;
-                navigator.clipboard.writeText(hiddenValue).then(() => {
-                    toast.style.display = "block";
-                    setTimeout(() => { toast.style.display = "none"; }, 2000);
-                }).catch(err => {
-                    console.error("Clipboard copy failed: ", err);
-                });
-            }
+            element.innerHTML = hiddenValue;
+            navigator.clipboard.writeText(hiddenValue).then(() => {
+                toast.style.display = "block";
+                setTimeout(() => { toast.style.display = "none"; }, 2000);
+            }).catch(err => console.error("Clipboard copy failed: ", err));
         }
 
         /* DYNAMIC WORKER REGISTRY CONTROLLER BLOCK */
@@ -754,7 +986,7 @@
             sortedRegistry.forEach(worker => {
                 tbody.innerHTML += `
                     <tr>
-                        <td class="ps-3 fw-bold text-dark">${escapeHtml(worker.name)}</td>
+                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
                         <td class="text-center no-print">
                             <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistryCloud('${worker.id}', '${escapeHtml(worker.name)}')">
                                 <i class="bi bi-person-x-fill"></i> Drop
@@ -776,7 +1008,7 @@
 
             const nameExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === targetName.toLowerCase());
             if (nameExists) {
-                alert(`Operation Blocked! A member named "${targetName}" is already registered inside the system database.`);
+                alert(`Operation Blocked! A member named "${targetName}" is already inside the engine logs database.`);
                 return;
             }
 
@@ -800,7 +1032,7 @@
         }
 
         function removeWorkerFromRegistryCloud(firebaseId, cleanName) {
-            if (confirm(`Completely drop "${cleanName}" from active rosters?\n\nAll historical work metrics, payments, and generated logs remain locked safely inside database architecture.`)) {
+            if (confirm(`Completely drop "${cleanName}" from active rosters?\n\nAll historical work metrics remain logged safely inside database architecture.`)) {
                 runWithSecurityGate(() => {
                     const dropEmployeePromise = fetch(`${FIREBASE_URL}employees/${firebaseId}.json`, { method: 'DELETE' });
                     const dropAttendancePromise = fetch(`${FIREBASE_URL}attendance/roster/${cleanName}.json`, { method: 'DELETE' });
@@ -823,7 +1055,7 @@
             const activeLogs = globalLogsArray.filter(log => !log.isCancelled);
 
             if (activeLogs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted"><i class="bi bi-info-circle"></i> No active logs found available for cancellation.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted"><i class="bi bi-info-circle"></i> No active logs available for cancellation.</td></tr>`;
                 return;
             }
 
@@ -832,7 +1064,7 @@
             activeLogs.forEach(log => {
                 tbody.innerHTML += `
                     <tr>
-                        <td class="ps-3 fw-bold text-dark">${escapeHtml(log.employeeName || "-")} <br><small class="text-muted font-monospace font-xs">${escapeHtml(log.vehiclePlate || "")}</small></td>
+                        <td class="ps-3 fw-bold text-wrap">${escapeHtml(log.employeeName || "-")} <br><small class="text-muted font-monospace font-xs">${escapeHtml(log.vehiclePlate || "")}</small></td>
                         <td class="text-secondary fw-semibold small">${formatDateDisplay(log.dateWorked || "")}</td>
                         <td class="fw-bold text-primary">${log.totalBoxes || 0} boxes</td>
                         <td class="text-center">
@@ -846,7 +1078,7 @@
         }
 
         function cancelWorkLogRecord(recordId, workerName) {
-            if (confirm(`Are you sure you want to mark this work entry for "${workerName}" as CANCELLED?\n\nThis will declare the work void on the dashboard logs list.`)) {
+            if (confirm(`Are you sure you want to mark this work entry for "${workerName}" as CANCELLED?\n\nThis will declare the work void on dashboard logs list.`)) {
                 runWithSecurityGate(() => {
                     let url = `${FIREBASE_URL}logs/${recordId}.json`;
                     
@@ -873,7 +1105,6 @@
             }
         }
 
-        /* UPDATED INSPECTION DETAILS MODAL RENDERING LOGIC */
         function showInspectionDetails(logId) {
             const targetLog = globalLogsArray.find(log => log.id === logId);
             if(!targetLog) return;
@@ -886,16 +1117,16 @@
                     <div class="alert alert-danger py-2 text-center mb-3">
                         <i class="bi bi-x-octagon-fill me-1"></i> <strong>VOIDED / CANCELLED</strong>
                     </div>
-                    <div class="mb-2 fs-6"><strong>Worker Name:</strong> <span class="text-dark fw-bold">${escapeHtml(targetLog.employeeName || "")}</span></div>
+                    <div class="mb-2 fs-6"><strong>Worker Name:</strong> <span class="fw-bold">${escapeHtml(targetLog.employeeName || "")}</span></div>
                     <div class="small mb-2"><strong>Date of Cancellation:</strong> ${formatDateDisplay(targetLog.dateCancelled || "")}</div>
                     <div class="small mb-2"><strong>Time:</strong> ${targetLog.timeCancelled || ""}</div>
                     <hr class="my-2">
-                    <div class="p-2 bg-light border rounded small text-secondary shadow-sm">
+                    <div class="p-2 bg-light text-dark border rounded small shadow-sm">
                         <i class="bi bi-chat-left-text-fill text-danger me-1"></i> 
-                        This operation transaction row was verified and cancelled safely under administrative supervision by team leader 
+                        This transaction data was flagged and cancelled under supervisor oversight by team leader 
                         <span id="contact_denwilson" class="interactive-contact" onclick="toggleInteractiveContactDisplay('contact_denwilson', '0742960571')">Denwilson</span>
                         <span id="contact_denwilson_toast" class="copy-toast"><i class="bi bi-check2-circle"></i> Number Copied!</span> 
-                        and system payroll platform manager payer 
+                        and system manager 
                         <span id="contact_kelvin" class="interactive-contact" onclick="toggleInteractiveContactDisplay('contact_kelvin', '0714026060')">Kelvin</span>.
                         <span id="contact_kelvin_toast" class="copy-toast"><i class="bi bi-check2-circle"></i> Number Copied!</span>
                     </div>
@@ -903,7 +1134,7 @@
             } else if (targetLog.isPaid) {
                 statusBlockHtml = `
                     <div class="alert alert-success py-2 text-center mb-3">
-                        <i class="bi bi-check-circle-fill me-1"></i> <strong>COMPLETELY SETTLED</strong>
+                        <i class="bi bi-check-circle-fill childhood-icon me-1"></i> <strong>COMPLETELY SETTLED</strong>
                     </div>
                     <div class="small mb-2"><strong>Paid Out:</strong> Ksh ${Number(targetLog.amountPaid || 0).toLocaleString()}</div>
                     <div class="small mb-2"><strong>Settled On:</strong> ${formatDateDisplay(targetLog.datePaid || "")} ${targetLog.timePaid || ""}</div>
@@ -960,7 +1191,7 @@
                 })
                 .then(res => {
                     rebuildDynamicFormDropdowns();
-                    updateAttendanceBadgeCounter();
+                    updateAttendanceBadgeCounters();
                 })
                 .catch(() => {
                     alert("Network Error updating cloud roster.");
@@ -971,7 +1202,7 @@
         }
 
         function resetAllAttendanceOffManually() {
-            if(confirm("Turn OFF shift logs for the entire team roster manually?")) {
+            if(confirm("Turn OFF shift logs for entire team roster manually?")) {
                 runWithSecurityGate(() => {
                     const clearPromises = masterDynamicWorkersArray.map(worker => {
                         globalAttendanceObj[worker.name] = false;
@@ -986,29 +1217,35 @@
                     Promise.all(clearPromises).then(() => {
                         renderAttendanceUiList();
                         rebuildDynamicFormDropdowns();
-                        updateAttendanceBadgeCounter();
+                        updateAttendanceBadgeCounters();
                     }).catch(() => alert("Could not flush server variables."));
                 });
             }
         }
 
-        function updateAttendanceBadgeCounter() {
+        function updateAttendanceBadgeCounters() {
             let activeCount = 0;
             masterDynamicWorkersArray.forEach(emp => {
                 if(globalAttendanceObj[emp.name] === true) activeCount++;
             });
-            document.getElementById('navActiveCount').innerText = `${activeCount} Active`;
+            document.getElementById('sidebarActiveCount').innerText = `${activeCount} Active`;
         }
 
         function rebuildDynamicFormDropdowns() {
             const dropdown = document.getElementById('employeeName');
+            const msgDropdown = document.getElementById('msgWorkerDropdown');
+            
             dropdown.innerHTML = '<option value="" disabled selected>Select member</option>';
+            msgDropdown.innerHTML = '<option value="" disabled selected>Identify worker...</option>';
 
             const sortedWorkers = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
             sortedWorkers.forEach(worker => {
+                // System Dropdown shows checked-in workers
                 if(globalAttendanceObj[worker.name] === true) {
                     dropdown.innerHTML += `<option value="${escapeHtml(worker.name)}">${escapeHtml(worker.name)}</option>`;
                 }
+                // Message board allows selection from all workers
+                msgDropdown.innerHTML += `<option value="${escapeHtml(worker.name)}">${escapeHtml(worker.name)}</option>`;
             });
         }
 
@@ -1018,8 +1255,79 @@
             masterDynamicWorkersArray.forEach(worker => {
                 globalAttendanceObj[worker.name] = rosterNode[worker.name] === true;
             });
-            updateAttendanceBadgeCounter();
+            updateAttendanceBadgeCounters();
             rebuildDynamicFormDropdowns();
+        }
+
+        /* LIVE MESSAGE BOARD DATA CONTROLLERS */
+        function postWorkerMessageToCloud(e) {
+            e.preventDefault();
+            const workerName = document.getElementById('msgWorkerDropdown').value;
+            const messageBody = document.getElementById('msgTextBody').value.trim();
+
+            if(!workerName || !messageBody) return;
+
+            const targetMessageId = "msg_" + Date.now();
+            const dateObj = new Date();
+            
+            const localStringDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+            const localStringTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            const messagePayload = {
+                id: targetMessageId,
+                workerName: workerName,
+                text: messageBody,
+                datePosted: localStringDate,
+                timePosted: localStringTime,
+                timestamp: Date.now()
+            };
+
+            fetch(`${FIREBASE_URL}messages/${targetMessageId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(messagePayload),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(() => {
+                document.getElementById('msgTextBody').value = '';
+                fetchMessagesTimelineFeed();
+            })
+            .catch(() => alert("Failed to commit notes payload online. Check link status."));
+        }
+
+        function fetchMessagesTimelineFeed() {
+            const feedContainer = document.getElementById('messagesContainerTimeline');
+            feedContainer.innerHTML = '<div class="text-center py-4 text-muted col-12"><span class="spinner-border spinner-border-sm me-2"></span>Reading timeline feed logs...</div>';
+
+            fetch(`${FIREBASE_URL}messages.json`)
+            .then(res => res.json())
+            .then(data => {
+                feedContainer.innerHTML = '';
+                if(!data) {
+                    feedContainer.innerHTML = '<div class="text-center py-5 text-muted col-12"><i class="bi bi-chat-square-dots display-5 d-block mb-2"></i>No updates or workspace conversations posted yet.</div>';
+                    return;
+                }
+
+                const msgList = Object.keys(data).map(k => data[k]).sort((a,b) => b.timestamp - a.timestamp);
+                msgList.forEach(msg => {
+                    feedContainer.innerHTML += `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-light border p-3 h-100 shadow-sm text-dark">
+                                <div class="d-flex justify-content-between border-bottom pb-2 mb-2 small font-monospace text-muted">
+                                    <span><i class="bi bi-calendar3"></i> ${formatDateDisplay(msg.datePosted)}</span>
+                                    <span><i class="bi bi-clock"></i> ${msg.timePosted}</span>
+                                </div>
+                                <p class="mb-2 flex-grow-1 font-monospace fw-semibold" style="font-size:0.92rem;">"${escapeHtml(msg.text)}"</p>
+                                <div class="text-end text-primary fw-bold small">
+                                    <i class="bi bi-person-circle"></i> — ${escapeHtml(msg.workerName)}
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            })
+            .catch(() => {
+                feedContainer.innerHTML = '<div class="text-center py-4 text-danger col-12">Failed to populate conversations timeline.</div>';
+            });
         }
 
         document.getElementById('workLogForm').addEventListener('submit', function(e) {
@@ -1342,7 +1650,7 @@
                             <button class="btn btn-sm btn-outline-secondary me-1" onclick="showInspectionDetails('${log.id}')" title="View Details">
                                 <i class="bi bi-eye-fill"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteIndividualRecord('${log.id}')" title="Permanently delete from database row">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteIndividualRecord('${log.id}')" title="Permanently delete database row">
                                 <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>`;
@@ -1378,7 +1686,7 @@
                 const row = `
                     <tr ${rowClass}>
                         <td>
-                            <div class="fw-bold text-dark text-wrap">${escapeHtml(log.employeeName || "-")}</div>
+                            <div class="fw-bold text-wrap">${escapeHtml(log.employeeName || "-")}</div>
                             <small class="text-muted text-uppercase font-monospace bg-light border px-1 rounded" style="font-size: 0.75rem;">
                                 ${escapeHtml(log.vehiclePlate || "-")}
                             </small>
