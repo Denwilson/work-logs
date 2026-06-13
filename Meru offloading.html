@@ -744,29 +744,28 @@
                 <div class="modal-body text-center p-3">
                     <p class="small text-muted mb-2">Enter secret code to authorize database changes.</p>
                     <input type="password" id="secretSecurityCodeInput" class="form-control text-center fw-bold fs-5 tracking-widest border-2" placeholder="••••••••" autocomplete="off">
-                    <div class="text-danger small fw-bold mt-2 d-none" id="securityModalErrorMsg">⚠️ Invalid Code! Try Again.</div>
-                </div>
-                <div class="modal-footer p-2 border-0 bg-light d-flex justify-content-between">
-                    <button type="button" class="btn btn-sm btn-secondary px-3" onclick="cancelSecurityVerification()">Cancel</button>
-                    <button type="button" class="btn btn-sm btn-danger px-3 fw-bold" onclick="submitSecurityVerification()">Verify</button>
+                    <div id="securityModalErrorMsg" class="text-danger small fw-bold mt-2 d-none">Invalid Code. Access Denied.</div>
+                    <button class="btn btn-danger w-100 mt-3 fw-bold" onclick="submitSecurityVerification()">Verify Identity</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-sm">
             <div class="modal-content">
-                <div class="modal-header bg-info text-dark">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check-fill me-2"></i>Daily Shift Check-In</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check text-warning me-2"></i>Shift Attendance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <div class="p-3 bg-light border-bottom text-muted small d-flex justify-content-between align-items-center">
-                        <span>Check workers <span class="text-success fw-bold">ON</span> to show them inside the logging choices list.</span>
-                        <button class="btn btn-xs btn-outline-danger py-0 px-2 small fw-bold text-uppercase" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All Off</button>
+                    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                        <span class="small text-muted fw-bold text-uppercase">Check-In Registry</span>
+                        <button class="btn btn-xs btn-outline-danger py-0 px-2 fw-semibold" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All</button>
                     </div>
-                    <ul class="list-group list-group-flush" id="attendanceListBody"></ul>
+                    <ul class="list-group list-group-flush" id="attendanceListBody" style="max-height:350px; overflow-y:auto;">
+                        <li class="list-group-item text-center py-3 text-muted">Loading list nodes...</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -839,65 +838,80 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
-        const SECRET_CODE = "den1472";
-        const SESSION_DURATION_MS = 45 * 60 * 1000;
-        
+        const SECRET_CODE = "2026";
+        const RATE_PER_BOX = 1; // Updated to 1 Shilling per box
+        const SESSION_DURATION_MS = 45 * 60 * 1000; // 45 minutes session memory
+
+        const UNIQUE_DEVICE_ID = (() => {
+            let id = localStorage.getItem('meru_device_token_identity');
+            if(!id) {
+                id = 'DEV-' + Math.floor(1000 + Math.random() * 9000);
+                localStorage.setItem('meru_device_token_identity', id);
+            }
+            return id;
+        })();
+
         let globalLogsArray = [];
         let masterDynamicWorkersArray = [];
         let globalAttendanceObj = {};
-        let currentPricePerBox = 1;
-        let pendingActionCallback = null;
-        
-        let securityBootstrapModal = null;
-        let inspectionBootstrapModal = null;
-        let cancellationBootstrapModal = null;
-        let notificationsInboxBootstrapModal = null;
-
-        // Persistent Client Browser Identification Engine Track Setup
-        let UNIQUE_DEVICE_ID = localStorage.getItem('meru_terminal_device_uuid');
-        if (!UNIQUE_DEVICE_ID) {
-            UNIQUE_DEVICE_ID = 'DEV-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-            localStorage.setItem('meru_terminal_device_uuid', UNIQUE_DEVICE_ID);
-        }
-
-        // System Notification Control Trackers
         let globalMessagesCacheArray = [];
-        let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
-        let broadcastTickerTimerReference = null;
-        const TOTAL_ALERT_DURATION_MS = 10000; // 10 seconds total duration
-        let alertTimeRemainingMs = TOTAL_ALERT_DURATION_MS;
+        let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map')) || {};
 
-        document.addEventListener("DOMContentLoaded", () => {
+        let securityBootstrapModal;
+        let pendingActionCallback = null;
+        let activeStatusFilterCriteria = "ALL";
+        let isInitialBootLoad = true;
+
+        document.addEventListener('DOMContentLoaded', () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
-            inspectionBootstrapModal = new bootstrap.Modal(document.getElementById('inspectionViewModal'));
-            cancellationBootstrapModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-            notificationsInboxBootstrapModal = new bootstrap.Modal(document.getElementById('notificationsInboxModal'));
-
-            const activeCachedTheme = localStorage.getItem('meru_web_theme') || 'light';
-            setAppViewTheme(activeCachedTheme);
-
-            document.getElementById('secretSecurityCodeInput').addEventListener('keydown', (e) => {
-                if(e.key === 'Enter') submitSecurityVerification();
-            });
-
-            document.getElementById('messageBoardForm').addEventListener('submit', postWorkerMessageToCloud);
-            document.getElementById('workLogForm').addEventListener('submit', handleWorkLogFormSubmit);
-
-            setupSidebarInteractions();
             
-            window.addEventListener('online', updateNetworkIndicatorStatus);
-            window.addEventListener('offline', updateNetworkIndicatorStatus);
-            updateNetworkIndicatorStatus();
+            const savedTheme = localStorage.getItem('meru_web_theme') || 'light';
+            setAppViewTheme(savedTheme);
 
-            // Initial Bootstrap Engine Dynamic Calls
+            initializeSidebarLayoutControls();
+            
+            // Set default date picker layout to current localized timestamp and configure future restriction (max)
+            const todayStr = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('dateWorked');
+            dateInput.value = todayStr;
+            dateInput.setAttribute('max', todayStr); // Blocks dates past current day in user interface selector
+
+            // Operational initialization pipeline runs
             fetchWorkersRegistryFromCloud();
             fetchLogsFromCloud();
-            
-            // Continuous Live Sync Listener Loop for Notification Communications Stream Node
-            initLiveMessagesSynchronizationDaemon();
+            fetchMessagesTimelineFeed(true);
+
+            // Interface interval clock updates
+            setInterval(executeLiveClockTicker, 1000);
+            updateNetworkIndicatorStatus();
+            window.addEventListener('online', updateNetworkIndicatorStatus);
+            window.addEventListener('offline', updateNetworkIndicatorStatus);
+
+            // Attach Work Entry Interceptor Submission Hook with Identity Verification Check
+            document.getElementById('workLogForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Route work entry submission securely through the 45-min security gate
+                runWithSecurityGate(() => {
+                    executeWorkLogSubmissionPayload();
+                });
+            });
+
+            document.getElementById('messageBoardForm').addEventListener('submit', executeMessageSubmissionTimelineChannel);
+
+            // Cross-Terminal Synchronization polling sequence
+            setInterval(() => {
+                fetchLogsFromCloud();
+                fetchMessagesTimelineFeed(false);
+            }, 8000);
         });
 
-        function setupSidebarInteractions() {
+        function executeLiveClockTicker() {
+            const timeStr = new Date().toLocaleTimeString();
+            document.getElementById('navLiveClock').innerText = timeStr;
+        }
+
+        function initializeSidebarLayoutControls() {
             const sb = document.getElementById('mainSidebarLayout');
             const zone = document.getElementById('sidebarTriggerZone');
             const btn = document.getElementById('sidebarToggleActionBtn');
@@ -906,6 +920,7 @@
             btn.addEventListener('click', () => sb.classList.toggle('active'));
         }
 
+        // Updates theme layouts
         function setAppViewTheme(themeMode) {
             document.documentElement.setAttribute('data-theme', themeMode);
             localStorage.setItem('meru_web_theme', themeMode);
@@ -970,9 +985,9 @@
                 localStorage.setItem('meru_offload_session_time', Date.now().toString());
                 securityBootstrapModal.hide();
                 if(pendingActionCallback) {
-                    const executionMethod = pendingActionCallback;
+                    const executionFunction = pendingActionCallback;
                     pendingActionCallback = null;
-                    executionMethod();
+                    executionFunction();
                 }
             } else {
                 document.getElementById('securityModalErrorMsg').classList.remove('d-none');
@@ -981,524 +996,82 @@
             }
         }
 
-        function cancelSecurityVerification() {
-            securityBootstrapModal.hide();
-            pendingActionCallback = null;
-            const submitBtn = document.getElementById('submitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
-            }
-        }
-
-        document.getElementById('dateWorked').valueAsDate = new Date();
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('navLiveClock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-        }, 1000);
-
-        function filterByStatusSelector(statusType) {
-            document.getElementById('tableStatusSelector').value = statusType;
-            toggleViewLayout('dashboard');
-            handleLiveSearchFilter();
-        }
-
         function togglePaidBoxesInput() {
-            const selection = document.getElementById('paidBoxesSelection').value;
-            const customContainer = document.getElementById('customPaidBoxesContainer');
-            const customInput = document.getElementById('paidBoxes');
-            if (selection === "CUSTOM") {
-                customContainer.classList.remove('d-none');
-                customInput.required = true;
-                customInput.focus();
+            const choice = document.getElementById('paidBoxesSelection').value;
+            const container = document.getElementById('customPaidBoxesContainer');
+            const inputField = document.getElementById('paidBoxes');
+            if(choice === "CUSTOM") {
+                container.classList.remove('d-none');
+                inputField.setAttribute('required', 'true');
+                inputField.focus();
             } else {
-                customContainer.classList.add('d-none');
-                customInput.required = false;
-                customInput.value = '';
+                container.classList.add('d-none');
+                inputField.removeAttribute('required');
+                inputField.value = '';
             }
         }
 
-        function launchSecureWorkCancellationPanel() {
-            document.getElementById('mainSidebarLayout').classList.remove('active');
-            runWithSecurityGate(() => {
-                renderWorkCancellationTable();
-                cancellationBootstrapModal.show();
-            });
-        }
-
-        /* LIVE CONTINUOUS SYNCHRONIZATION FOR WORKER NOTIFICATION SYSTEM MESSAGES */
-        function initLiveMessagesSynchronizationDaemon() {
-            // Establish a cyclical long poll fetch fallback rule to synchronize data instantly without needing manual refreshes.
-            fetchMessagesTimelineFeed(true); 
-            setInterval(() => {
-                fetchMessagesTimelineFeed(false);
-            }, 4000);
-        }
-
-        function fetchMessagesTimelineFeed(isInitialBootLoad = false) {
-            const url = `${FIREBASE_URL}comms_board.json`;
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                const legacyArrayLength = globalMessagesCacheArray.length;
-                globalMessagesCacheArray = [];
-                if (data) {
-                    Object.keys(data).forEach(firebaseId => {
-                        globalMessagesCacheArray.push({
-                            id: firebaseId,
-                            ...data[firebaseId]
-                        });
-                    });
-                    // Sort descending by unix epoch time
-                    globalMessagesCacheArray.sort((a, b) => b.timestamp - a.timestamp);
-                }
-
-                evaluateUnreadMessagesBadgeCount();
-                renderMessageBoardTimelineView();
-
-                // Cross-Terminal Intercept: Trigger Popup Banner Alert if another terminal introduces notes 
-                if (!isInitialBootLoad && globalMessagesCacheArray.length > legacyArrayLength) {
-                    const structuralLatestMsg = globalMessagesCacheArray[0];
-                    if (structuralLatestMsg && structuralLatestMsg.deviceId !== UNIQUE_DEVICE_ID) {
-                        triggerCrossTerminalLiveAlertPopup(structuralLatestMsg);
-                    }
-                }
-            })
-            .catch(err => console.error("Communication Feed Fetch Failure: ", err));
-        }
-
-        function evaluateUnreadMessagesBadgeCount() {
-            let unreadCount = 0;
-            globalMessagesCacheArray.forEach(msg => {
-                if (!clientReadMessagesTrackerObj[msg.id]) {
-                    unreadCount++;
-                }
-            });
-
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            const modalBadge = document.getElementById('modalInboxUnreadCountBadge');
+        function executeWorkLogSubmissionPayload() {
+            const employeeName = document.getElementById('employeeName').value.trim();
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim().toUpperCase();
+            const dateWorked = document.getElementById('dateWorked').value;
+            const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10) || 0;
+            const selectionChoice = document.getElementById('paidBoxesSelection').value;
             
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount;
-                badge.classList.remove('d-none');
-                if(modalBadge) modalBadge.innerText = `${unreadCount} Unread Notes`;
-            } else {
-                badge.classList.add('d-none');
-                if(modalBadge) modalBadge.innerText = `0 Unread Messages`;
-            }
-        }
-
-        /* MESSAGE BOARD: RESTRICT LOG VIEW EXCLUSIVELY TO SENT MESSAGES FROM ACTIVE MACHINE */
-        function renderMessageBoardTimelineView() {
-            const container = document.getElementById('messagesContainerTimeline');
-            if(!container) return;
-
-            // Strict Filter Strategy Rule: Only show notes initiated on this current browser instance.
-            const localDeviceMessages = globalMessagesCacheArray.filter(msg => msg.deviceId === UNIQUE_DEVICE_ID);
-
-            if (localDeviceMessages.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5 text-muted col-12">
-                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
-                        No notes posted from this specific device. Use the form above to add an administrative notice.
-                    </div>`;
+            // STRICT PREVENT FUTURE DATE PROTECTION GATE
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (dateWorked > todayStr) {
+                alert("❌ Data Entry Declined! System parameters prohibit capturing logged shifts for future dates.");
                 return;
             }
 
-            let timelineHtml = '';
-            localDeviceMessages.forEach(msg => {
-                const dateText = new Date(msg.timestamp).toLocaleDateString();
-                const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                timelineHtml += `
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card border bg-light shadow-sm">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold text-success mb-0"><i class="bi bi-person-fill"></i> ${escapeHtml(msg.sender)}</h6>
-                                    <span class="badge bg-secondary font-monospace" style="font-size:10px;">${dateText} ${timeText}</span>
-                                </div>
-                                <p class="card-text text-dark bg-white p-2 rounded border small mb-1">${escapeHtml(msg.text)}</p>
-                                <div class="text-end">
-                                    <small class="text-muted font-monospace" style="font-size:9px;">ID: ${msg.deviceId} (Me)</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+            let paidBoxes = totalBoxes;
+            if (selectionChoice === "CUSTOM") {
+                paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10) || 0;
+            }
+
+            // STRICT REPEATED DATA PREVENTION MECHANISM
+            const isDuplicateRecord = globalLogsArray.some(existingLog => {
+                return existingLog.status !== "CANCELLED" &&
+                       existingLog.employeeName.trim().toLowerCase() === employeeName.toLowerCase() &&
+                       existingLog.vehiclePlate.trim().toUpperCase() === vehiclePlate &&
+                       existingLog.dateWorked === dateWorked &&
+                       parseInt(existingLog.totalBoxes, 10) === totalBoxes;
             });
-            container.innerHTML = timelineHtml;
-        }
 
-        /* NOTIFICATION HUB INBOX: SHOW ALL SYSTEM MESSAGES CHRONOLOGICALLY FOR EVERYONE */
-        function renderNotificationsInboxModal() {
-            const container = document.getElementById('globalNotificationHubListBody');
-            if (!container) return;
-
-            if (globalMessagesCacheArray.length === 0) {
-                container.innerHTML = `<div class="text-center py-4 text-muted">No messages posted across terminals to show.</div>`;
+            if (isDuplicateRecord) {
+                alert("❌ Data Submission Declined! A matching duplicate record with the exact same Employee Name, Vehicle Plate, Date, and Box Count already exists inside the system database.");
                 return;
             }
 
-            let inboxHtml = '<div class="d-flex flex-column gap-2">';
-            globalMessagesCacheArray.forEach(msg => {
-                const isRead = !!clientReadMessagesTrackerObj[msg.id];
-                const isFromMe = msg.deviceId === UNIQUE_DEVICE_ID;
-                const d = new Date(msg.timestamp);
-                const formatDateTimeStr = `${d.toLocaleDateString()} at ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-
-                inboxHtml += `
-                    <div class="card border p-3 ${isRead ? 'bg-white text-muted' : 'bg-warning-subtle shadow-sm'}" style="transition: all 0.2s;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold ${isFromMe ? 'text-primary' : 'text-dark'}">
-                                <i class="bi bi-person-circle"></i> ${escapeHtml(msg.sender)}
-                                ${isFromMe ? ' <span class="badge bg-secondary font-monospace" style="font-size:9px;">My Device</span>' : ''}
-                            </span>
-                            <small class="text-muted font-monospace small">${formatDateTimeStr}</small>
-                        </div>
-                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
-                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: ${msg.deviceId}</span>
-                            <div class="d-flex gap-1">
-                                ${!isRead ? `
-                                    <button class="btn btn-xs btn-success py-0 px-2 fw-bold" style="font-size:11px;" onclick="markSingleMessageAsReadHub('${msg.id}')">
-                                        <i class="bi bi-check2"></i> Mark Read
-                                    </button>` : '<span class="text-success small align-self-center me-1"><i class="bi bi-check2-all"></i> Read</span>'}
-                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('${msg.id}', '${escapeHtml(msg.sender)}')">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            inboxHtml += '</div>';
-            container.innerHTML = inboxHtml;
-        }
-
-        function markSingleMessageAsReadHub(msgId) {
-            clientReadMessagesTrackerObj[msgId] = true;
-            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            evaluateUnreadMessagesBadgeCount();
-            renderNotificationsInboxModal();
-        }
-
-        function markAllNotificationsAsReadHub() {
-            globalMessagesCacheArray.forEach(msg => {
-                clientReadMessagesTrackerObj[msg.id] = true;
-            });
-            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            evaluateUnreadMessagesBadgeCount();
-            renderNotificationsInboxModal();
-        }
-
-        /* CLOUD WORKER NOTIFICATION DELETION PIPELINE */
-        function deleteSingleMessageFromCloud(msgId, senderName) {
-            if (confirm(`Confirm deletion of this notification message entry from ${senderName}?`)) {
-                runWithSecurityGate(() => {
-                    const url = `${FIREBASE_URL}comms_board/${msgId}.json`;
-                    fetch(url, { method: 'DELETE' })
-                    .then(res => {
-                        if (!res.ok) throw new Error("Cloud delete request rejected");
-                        // Clean up read status maps tracker references locally
-                        if (clientReadMessagesTrackerObj[msgId]) {
-                            delete clientReadMessagesTrackerObj[msgId];
-                            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-                        }
-                        fetchMessagesTimelineFeed(false);
-                        setTimeout(() => renderNotificationsInboxModal(), 500);
-                    })
-                    .catch(err => {
-                        console.error("Deletion Failure: ", err);
-                        alert("Failed to delete notification message from the cloud database node.");
-                    });
-                });
-            }
-        }
-
-        /* SYSTEM POPUP ALERT BROADCAST MANAGEMENT STRATEGY MECHANISM */
-        function triggerCrossTerminalLiveAlertPopup(msgObject) {
-            clearInterval(broadcastTickerTimerReference);
-            alertTimeRemainingMs = TOTAL_ALERT_DURATION_MS;
-
-            document.getElementById('popupAlertSender').innerText = msgObject.sender;
-            const d = new Date(msgObject.timestamp);
-            document.getElementById('popupAlertTime').innerText = `${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-            
-            const progressBar = document.getElementById('popupAlertProgressLine');
-            progressBar.style.width = '100%';
-            progressBar.setAttribute('aria-valuenow', '100');
-            
-            const popupElement = document.getElementById('crossTerminalAlertPopup');
-            popupElement.style.display = 'block';
-
-            const intervalTickStepMs = 50; 
-            broadcastTickerTimerReference = setInterval(() => {
-                alertTimeRemainingMs -= intervalTickStepMs;
-                const percentageLeft = (alertTimeRemainingMs / TOTAL_ALERT_DURATION_MS) * 100;
-                
-                progressBar.style.width = `${percentageLeft}%`;
-                progressBar.setAttribute('aria-valuenow', percentageLeft.toFixed(0));
-
-                if (alertTimeRemainingMs <= 0) {
-                    closeLiveAlertPopupBanner();
-                }
-            }, intervalTickStepMs);
-        }
-
-        function closeLiveAlertPopupBanner() {
-            clearInterval(broadcastTickerTimerReference);
-            document.getElementById('crossTerminalAlertPopup').style.display = 'none';
-        }
-
-        function viewAlertMessageViaNotificationHub() {
-            closeLiveAlertPopupBanner();
-            renderNotificationsInboxModal();
-            notificationsInboxBootstrapModal.show();
-        }
-
-        /* OUTGOING MESSAGE WRITER PIPELINE */
-        function postWorkerMessageToCloud(event) {
-            event.preventDefault();
-            const senderName = document.getElementById('msgWorkerDropdown').value;
-            const textContent = document.getElementById('msgTextBody').value.trim();
-
-            if (!senderName || !textContent) return;
-
-            const newPayload = {
-                sender: senderName,
-                text: textContent,
-                timestamp: Date.now(),
-                deviceId: UNIQUE_DEVICE_ID
-            };
-
-            const url = `${FIREBASE_URL}comms_board.json`;
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newPayload)
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Cloud submission rejected");
-                document.getElementById('msgTextBody').value = '';
-                fetchMessagesTimelineFeed(false);
-            })
-            .catch(err => {
-                console.error("Transmission broken: ", err);
-                alert("Failed to sync message to cloud database node.");
-            });
-        }
-
-        /* MASTER CORE SYSTEM CORE MODULE: INTEGRATION CODE RETAINED FROM SOURCE BASE */
-        function fetchWorkersRegistryFromCloud() {
-            const url = `${FIREBASE_URL}workers.json`;
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                masterDynamicWorkersArray = [];
-                if (data) {
-                    Object.keys(data).forEach(key => {
-                        masterDynamicWorkersArray.push({ id: key, name: data[key].name });
-                    });
-                }
-                syncSystemAttendanceStateProperties();
-            })
-            .catch(err => console.error("Worker Registry Cloud Error: ", err));
-        }
-
-        function syncSystemAttendanceStateProperties() {
-            const url = `${FIREBASE_URL}attendance.json`;
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                globalAttendanceObj = data || {};
-                rebuildDynamicDomSelectPickers();
-            })
-            .catch(err => {
-                console.error("Attendance Sync Error: ", err);
-                rebuildDynamicDomSelectPickers();
-            });
-        }
-
-        function rebuildDynamicDomSelectPickers() {
-            const entrySelect = document.getElementById('employeeName');
-            const commsSelect = document.getElementById('msgWorkerDropdown');
-            
-            const legacyEntryVal = entrySelect.value;
-            const legacyCommsVal = commsSelect.value;
-
-            entrySelect.innerHTML = '<option value="" disabled selected>Select member</option>';
-            commsSelect.innerHTML = '<option value="" disabled selected>Identify worker...</option>';
-
-            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            
-            let activeCounter = 0;
-            sortedList.forEach(w => {
-                // Populate all configuration records onto the Comms drop down menu list options frame
-                commsSelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
-                
-                // Only show active checked-in records onto the log workflow picker field layout
-                if (globalAttendanceObj[w.name] === true) {
-                    activeCounter++;
-                    entrySelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
-                }
-            });
-
-            document.getElementById('sidebarActiveCount').innerText = `${activeCounter} Active`;
-            
-            if(legacyEntryVal) entrySelect.value = legacyEntryVal;
-            if(legacyCommsVal) commsSelect.value = legacyCommsVal;
-        }
-
-        function addNewWorkerToRegistryCloud() {
-            const nameField = document.getElementById('newRegistryWorkerName');
-            const nameRaw = nameField.value.trim();
-            if (!nameRaw) return;
-
-            const normalizedInput = nameRaw.toUpperCase();
-            const collisionTest = masterDynamicWorkersArray.some(w => w.name.toUpperCase() === normalizedInput);
-            if(collisionTest) {
-                alert("Operation Rejected: Worker name matches an entry already present inside system roster storage logs.");
-                return;
-            }
-
-            const payload = { name: nameRaw };
-            fetch(`${FIREBASE_URL}workers.json`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                nameField.value = '';
-                fetchWorkersRegistryFromCloud();
-                setTimeout(() => renderRosterRegistryManagementTable(), 800);
-            });
-        }
-
-        function renderRosterRegistryManagementTable() {
-            const tbody = document.getElementById('rosterRegistryTableBody');
-            tbody.innerHTML = '';
-            if (masterDynamicWorkersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No active members configured.</td></tr>`;
-                return;
-            }
-            const sortedRegistry = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sortedRegistry.forEach(worker => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
-                        <td class="text-center no-print">
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistry('${worker.id}', '${escapeHtml(worker.name)}')">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        function removeWorkerFromRegistry(firebaseId, cleanName) {
-            if(confirm(`Confirm deletion of entry: "${cleanName}" from global roster records?`)) {
-                runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}workers/${firebaseId}.json`, { method: 'DELETE' })
-                    .then(() => {
-                        fetch(`${FIREBASE_URL}attendance/${cleanName}.json`, { method: 'DELETE' })
-                        .then(() => {
-                            fetchWorkersRegistryFromCloud();
-                            setTimeout(() => renderRosterRegistryManagementTable(), 600);
-                        });
-                    });
-                });
-            }
-        }
-
-        function renderAttendanceUiList() {
-            const list = document.getElementById('attendanceListBody');
-            list.innerHTML = '';
-            if(masterDynamicWorkersArray.length === 0) {
-                list.innerHTML = `<li class="list-group-item text-center py-4 text-muted">Register team members inside the system database roster profile template to establish shift status controllers.</li>`;
-                return;
-            }
-            const sorted = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sorted.forEach(w => {
-                const isCheckedOn = globalAttendanceObj[w.name] === true;
-                list.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                        <span class="fw-bold text-dark">${escapeHtml(w.name)}</span>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" style="cursor:pointer;" ${isCheckedOn ? 'checked' : ''} onchange="toggleWorkerAttendanceSwitch(this, '${escapeHtml(w.name)}')">
-                        </div>
-                    </li>`;
-            });
-        }
-
-        function toggleWorkerAttendanceSwitch(checkboxElement, nameKey) {
-            const newState = checkboxElement.checked;
-            fetch(`${FIREBASE_URL}attendance/${nameKey}.json`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(newState)
-            })
-            .then(() => {
-                globalAttendanceObj[nameKey] = newState;
-                rebuildDynamicDomSelectPickers();
-            });
-        }
-
-        function resetAllAttendanceOffManually() {
-            if(confirm("Toggle attendance shift parameters OFF for all configured worker index templates?")) {
-                fetch(`${FIREBASE_URL}attendance.json`, { method: 'DELETE' })
-                .then(() => {
-                    globalAttendanceObj = {};
-                    rebuildDynamicDomSelectPickers();
-                    renderAttendanceUiList();
-                });
-            }
-        }
-
-        /* REVENUE CALCULATION ENGINE LOGGING INTERACTION MATRIX RULES */
-        function handleWorkLogFormSubmit(e) {
-            e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Syncing Cloud Node...`;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
 
-            const employee = document.getElementById('employeeName').value;
-            const vehicle = document.getElementById('vehiclePlate').value.trim().toUpperCase();
-            const rawDate = document.getElementById('dateWorked').value;
-            const total = parseInt(document.getElementById('totalBoxes').value, 10);
-            const selection = document.getElementById('paidBoxesSelection').value;
-            
-            let payBoxesCount = total;
-            if (selection === "CUSTOM") {
-                payBoxesCount = parseInt(document.getElementById('paidBoxes').value, 10) || 0;
-            }
+            // Rate is 1 Ksh per Box
+            const calculatedPayout = paidBoxes * RATE_PER_BOX;
 
-            if (payBoxesCount > total) {
-                alert("Database Error Rule: Paid box count parameters cannot safely exceed the absolute physical capacity offloaded quantities logged.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
-                return;
-            }
-
-            const payrollSummaryAmount = payBoxesCount * currentPricePerBox;
-            const payloadRecord = {
-                employeeName: employee,
-                vehiclePlate: vehicle,
-                dateWorked: rawDate,
-                totalBoxes: total,
-                paidBoxes: payBoxesCount,
-                calculatedPayout: payrollSummaryAmount,
+            const payload = {
+                employeeName,
+                vehiclePlate,
+                dateWorked,
+                totalBoxes,
+                paidBoxes,
+                calculatedPayout,
                 status: "UNPAID",
                 timestamp: Date.now()
             };
 
             fetch(`${FIREBASE_URL}logs.json`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payloadRecord)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             })
             .then(res => {
-                if(!res.ok) throw new Error("Sync Failed");
-                document.getElementById('workLogForm').reset();
-                document.getElementById('dateWorked').valueAsDate = new Date();
+                if(!res.ok) throw new Error("Database rejected submission payload stream.");
+                document.getElementById('vehiclePlate').value = '';
+                document.getElementById('totalBoxes').value = '';
+                document.getElementById('paidBoxesSelection').value = 'ALL';
                 togglePaidBoxesInput();
                 
                 submitBtn.innerHTML = "Success!";
@@ -1506,7 +1079,6 @@
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = "Save Record";
                 }, 1200);
-
                 fetchLogsFromCloud();
             })
             .catch(() => {
@@ -1526,8 +1098,18 @@
                     Object.keys(data).forEach(k => {
                         globalLogsArray.push({ id: k, ...data[k] });
                     });
-                    // Newest logs rank up top
-                    globalLogsArray.sort((a,b) => b.timestamp - a.timestamp);
+                    
+                    // CHRONOLOGICAL CHRONICLE REARRANGEMENT ARROW
+                    // Re-orders records automatically matching date parameters (Latest day descending to oldest logs)
+                    globalLogsArray.sort((a, b) => {
+                        // First criteria level: Date string comparison ('YYYY-MM-DD')
+                        const dateCompareValue = b.dateWorked.localeCompare(a.dateWorked);
+                        if (dateCompareValue !== 0) {
+                            return dateCompareValue;
+                        }
+                        // Fallback criteria level: Newest physical sync input timestamp wins tiering order splits
+                        return b.timestamp - a.timestamp;
+                    });
                 }
                 document.getElementById('loadingSpinner').style.display = 'none';
                 executeCalculatedSystemMetrics();
@@ -1543,12 +1125,10 @@
             let totalPaid = 0;
             let totalUnpaid = 0;
             let pendingLogsCount = 0;
-
             let lastEnteredText = "None Available";
             let lastPaymentText = "None Processed";
 
             const validLogs = globalLogsArray.filter(l => l.status !== "CANCELLED");
-
             if(globalLogsArray.length > 0) {
                 const latest = globalLogsArray[0];
                 lastEnteredText = `${latest.employeeName} (${latest.totalBoxes} Boxes on ${formatDateDisplay(latest.dateWorked)})`;
@@ -1574,48 +1154,56 @@
             document.getElementById('statTotalPaid').innerText = `Ksh ${totalPaid.toLocaleString()}`;
             document.getElementById('statTotalUnpaid').innerText = `Ksh ${totalUnpaid.toLocaleString()}`;
             document.getElementById('statPendingCount').innerText = pendingLogsCount.toLocaleString();
-
             document.getElementById('activityLastEntered').innerText = lastEnteredText;
             document.getElementById('activityLastPaid').innerText = lastPaymentText;
         }
 
         function handleLiveSearchFilter() {
             const query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
-            const selectedStatus = document.getElementById('tableStatusSelector').value;
-            const tbody = document.getElementById('logTableBody');
+            const selectedStatusOption = document.getElementById('tableStatusSelector').value;
             
+            const tbody = document.getElementById('logTableBody');
             tbody.innerHTML = '';
 
-            const filtered = globalLogsArray.filter(log => {
-                const matchQuery = log.employeeName.toLowerCase().includes(query) || log.vehiclePlate.toLowerCase().includes(query);
-                const matchStatus = (selectedStatus === "ALL") || (log.status === selectedStatus);
-                return matchQuery && matchStatus;
+            const filteredList = globalLogsArray.filter(log => {
+                const matchesSearch = log.employeeName.toLowerCase().includes(query) || log.vehiclePlate.toLowerCase().includes(query);
+                
+                let matchesStatus = true;
+                if(selectedStatusOption !== "ALL") {
+                    matchesStatus = (log.status === selectedStatusOption);
+                } else if(activeStatusFilterCriteria !== "ALL") {
+                    matchesStatus = (log.status === activeStatusFilterCriteria);
+                }
+                
+                return matchesSearch && matchesStatus;
             });
 
-            document.getElementById('displayedRowsCounter').innerText = `Showing ${filtered.length} entries`;
+            document.getElementById('displayedRowsCounter').innerText = `Showing ${filteredList.length} entries`;
 
-            if (filtered.length === 0) {
+            if(filteredList.length === 0) {
                 document.getElementById('noDataMessage').classList.remove('d-none');
                 return;
             }
             document.getElementById('noDataMessage').classList.add('d-none');
 
-            filtered.forEach(log => {
+            filteredList.forEach(log => {
                 let statusBadge = '';
-                let rowStyleClass = '';
-
+                let rowClass = '';
+                
                 if (log.status === "PAID") {
-                    statusBadge = `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>PAID</span><div class="payment-details mt-1">Paid on: ${formatDateDisplay(log.paymentDate)}</div>`;
-                    rowStyleClass = 'disabled-row';
+                    statusBadge = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Paid</span>
+                                   <div class="payment-details mt-1"><i class="bi bi-clock-history"></i> ${escapeHtml(log.paymentDate)}</div>`;
+                    rowClass = 'disabled-row';
                 } else if (log.status === "UNPAID") {
-                    statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>UNPAID PENDING</span>`;
+                    statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Unpaid</span>`;
                 } else if (log.status === "CANCELLED") {
-                    statusBadge = `<span class="badge bg-danger"><i class="bi bi-x-octagon me-1"></i>CANCELLED</span><div class="cancellation-details mt-1">Void Reason: ${escapeHtml(log.cancelReason || 'Unspecified')}</div>`;
-                    rowStyleClass = 'cancelled-row';
+                    statusBadge = `<span class="badge bg-danger"><i class="bi bi-x-octagon-fill me-1"></i> Voided</span>
+                                   <div class="cancellation-details mt-1"><i class="bi bi-shield-exclamation"></i> Reason: ${escapeHtml(log.cancellationReason || 'Admin Override')}</div>`;
+                    rowClass = 'cancelled-row';
                 }
 
                 tbody.innerHTML += `
-                    <tr class="${rowStyleClass}">
+                    <tr class="${rowClass}">
                         <td>
                             <div class="fw-bold text-dark">${escapeHtml(log.employeeName)}</div>
                             <div class="text-muted small font-monospace">${escapeHtml(log.vehiclePlate)}</div>
@@ -1635,9 +1223,9 @@
                                     <i class="bi bi-eye"></i>
                                 </button>
                                 ${log.status === 'UNPAID' ? `
-                                    <button class="btn btn-sm btn-success fw-bold" onclick="processPaymentPayoutAction('${log.id}')">
-                                        Settle
-                                    </button>` : ''}
+                                <button class="btn btn-sm btn-success fw-bold" onclick="processPaymentPayoutAction('${log.id}')">
+                                    Settle
+                                </button>` : ''}
                             </div>
                         </td>
                     </tr>`;
@@ -1658,73 +1246,45 @@
                         <tr><th class="bg-light">Total Capacity</th><td>${record.totalBoxes} Boxes Handled</td></tr>
                         <tr><th class="bg-light">Calculated Revenue</th><td>Ksh ${record.calculatedPayout.toLocaleString()}</td></tr>
                         <tr><th class="bg-light">Status Profile</th><td><span class="badge ${record.status==='PAID'?'bg-success':record.status==='UNPAID'?'bg-warning text-dark':'bg-danger'}">${record.status}</span></td></tr>
-                        ${record.status === 'PAID' ? `<tr><th class="bg-light text-success">Settlement Point</th><td>${formatDateDisplay(record.paymentDate)}</td></tr>` : ''}
-                        ${record.status === 'CANCELLED' ? `<tr><th class="bg-light text-danger">Void Audit Context</th><td>${escapeHtml(record.cancelReason || 'None')}</td></tr>` : ''}
+                        ${record.status === 'PAID' ? `<tr><th class="bg-light text-success">Settlement Point</th><td><i class="bi bi-clock-history me-1"></i> <strong>${escapeHtml(record.paymentDate)}</strong></td></tr>` : ''}
+                        ${record.status === 'CANCELLED' ? `<tr><th class="bg-light text-danger">Void Audit Context</th><td>${escapeHtml(record.cancellationReason || 'None')}</td></tr>` : ''}
                     </table>
                 </div>`;
-            inspectionBootstrapModal.show();
+            
+            const myModal = new bootstrap.Modal(document.getElementById('inspectionViewModal'));
+            myModal.show();
         }
 
-        function processPaymentPayoutAction(id) {
-            runWithSecurityGate(() => {
-                const targetObj = globalLogsArray.find(l => l.id === id);
-                if (!targetObj) return;
+        function filterByStatusSelector(statusCode) {
+            activeStatusFilterCriteria = statusCode;
+            document.getElementById('tableStatusSelector').value = statusCode;
+            handleLiveSearchFilter();
+        }
 
-                if (confirm(`Authorize validation statement payout claims processing rule for amount: Ksh ${targetObj.calculatedPayout.toLocaleString()} assigned to member identity: ${targetObj.employeeName}?`)) {
-                    const todayDateString = new Date().toISOString().split('T')[0];
-                    const patches = { status: "PAID", paymentDate: todayDateString };
+        function processPaymentPayoutAction(firebaseKey) {
+            const matchRecord = globalLogsArray.find(l => l.id === firebaseKey);
+            if(!matchRecord) return;
 
-                    fetch(`${FIREBASE_URL}logs/${id}.json`, {
+            if (confirm(`Confirm settlement payment action for Ksh ${matchRecord.calculatedPayout.toLocaleString()} owed to ${matchRecord.employeeName}?`)) {
+                runWithSecurityGate(() => {
+                    const currentStamp = new Date();
+                    const formattedDateTimeString = currentStamp.toLocaleDateString('en-GB') + " at " + currentStamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                    const updatePayload = {
+                        status: "PAID",
+                        paymentDate: formattedDateTimeString
+                    };
+                    
+                    fetch(`${FIREBASE_URL}logs/${firebaseKey}.json`, {
                         method: 'PATCH',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(patches)
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatePayload)
                     })
-                    .then(() => fetchLogsFromCloud());
-                }
-            });
-        }
-
-        function renderWorkCancellationTable() {
-            const tbody = document.getElementById('workCancellationTableBody');
-            tbody.innerHTML = '';
-            
-            const rawPendingUnpaidList = globalLogsArray.filter(l => l.status === "UNPAID");
-            if (rawPendingUnpaidList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted text-dark">No open pending unpaid work logs available to target for cancellation validation workflows.</td></tr>`;
-                return;
+                    .then(() => {
+                        fetchLogsFromCloud();
+                    });
+                });
             }
-
-            rawPendingUnpaidList.forEach(log => {
-                tbody.innerHTML += `
-                    <tr class="text-dark">
-                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
-                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
-                        <td><span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span></td>
-                        <td class="text-center">
-                            <button class="btn btn-xs btn-danger fw-bold py-1 px-2 small" style="font-size:11px;" onclick="executeSecureCancellationWriteTransaction('${log.id}', '${escapeHtml(log.employeeName)}')">
-                                Void Log
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        function executeSecureCancellationWriteTransaction(id, name) {
-            const promptContextReason = prompt(`Provide administrative context statement explaining reason behind voiding entry log records matching name assignment line: [${name}]:`);
-            if (promptContextReason === null) return;
-            
-            const traceContextString = promptContextReason.trim() || "Unspecified Management Override Cancellation";
-            const patchPayload = { status: "CANCELLED", cancelReason: traceContextString };
-
-            fetch(`${FIREBASE_URL}logs/${id}.json`, {
-                method: 'PATCH',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(patchPayload)
-            })
-            .then(() => {
-                cancellationBootstrapModal.hide();
-                fetchLogsFromCloud();
-            });
         }
 
         function generatePDF() {
@@ -1774,42 +1334,39 @@
                 <div style="border-bottom:3px solid #000; padding-bottom:12px; margin-bottom:20px;">
                     <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
                     <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Logs'}] To [${endMatch || 'Latest Real-time Node'}]</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Generated On: ${new Date().toLocaleString()}</p>
-                </div>`;
-
-            let aggregateBreakdownTable = `
-                <h4>Roster Performance & Balances Summary Matrix</h4>
-                <table class="table table-bordered style="width:100%; border-collapse:collapse; margin-bottom:30px; font-size:13px;">
-                    <thead style="background-color:#f2f2f2;">
+                    <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
+                </div>
+                <h4>Personnel Aggregations Summary Statement</h4>
+                <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:25px; font-size:12px;">
+                    <thead style="background-color:#f8fafc;">
                         <tr>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name Reference</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:center;">Total Offloaded Boxes</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Settled Revenue (Ksh)</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Outstanding Owed Balance (Ksh)</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:center;">Total Offloaded Capacity</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Settled Claims Val</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Outstanding Owed Balance</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
             Object.keys(summaryMap).sort().forEach(empName => {
-                aggregateBreakdownTable += `
+                reportHeaderMetaData += `
                     <tr>
                         <td style="padding:7px; border:1px solid #ddd;"><strong>${empName}</strong></td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:center;">${summaryMap[empName].boxes.toLocaleString()}</td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${summaryMap[empName].paidAmt.toLocaleString()}</td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${summaryMap[empName].unpaidAmt.toLocaleString()}</td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:center; font-family:monospace;">${summaryMap[empName].boxes.toLocaleString()} Boxes</td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:right; font-family:monospace; color:#198754;">Ksh ${summaryMap[empName].paidAmt.toLocaleString()}</td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:right; font-family:monospace; color:#b45309;">Ksh ${summaryMap[empName].unpaidAmt.toLocaleString()}</td>
                     </tr>`;
             });
 
-            aggregateBreakdownTable += `
-                    <tr style="background-color:#eaedf2; font-weight:bold; border-top:2px solid #000;">
-                        <td style="padding:8px; border:1px solid #ddd;">GRAND TOTAL ACCUMULATION AUDITS</td>
-                        <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()}</td>
+            reportHeaderMetaData += `
+                    <tr style="background-color:#f1f5f9; font-weight:bold; border-top:2px solid #000;">
+                        <td style="padding:8px; border:1px solid #ddd;">GRAND SYSTEM AUDIT TOTALS</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()} Boxes</td>
                         <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${grandTotalPaid.toLocaleString()}</td>
                         <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
                     </tr>
-                </tbody>
-            </table>`;
+                    </tbody>
+                </table>`;
 
             let transactionalTimelineLogsTable = `
                 <h4 style="margin-top:25px;">Detailed Transactional Shift Logs Timeline</h4>
@@ -1826,80 +1383,32 @@
                     </thead>
                     <tbody>`;
 
-            [...filteredArray].sort((a,b)=>b.dateWorked.localeCompare(a.dateWorked)).forEach(log => {
+            // Table report display preserves identical descending date sorting setup
+            [...filteredArray].forEach(log => {
                 transactionalTimelineLogsTable += `
                     <tr>
                         <td style="padding:5px; border:1px solid #ddd; font-family:monospace;">${formatDateDisplay(log.dateWorked)}</td>
                         <td style="padding:5px; border:1px solid #ddd;"><strong>${log.employeeName}</strong></td>
                         <td style="padding:5px; border:1px solid #ddd; font-family:monospace; text-align:center;">${log.vehiclePlate}</td>
                         <td style="padding:5px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:right;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':'#b57c00'};">${log.status}</td>
+                        <td style="padding:5px; border:1px solid #ddd; text-align:right; font-family:monospace;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
+                        <td style="padding:5px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':'#b45309'}">${log.status}</td>
                     </tr>`;
             });
+
             transactionalTimelineLogsTable += `</tbody></table>`;
+            
+            printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
 
-            printWrapper.innerHTML = reportHeaderMetaData + aggregateBreakdownTable + transactionalTimelineLogsTable;
-
-            const printSettingsOptions = {
-                margin: [0.4, 0.4, 0.4, 0.4],
-                filename: `MERU_DAIRY_OFFLOAD_AUDIT_REPORT_${new Date().toISOString().split('T')[0]}.pdf`,
+            const printSettingsOptionsObject = {
+                margin: [10, 10, 10, 10],
+                filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            const pdfBtn = document.getElementById('pdfBtn');
-            pdfBtn.disabled = true;
-            pdfBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Compiling Blueprint...`;
-
-            html2pdf().set(printSettingsOptions).from(printWrapper).save()
-            .then(() => {
-                pdfBtn.disabled = false;
-                pdfBtn.innerHTML = `<i class="bi bi-download me-2"></i>Download PDF Report`;
-            })
-            .catch(err => {
-                console.error("PDF Processing Failure: ", err);
-                alert("Failed to render document safely.");
-                pdfBtn.disabled = false;
-                pdfBtn.innerHTML = `<i class="bi bi-download me-2"></i>Download PDF Report`;
-            });
-        }
-
-        function buildLeaderboard() {
-            const tableBody = document.getElementById('leaderboardTableBody');
-            tableBody.innerHTML = '';
-            
-            let statsMap = {};
-            globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
-                if(!statsMap[log.employeeName]) statsMap[log.employeeName] = 0;
-                statsMap[log.employeeName] += parseInt(log.totalBoxes, 10) || 0;
-            });
-
-            let sortableRankArray = [];
-            Object.keys(statsMap).forEach(k => {
-                sortableRankArray.push({ name: k, total: statsMap[k] });
-            });
-            sortableRankArray.sort((a,b) => b.total - a.total);
-
-            if(sortableRankArray.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted text-dark">No work volume records present to generate board rankings.</td></tr>`;
-                return;
-            }
-
-            sortableRankArray.forEach((item, index) => {
-                let rankIconStyle = `<strong>${index + 1}</strong>`;
-                if(index === 0) rankIconStyle = `🥇 <span class="badge bg-warning text-dark">Top</span>`;
-                if(index === 1) rankIconStyle = `🥈`;
-                if(index === 2) rankIconStyle = `🥉`;
-
-                tableBody.innerHTML += `
-                    <tr class="text-dark">
-                        <td class="text-center font-monospace">${rankIconStyle}</td>
-                        <td class="fw-bold">${escapeHtml(item.name)}</td>
-                        <td class="text-end pe-4 font-monospace fw-semibold">${item.total.toLocaleString()} Units</td>
-                    </tr>`;
-            });
+            html2pdf().from(printWrapper).set(printSettingsOptionsObject).save();
         }
 
         function buildTruckAnalytics() {
@@ -1915,9 +1424,10 @@
                 truckAggregations[log.vehiclePlate].boxes += parseInt(log.totalBoxes, 10) || 0;
             });
 
-            const sortedPlates = Object.keys(truckAggregations).sort();
-            if (sortedPlates.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted text-dark">No vehicle deliveries logged.</td></tr>`;
+            const sortedPlates = Object.keys(truckAggregations).sort((a,b) => truckAggregations[b].boxes - truckAggregations[a].boxes);
+            
+            if(sortedPlates.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No active vehicle logs captured inside current index records matrix frames.</td></tr>`;
                 return;
             }
 
@@ -1931,6 +1441,490 @@
             });
         }
 
+        function buildLeaderboard() {
+            const tbody = document.getElementById('leaderboardTableBody');
+            tbody.innerHTML = '';
+
+            let boardMap = {};
+            globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
+                boardMap[log.employeeName] = (boardMap[log.employeeName] || 0) + (parseInt(log.totalBoxes, 10) || 0);
+            });
+
+            const sortedWorkers = Object.keys(boardMap).sort((a,b) => boardMap[b] - boardMap[a]);
+
+            if(sortedWorkers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No operational work parameters aggregated yet. Run logs pipeline entries.</td></tr>`;
+                return;
+            }
+
+            sortedWorkers.forEach((workerName, index) => {
+                let medalBadge = `<span class="badge bg-light text-dark border font-monospace">${index + 1}</span>`;
+                if (index === 0) medalBadge = `🥇`;
+                if (index === 1) medalBadge = `🥈`;
+                if (index === 2) medalBadge = `🥉`;
+
+                tbody.innerHTML += `
+                    <tr class="text-dark">
+                        <td class="text-center fw-bold">${medalBadge}</td>
+                        <td><strong>${escapeHtml(workerName)}</strong></td>
+                        <td class="text-end pe-4 font-monospace fw-bold text-success">${boardMap[workerName].toLocaleString()} Boxes</td>
+                    </tr>`;
+            });
+        }
+
+        function fetchMessagesTimelineFeed(isBootSequence) {
+            const url = `${FIREBASE_URL}comms_board.json`;
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const legacyArrayLength = globalMessagesCacheArray.length;
+                globalMessagesCacheArray = [];
+                
+                if (data) {
+                    Object.keys(data).forEach(firebaseId => {
+                        globalMessagesCacheArray.push({ id: firebaseId, ...data[firebaseId] });
+                    });
+                    globalMessagesCacheArray.sort((a, b) => b.timestamp - a.timestamp);
+                }
+                evaluateUnreadMessagesBadgeCount();
+                renderMessageBoardTimelineView();
+
+                if (!isBootSequence && globalMessagesCacheArray.length > legacyArrayLength) {
+                    const structuralLatestMsg = globalMessagesCacheArray[0];
+                    if (structuralLatestMsg && structuralLatestMsg.deviceId !== UNIQUE_DEVICE_ID) {
+                        triggerCrossTerminalLiveAlertPopup(structuralLatestMsg);
+                    }
+                }
+                isInitialBootLoad = false;
+            })
+            .catch(err => console.error("Communication Feed Fetch Failure: ", err));
+        }
+
+        function evaluateUnreadMessagesBadgeCount() {
+            let unreadCount = 0;
+            globalMessagesCacheArray.forEach(msg => {
+                if (!clientReadMessagesTrackerObj[msg.id]) {
+                    unreadCount++;
+                }
+            });
+
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            const modalBadge = document.getElementById('modalInboxUnreadCountBadge');
+            
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.classList.remove('d-none');
+                if(modalBadge) modalBadge.innerText = `${unreadCount} Unread Notes`;
+            } else {
+                badge.classList.add('d-none');
+                if(modalBadge) modalBadge.innerText = `0 Unread Messages`;
+            }
+        }
+
+        function renderMessageBoardTimelineView() {
+            const container = document.getElementById('messagesContainerTimeline');
+            if(!container) return;
+
+            const localDeviceMessages = globalMessagesCacheArray.filter(msg => msg.deviceId === UNIQUE_DEVICE_ID);
+            
+            if (localDeviceMessages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted col-12">
+                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
+                        No notes posted from this specific device. Use the form above to add an administrative notice.
+                    </div>`;
+                return;
+            }
+
+            let timelineHtml = '';
+            localDeviceMessages.forEach(msg => {
+                const dateText = new Date(msg.timestamp).toLocaleDateString();
+                const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                timelineHtml += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border bg-light shadow-sm">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold text-dark m-0"><i class="bi bi-person"></i> ${escapeHtml(msg.sender)}</h6>
+                                    <small class="text-muted font-monospace" style="font-size:11px;">${dateText} ${timeText}</small>
+                                </div>
+                                <p class="card-text small text-dark p-2 bg-white rounded border border-light shadow-inner mb-0" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</p>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = timelineHtml;
+        }
+
+        function renderNotificationsInboxModal() {
+            const container = document.getElementById('globalNotificationHubListBody');
+            if (!container) return;
+
+            if (globalMessagesCacheArray.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-muted">No communication notes inside notification center archive view.</div>`;
+                return;
+            }
+
+            let inboxHtml = '<div class="d-flex flex-column gap-2">';
+            globalMessagesCacheArray.forEach(msg => {
+                const isRead = clientReadMessagesTrackerObj[msg.id] === true;
+                const isFromMe = msg.deviceId === UNIQUE_DEVICE_ID;
+                const formatDateTimeStr = `${new Date(msg.timestamp).toLocaleDateString()} ${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+                inboxHtml += `
+                    <div class="card border rounded p-3 ${isRead ? 'bg-white text-muted' : 'bg-warning-subtle shadow-sm'}" style="transition: all 0.2s;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold ${isFromMe ? 'text-primary' : 'text-dark'}">
+                                <i class="bi bi-person-circle"></i> ${escapeHtml(msg.sender)} ${isFromMe ? ' <span class="badge bg-secondary font-monospace" style="font-size:9px;">My Device</span>' : ''}
+                            </span>
+                            <small class="text-muted font-monospace small">${formatDateTimeStr}</small>
+                        </div>
+                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
+                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: ${msg.deviceId}</span>
+                            <div class="d-flex gap-1">
+                                ${!isRead ? `
+                                <button class="btn btn-xs btn-success py-0 px-2 fw-bold" style="font-size:11px;" onclick="markSingleMessageAsReadHub('${msg.id}')">
+                                    <i class="bi bi-check2"></i> Mark Read
+                                </button>` : '<span class="text-success small align-self-center me-1"><i class="bi bi-check2-all"></i> Read</span>'}
+                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('${msg.id}', '${escapeHtml(msg.sender)}')">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            inboxHtml += '</div>';
+            container.innerHTML = inboxHtml;
+        }
+
+        function markSingleMessageAsReadHub(msgId) {
+            clientReadMessagesTrackerObj[msgId] = true;
+            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
+            evaluateUnreadMessagesBadgeCount();
+            renderNotificationsInboxModal();
+        }
+
+        function markAllNotificationsAsReadHub() {
+            globalMessagesCacheArray.forEach(msg => {
+                clientReadMessagesTrackerObj[msg.id] = true;
+            });
+            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
+            evaluateUnreadMessagesBadgeCount();
+            renderNotificationsInboxModal();
+        }
+
+        function deleteSingleMessageFromCloud(msgId, senderName) {
+            if (confirm(`Confirm deletion of this notification message entry from ${senderName}?`)) {
+                runWithSecurityGate(() => {
+                    fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { method: 'DELETE' })
+                    .then(() => {
+                        fetchMessagesTimelineFeed(false);
+                        setTimeout(() => renderNotificationsInboxModal(), 400);
+                    });
+                });
+            }
+        }
+
+        let liveAlertProgressTimerInterval = null;
+        function triggerCrossTerminalLiveAlertPopup(msgObj) {
+            closeLiveAlertPopupBanner();
+            
+            document.getElementById('popupAlertSender').innerText = msgObj.sender;
+            document.getElementById('popupAlertTime').innerText = new Date(msgObj.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            
+            const element = document.getElementById('crossTerminalAlertPopup');
+            element.style.display = 'block';
+
+            const progressLine = document.getElementById('popupAlertProgressLine');
+            let percentage = 100;
+            
+            liveAlertProgressTimerInterval = setInterval(() => {
+                percentage -= 1;
+                progressLine.style.width = percentage + '%';
+                progressLine.setAttribute('aria-valuenow', percentage);
+                
+                if(percentage <= 0) {
+                    closeLiveAlertPopupBanner();
+                }
+            }, 80);
+        }
+
+        function closeLiveAlertPopupBanner() {
+            if(liveAlertProgressTimerInterval) {
+                clearInterval(liveAlertProgressTimerInterval);
+                liveAlertProgressTimerInterval = null;
+            }
+            document.getElementById('crossTerminalAlertPopup').style.display = 'none';
+        }
+
+        function viewAlertMessageViaNotificationHub() {
+            closeLiveAlertPopupBanner();
+            const modalEl = document.getElementById('notificationsInboxModal');
+            const bModal = new bootstrap.Modal(modalEl);
+            renderNotificationsInboxModal();
+            bModal.show();
+        }
+
+        function executeMessageSubmissionTimelineChannel(event) {
+            event.preventDefault();
+            const senderName = document.getElementById('msgWorkerDropdown').value;
+            const textContent = document.getElementById('msgTextBody').value.trim();
+
+            if(!senderName || !textContent) return;
+
+            const newPayload = {
+                sender: senderName,
+                text: textContent,
+                timestamp: Date.now(),
+                deviceId: UNIQUE_DEVICE_ID
+            };
+
+            const url = `${FIREBASE_URL}comms_board.json`;
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newPayload)
+            })
+            .then(res => {
+                if(!res.ok) throw new Error("Cloud submission rejected");
+                document.getElementById('msgTextBody').value = '';
+                fetchMessagesTimelineFeed(false);
+            })
+            .catch(err => {
+                console.error("Transmission broken: ", err);
+                alert("Failed to sync message to cloud database node.");
+            });
+        }
+
+        function fetchWorkersRegistryFromCloud() {
+            const url = `${FIREBASE_URL}workers.json`;
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                masterDynamicWorkersArray = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        masterDynamicWorkersArray.push({ id: key, name: data[key].name });
+                    });
+                }
+                syncSystemAttendanceStateProperties();
+            })
+            .catch(err => console.error("Worker Registry Cloud Error: ", err));
+        }
+
+        function syncSystemAttendanceStateProperties() {
+            const url = `${FIREBASE_URL}attendance.json`;
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                globalAttendanceObj = data || {};
+                rebuildDynamicDomSelectPickers();
+            })
+            .catch(err => {
+                console.error("Attendance Sync Error: ", err);
+                rebuildDynamicDomSelectPickers();
+            });
+        }
+
+        function rebuildDynamicDomSelectPickers() {
+            const entrySelect = document.getElementById('employeeName');
+            const commsSelect = document.getElementById('msgWorkerDropdown');
+            
+            const legacyEntryVal = entrySelect.value;
+            const legacyCommsVal = commsSelect.value;
+
+            entrySelect.innerHTML = '<option value="" disabled selected>Select member</option>';
+            commsSelect.innerHTML = '<option value="" disabled selected>Identify worker...</option>';
+
+            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            let activeCounter = 0;
+
+            sortedList.forEach(w => {
+                commsSelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
+                
+                if (globalAttendanceObj[w.name] === true) {
+                    activeCounter++;
+                    entrySelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
+                }
+            });
+
+            if(legacyEntryVal) entrySelect.value = legacyEntryVal;
+            if(legacyCommsVal) commsSelect.value = legacyCommsVal;
+
+            const activeBadge = document.getElementById('sidebarActiveCount');
+            if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
+        }
+
+        function renderRosterRegistryManagementTable() {
+            const tbody = document.getElementById('rosterRegistryTableBody');
+            tbody.innerHTML = '';
+
+            if (masterDynamicWorkersArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
+                return;
+            }
+
+            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            sortedList.forEach(worker => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
+                        <td class="text-center no-print">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistry('${worker.id}', '${escapeHtml(worker.name)}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function addNewWorkerToRegistryCloud() {
+            const nameField = document.getElementById('newRegistryWorkerName');
+            const workerNameInput = nameField.value.trim();
+
+            if(!workerNameInput) {
+                alert("Please specify a complete name configuration entry string value.");
+                return;
+            }
+
+            const nameCollisionExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === workerNameInput.toLowerCase());
+            if (nameCollisionExists) {
+                alert("Conflict Identified: A profile index matching that specified worker descriptor layout exists.");
+                return;
+            }
+
+            runWithSecurityGate(() => {
+                fetch(`${FIREBASE_URL}workers.json`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: workerNameInput })
+                })
+                .then(() => {
+                    nameField.value = '';
+                    fetchWorkersRegistryFromCloud();
+                    setTimeout(() => renderRosterRegistryManagementTable(), 600);
+                });
+            });
+        }
+
+        function removeWorkerFromRegistry(firebaseId, cleanName) {
+            if(confirm(`Confirm deletion of entry: "${cleanName}" from global roster records?`)) {
+                runWithSecurityGate(() => {
+                    fetch(`${FIREBASE_URL}workers/${firebaseId}.json`, { method: 'DELETE' })
+                    .then(() => {
+                        fetch(`${FIREBASE_URL}attendance/${cleanName}.json`, { method: 'DELETE' })
+                        .then(() => {
+                            fetchWorkersRegistryFromCloud();
+                            setTimeout(() => renderRosterRegistryManagementTable(), 600);
+                        });
+                    });
+                });
+            }
+        }
+
+        function renderAttendanceUiList() {
+            const list = document.getElementById('attendanceListBody');
+            list.innerHTML = '';
+
+            if(masterDynamicWorkersArray.length === 0) {
+                list.innerHTML = `<li class="list-group-item text-center py-4 text-muted">Register team members inside the system database roster profile template to establish shift status controllers.</li>`;
+                return;
+            }
+
+            const sorted = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            sorted.forEach(w => {
+                const isCheckedOn = globalAttendanceObj[w.name] === true;
+                list.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                        <span class="fw-bold text-dark">${escapeHtml(w.name)}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" style="cursor:pointer;" ${isCheckedOn ? 'checked' : ''} onchange="toggleWorkerAttendanceSwitch(this, '${escapeHtml(w.name)}')">
+                        </div>
+                    </li>`;
+            });
+        }
+
+        function toggleWorkerAttendanceSwitch(checkboxElement, nameKey) {
+            const newState = checkboxElement.checked;
+            fetch(`${FIREBASE_URL}attendance/${nameKey}.json`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(newState)
+            })
+            .then(() => {
+                globalAttendanceObj[nameKey] = newState;
+                rebuildDynamicDomSelectPickers();
+            });
+        }
+
+        function resetAllAttendanceOffManually() {
+            if(confirm("Toggle attendance shift parameters OFF for all configured worker index templates?")) {
+                fetch(`${FIREBASE_URL}attendance.json`, { method: 'DELETE' })
+                .then(() => {
+                    globalAttendanceObj = {};
+                    rebuildDynamicDomSelectPickers();
+                    renderAttendanceUiList();
+                });
+            }
+        }
+
+        function launchSecureWorkCancellationPanel() {
+            document.getElementById('mainSidebarLayout').classList.remove('active');
+            
+            const tbody = document.getElementById('workCancellationTableBody');
+            tbody.innerHTML = '';
+
+            const activeRecords = globalLogsArray.filter(l => l.status !== "CANCELLED");
+
+            if(activeRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active tracking records available inside cloud logs timeline nodes to target.</td></tr>`;
+                const myModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+                myModal.show();
+                return;
+            }
+
+            activeRecords.forEach(log => {
+                tbody.innerHTML += `
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
+                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
+                        <td><span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger fw-bold py-1 px-3" onclick="executeVoidCancellationSequence('${log.id}', '${escapeHtml(log.employeeName)}')">Void</button>
+                        </td>
+                    </tr>`;
+            });
+
+            const targetModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+            targetModal.show();
+        }
+
+        function executeVoidCancellationSequence(firebaseId, employeeLabel) {
+            const contextReason = prompt(`Specify the reason for voiding this record entry for ${employeeLabel}:`);
+            if (contextReason === null) return; 
+
+            const validatedReason = contextReason.trim() || "Administrative Override Entry Change";
+
+            runWithSecurityGate(() => {
+                const patchPayload = {
+                    status: "CANCELLED",
+                    cancellationReason: validatedReason
+                };
+
+                fetch(`${FIREBASE_URL}logs/${firebaseId}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patchPayload)
+                })
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('workCancellationModal')).hide();
+                    fetchLogsFromCloud();
+                });
+            });
+        }
+
         function formatDateDisplay(dateString) {
             if (!dateString) return "";
             const parts = dateString.split('-');
@@ -1938,6 +1932,7 @@
             return dateString;
         }
 
+        // Standard string projection encoding shield mapping
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
