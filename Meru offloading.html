@@ -110,7 +110,7 @@
         }
 
         .sidebar-menu-list {
-            list-style: none;
+            list-style: list-style-type;
             padding: 15px 10px;
             margin: 0;
             display: flex;
@@ -896,7 +896,7 @@
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const SECRET_CODE = "2026";
-        const RATE_PER_BOX = 11;
+        const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; // Updated to 45 minutes
 
         const UNIQUE_DEVICE_ID = (() => {
@@ -1018,6 +1018,12 @@
         }
 
         function runWithSecurityGate(callbackAction) {
+            // Bypass verification for worker dashboard changes, deletions, configurations and database actions
+            if (callbackAction && callbackAction !== executeMessageSubmissionTimelineChannel) {
+                callbackAction();
+                return;
+            }
+
             const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
             const now = Date.now();
             if (lastSessionVerificationTimestamp && (now - parseInt(lastSessionVerificationTimestamp, 10) < SESSION_DURATION_MS)) {
