@@ -895,7 +895,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
-        const SECRET_CODE = "2026";
+        const SECRET_CODE = "den1472";
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; // Updated to 45 minutes
 
@@ -1018,12 +1018,6 @@
         }
 
         function runWithSecurityGate(callbackAction) {
-            // Bypass verification for worker dashboard changes, deletions, configurations and database actions
-            if (callbackAction && callbackAction !== executeMessageSubmissionTimelineChannel) {
-                callbackAction();
-                return;
-            }
-
             const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
             const now = Date.now();
             if (lastSessionVerificationTimestamp && (now - parseInt(lastSessionVerificationTimestamp, 10) < SESSION_DURATION_MS)) {
@@ -1315,13 +1309,23 @@
             const nameMatch = document.getElementById('filterName').value.trim().toLowerCase();
             const startMatch = document.getElementById('filterStartDate').value;
             const endMatch = document.getElementById('filterEndDate').value;
+            const tableStatusFilter = document.getElementById('tableStatusSelector').value;
 
             const filteredArray = globalLogsArray.filter(log => {
-                if (log.status === "CANCELLED") return false;
                 const matchName = !nameMatch || log.employeeName.toLowerCase().includes(nameMatch);
                 const matchStart = !startMatch || (log.dateWorked >= startMatch);
                 const matchEnd = !endMatch || (log.dateWorked <= endMatch);
-                return matchName && matchStart && matchEnd;
+                
+                let matchStatus = true;
+                if(tableStatusFilter !== "ALL") {
+                    matchStatus = (log.status === tableStatusFilter);
+                } else if (activeStatusFilterCriteria !== "ALL") {
+                    matchStatus = (log.status === activeStatusFilterCriteria);
+                } else {
+                    matchStatus = (log.status !== "CANCELLED");
+                }
+                
+                return matchName && matchStart && matchEnd && matchStatus;
             });
 
             if(filteredArray.length === 0) {
@@ -1342,7 +1346,7 @@
                 if (l.status === 'PAID') {
                     summaryMap[l.employeeName].paidAmt += parseFloat(l.calculatedPayout) || 0;
                     grandTotalPaid += parseFloat(l.calculatedPayout) || 0;
-                } else {
+                } else if (l.status === 'UNPAID') {
                     summaryMap[l.employeeName].unpaidAmt += parseFloat(l.calculatedPayout) || 0;
                     grandTotalUnpaid += parseFloat(l.calculatedPayout) || 0;
                 }
@@ -1358,6 +1362,7 @@
                 <div style="border-bottom:3px solid #000; padding-bottom:12px; margin-bottom:20px;">
                     <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
                     <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
+                    <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
                     <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
                 </div>
                 <h4>Personnel Aggregations Summary Statement</h4>
@@ -1415,7 +1420,7 @@
                         <td style="padding:5px; border:1px solid #ddd; font-family:monospace; text-align:center;">${log.vehiclePlate}</td>
                         <td style="padding:5px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
                         <td style="padding:5px; border:1px solid #ddd; text-align:right; font-family:monospace;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':'#b45309'}">${log.status}</td>
+                        <td style="padding:5px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
                     </tr>`;
             });
 
