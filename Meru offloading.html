@@ -110,7 +110,7 @@
         }
 
         .sidebar-menu-list {
-            list-style: list-style-type;
+            list-style: none;
             padding: 15px 10px;
             margin: 0;
             display: flex;
@@ -266,7 +266,7 @@
         }
     </style>
 </head>
-<body class="" style="">
+<body>
 
     <div class="hover-trigger-zone" id="sidebarTriggerZone"></div>
 
@@ -301,20 +301,20 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item py-2 rounded" href="#" onclick="alert('Table Filter Preview active below. Select columns inside historical logs view to inspect entries.'); return false;">
+                        <a class="dropdown-item py-2 rounded" href="#" data-bs-toggle="modal" data-bs-target="#previewDeletionModal" onclick="renderPreviewDeletionTable()">
                             <i class="bi bi-file-earmark-medical me-2 text-info"></i> Preview
                         </a>
                     </li>
                 </ul>
             </li>
             <li>
-                <a href="#" class="sidebar-link" toggle-target="message-board-panel" onclick="toggleViewLayout('messages'); return false;">
+                <a href="#" class="sidebar-link" onclick="toggleViewLayout('messages'); return false;">
                     <i class="bi bi-chat-left-text-fill text-success"></i> Message Board
                 </a>
             </li>
             <li>
                 <a href="#" class="sidebar-link" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="renderAttendanceUiList()">
-                    <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="sidebarActiveCount" class="badge bg-info text-dark ms-auto px-2 rounded-pill">15 Checked-In</span>
+                    <i class="bi bi-calendar-check-fill text-info"></i> Attendance <span id="sidebarActiveCount" class="badge bg-info text-dark ms-auto px-2 rounded-pill">0 Checked-In</span>
                 </a>
             </li>
             <li class="dropdown">
@@ -324,14 +324,14 @@
                 <ul class="dropdown-menu dropdown-menu-dark shadow border-0 p-2 m-0" aria-labelledby="sidebarFilterDropdown">
                     <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('ALL'); return false;"><i class="bi bi-collection me-2"></i> All Logs Archive</a></li>
                     <li><a class="dropdown-item py-2 rounded mb-1" href="#" onclick="filterByStatusSelector('UNPAID'); return false;"><i class="bi bi-hourglass-split me-2 text-warning"></i> Unpaid Pending</a></li>
-                    <li><a class="dropdown-item py-2 rounded mb-1 text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
+                    <li><a class="dropdown-item py-2 rounded text-success" href="#" onclick="filterByStatusSelector('PAID'); return false;"><i class="bi bi-check-circle-fill me-2"></i> Settled Claims</a></li>
                     <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                 </ul>
             </li>
         </ul>
     </div>
 
-    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar fixed-top shadow no-print" style="">
+    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar fixed-top shadow no-print">
         <div class="container-fluid px-lg-4">
             <div class="d-flex align-items-center">
                 <button class="btn menu-pill-btn me-3" id="sidebarToggleActionBtn" title="Reveal Menu Panel">
@@ -359,7 +359,7 @@
                     </li>
                     <li class="nav-item">
                         <span class="menu-pill-btn text-light shadow-sm" style="cursor: default; background: rgba(255,255,255,0.02);">
-                            <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">19:07:27</span>
+                            <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">00:00:00</span>
                         </span>
                     </li>
                 </ul>
@@ -368,7 +368,7 @@
                     <li class="nav-item me-2 position-relative">
                         <a class="menu-pill-btn border-secondary" href="#" data-bs-toggle="modal" data-bs-target="#notificationsInboxModal" onclick="renderNotificationsInboxModal()">
                             <i class="bi bi-bell-fill text-warning"></i> Notifications
-                            <span id="globalNavUnreadBadgeCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">1</span>
+                            <span id="globalNavUnreadBadgeCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -398,7 +398,7 @@
                 <strong>Timestamp:</strong> <span id="popupAlertTime">00:00</span>
             </div>
             <div class="progress mb-3" style="height: 6px;">
-                <div id="popupAlertProgressLine" class="progress-bar bg-warning" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                <div id="popupAlertProgressLine" class="progress-bar bg-warning" role="progressbar" style="width: 100%;"></div>
             </div>
             <div class="d-flex align-items-center justify-content-center mt-1">
                 <button class="btn btn-sm btn-primary w-100 py-1 fw-bold text-uppercase" style="font-size: 11px;" onclick="viewAlertMessageViaNotificationHub()">
@@ -415,13 +415,13 @@
                 <div class="col-md-3">
                     <div class="card shadow-sm p-3 stat-card" style="border-left-color: #0d6efd;">
                         <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
-                        <div class="fs-4 fw-bold" id="statTotalBoxes">1,111</div>
+                        <div class="fs-4 fw-bold" id="statTotalBoxes">0</div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card shadow-sm p-3 stat-card" style="border-left-color: #198754;">
                         <div class="text-muted small fw-bold text-uppercase">Total Paid Out</div>
-                        <div class="fs-4 fw-bold text-success" id="statTotalPaid">Ksh 12,221</div>
+                        <div class="fs-4 fw-bold text-success" id="statTotalPaid">Ksh 0</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -448,7 +448,9 @@
                             <form id="workLogForm">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Employee Name</label>
-                                    <select id="employeeName" class="form-select text-dark bg-light" required=""><option value="" disabled="" selected="">Select member</option><option value="Bornie">Bornie</option><option value="Dominic">Dominic</option><option value="Duncan">Duncan</option><option value="DW">DW</option><option value="Eliud">Eliud</option><option value="Festo">Festo</option><option value="Gitonga">Gitonga</option><option value="Ian">Ian</option><option value="James">James</option><option value="Jayden">Jayden</option><option value="Muriuki">Muriuki</option><option value="Phini">Phini</option><option value="Roy">Roy</option><option value="Samwel">Samwel</option><option value="Thuranira">Thuranira</option></select>
+                                    <select id="employeeName" class="form-select text-dark bg-light" required="">
+                                        <option value="" disabled="" selected="">Select member</option>
+                                    </select>
                                     <div class="form-text text-muted small mt-1"><i class="bi bi-info-circle"></i> Showing active checked-in members only.</div>
                                 </div>
                                 <div class="mb-3">
@@ -509,13 +511,13 @@
                             <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
                                 <i class="bi bi-journal-plus text-primary me-1"></i> Last Entered Record
                             </div>
-                            <div class="mt-1 fw-semibold" id="activityLastEntered">DW (1111 Boxes on 14/06/2026)</div>
+                            <div class="mt-1 fw-semibold" id="activityLastEntered">None Available</div>
                         </div>
                         <div class="col-md-6 ps-md-3">
                             <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
                                 <i class="bi bi-cash-check text-success me-1"></i> Last Payment Processed
                             </div>
-                            <div class="mt-1 fw-semibold" id="activityLastPaid">DW (Ksh 12,221 for 1111 Boxes)</div>
+                            <div class="mt-1 fw-semibold" id="activityLastPaid">None Processed</div>
                         </div>
                     </div>
 
@@ -539,7 +541,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3 text-md-end">
-                                <span class="text-muted small fw-semibold" id="displayedRowsCounter">Showing 1 entries</span>
+                                <span class="text-muted small fw-semibold" id="displayedRowsCounter">Showing 0 entries</span>
                             </div>
                         </div>
                     </div>
@@ -565,31 +567,7 @@
                                             <th class="text-center no-print">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="logTableBody">
-                    <tr class="disabled-row">
-                        <td>
-                            <div class="fw-bold text-dark">DW</div>
-                            <div class="text-muted small font-monospace">KBL</div>
-                        </td>
-                        <td class="font-monospace">14/06/2026</td>
-                        <td>
-                            <span class="badge bg-dark px-2 py-1 box-count">1111 Count</span>
-                            <div class="text-muted small mt-1" style="font-size:11px;">Billable Units: 1111</div>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-dark mb-1">Ksh 12,221</div>
-                            <div><span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Paid</span>
-                                   <div class="payment-details mt-1"><i class="bi bi-calendar2-check"></i> 14/06/2026</div></div>
-                        </td>
-                        <td class="text-center no-print">
-                            <div class="d-flex justify-content-center gap-1">
-                                <button class="btn btn-sm btn-outline-secondary" title="Inspect Record" onclick="triggerDetailedAuditLogInspection('-Ov3r-xjy1wn6E-PTiU7')">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                
-                            </div>
-                        </td>
-                    </tr></tbody>
+                                    <tbody id="logTableBody"></tbody>
                                 </table>
                             </div>
                             <div id="noDataMessage" class="text-center py-5 text-muted d-none">
@@ -612,7 +590,9 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Select Your Name</label>
-                                <select id="msgWorkerDropdown" class="form-select bg-light text-dark" required=""><option value="" disabled="" selected="">Identify worker...</option><option value="Bornie">Bornie</option><option value="Dominic">Dominic</option><option value="Duncan">Duncan</option><option value="DW">DW</option><option value="Eliud">Eliud</option><option value="Festo">Festo</option><option value="Gitonga">Gitonga</option><option value="Ian">Ian</option><option value="James">James</option><option value="Jayden">Jayden</option><option value="Muriuki">Muriuki</option><option value="Phini">Phini</option><option value="Roy">Roy</option><option value="Samwel">Samwel</option><option value="Thuranira">Thuranira</option><option value="UN-None">UN-None</option></select>
+                                <select id="msgWorkerDropdown" class="form-select bg-light text-dark" required="">
+                                    <option value="" disabled="" selected="">Identify worker...</option>
+                                </select>
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label fw-bold">Message Content</label>
@@ -632,110 +612,41 @@
                     <span class="badge bg-info text-dark font-monospace">Device Sent Logs Only</span>
                 </div>
                 <div class="card-body p-3">
-                    <div id="messagesContainerTimeline" class="row g-3">
-                    <div class="text-center py-5 text-muted col-12">
-                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
-                        No notes posted from this specific device. Use the form above to add an administrative notice.
-                    </div></div>
+                    <div id="messagesContainerTimeline" class="row g-3"></div>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <div class="modal fade" id="notificationsInboxModal" tabindex="-1" aria-hidden="true" style="display: none;">
+    <div class="modal fade" id="notificationsInboxModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md modal-dialog-scrollable">
             <div class="modal-content text-dark">
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title fw-bold">
                         <i class="bi bi-bell-fill text-warning me-2"></i>System Notification Hub
                     </h5>
-                    <span id="modalInboxUnreadCountBadge" class="badge bg-danger ms-2 px-2 py-1">1 Unread Notes</span>
+                    <span id="modalInboxUnreadCountBadge" class="badge bg-danger ms-2 px-2 py-1">0 Unread Notes</span>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body bg-light p-3" id="globalNotificationHubListBody"><div class="d-flex flex-column gap-2">
-                    <div class="card border rounded p-3 bg-warning-subtle shadow-sm" style="transition: all 0.2s;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark">
-                                <i class="bi bi-person-circle"></i> Warning 
-                            </span>
-                            <small class="text-muted font-monospace small">13/06/2026 22:04</small>
-                        </div>
-                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">System INFO. The system status says that, the System is almost done. Please be patient as we work on it. Thank you.</div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
-                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: DEV-1171</span>
-                            <div class="d-flex gap-1">
-                                
-                                <button class="btn btn-xs btn-success py-0 px-2 fw-bold" style="font-size:11px;" onclick="markSingleMessageAsReadHub('-Ov1MpLMaewtNVX-5im1')">
-                                    <i class="bi bi-check2"></i> Mark Read
-                                </button>
-                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('-Ov1MpLMaewtNVX-5im1', 'Warning')">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card border rounded p-3 bg-white text-muted" style="transition: all 0.2s;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark">
-                                <i class="bi bi-person-circle"></i> Warning ⚠️ 
-                            </span>
-                            <small class="text-muted font-monospace small">12/06/2026 20:37</small>
-                        </div>
-                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">System INFO. Please note that the system is under maintenance ⛑️. Be patient, you will get notification when Our team are done. Thank you.</div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
-                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: DEV-689WIQAWX</span>
-                            <div class="d-flex gap-1">
-                                <span class="text-success small align-self-center me-1"><i class="bi bi-check2-all"></i> Read</span>
-                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('-OuwuFvLrOrt-Bq2sKxR', 'Warning ⚠️')">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div></div></div>
-                <div class="modal-footer bg-white py-2 d-flex justify-content-between">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="markAllNotificationsAsReadHub()">Mark All as Read</button>
-                    <button type="button" class="btn btn-sm btn-dark" data-bs-dismiss="modal">Close View</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="themeSettingsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white py-2">
-                    <h6 class="modal-title fw-bold"><i class="bi bi-palette-fill me-2"></i>Web Themes Settings</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4 text-center">
-                    <p class="small text-muted mb-3">Choose global theme view preference</p>
-                    <div class="d-flex justify-content-center gap-3">
-                        <button class="btn btn-outline-dark fw-bold px-3 py-2" onclick="setAppViewTheme('light')">
-                            <i class="bi bi-brightness-high-fill me-1 text-warning"></i> Light Mode
-                        </button>
-                        <button class="btn btn-dark fw-bold px-3 py-2" onclick="setAppViewTheme('dark')">
-                            <i class="bi bi-moon-stars-fill me-1 text-info"></i> Dark Mode
-                        </button>
-                    </div>
-                </div>
+                <div class="modal-body bg-light p-3" id="globalNotificationHubListBody"></div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="rosterRegistryModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-person-gear text-warning me-2"></i>System Member Registry</h5>
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2"></i>Team Roster Settings Matrix</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="card bg-light border p-3 mb-4">
-                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill me-1 text-primary"></i>Register New Member</h6>
+                    <div class="p-3 bg-light rounded border mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill text-primary"></i> Deploy New Member</h6>
                         <div class="row g-2">
                             <div class="col-md-8">
-                                <input type="text" id="newRegistryWorkerName" class="form-control text-dark bg-white bg-light" placeholder="Enter full worker name">
+                                <input type="text" id="newRegistryWorkerName" class="form-control bg-white text-dark" placeholder="Enter full name...">
                             </div>
                             <div class="col-md-4">
                                 <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add Member</button>
@@ -743,7 +654,6 @@
                         </div>
                         <small class="text-muted mt-2"><i class="bi bi-shield-exclamation"></i> Names must be unique. Existing records protected.</small>
                     </div>
-
                     <h6 class="fw-bold text-dark mb-2">Configured Roster Members</h6>
                     <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
                         <table class="table table-hover mb-0 align-middle">
@@ -753,9 +663,7 @@
                                     <th class="text-center no-print" style="width: 100px;">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="rosterRegistryTableBody">
-                                <tr><td colspan="2" class="text-center py-3 text-muted">Loading registry components...</td></tr>
-                            </tbody>
+                            <tbody id="rosterRegistryTableBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -782,9 +690,83 @@
                                     <th class="text-center" style="width: 120px;">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="workCancellationTableBody">
-                                <tr><td colspan="4" class="text-center py-3 text-muted">Loading logged entries...</td></tr>
-                            </tbody>
+                            <tbody id="workCancellationTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="previewDeletionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-trash-fill me-2"></i>Saved Log Deletion Matrix (Preview Panel)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning small py-2 px-3 mb-3">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Identity Verification Gated Area. Individual saved work logs can be purged from indices below.
+                    </div>
+                    <div class="table-responsive border rounded" style="max-height: 380px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th class="ps-3">Staff Member</th>
+                                    <th>Date Worked</th>
+                                    <th>Boxes Volume</th>
+                                    <th class="text-center" style="width: 100px;">Purge</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewDeletionTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="themeSettingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-palette2 me-2"></i>System Palette Theme</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="d-flex flex-column gap-2">
+                        <button class="btn btn-outline-secondary text-start py-2 d-flex justify-content-between align-items-center" onclick="setAppViewTheme('light'); bootstrap.Modal.getInstance(document.getElementById('themeSettingsModal')).hide();">
+                            <span><i class="bi bi-sun-fill text-warning me-2"></i> Light Mode</span>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </button>
+                        <button class="btn btn-outline-dark text-start py-2 d-flex justify-content-between align-items-center" onclick="setAppViewTheme('dark'); bootstrap.Modal.getInstance(document.getElementById('themeSettingsModal')).hide();">
+                            <span><i class="bi bi-moon-stars-fill text-info me-2"></i> Dark Terminal</span>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check-fill text-success me-2"></i>Daily Attendance Management</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="table-responsive border rounded" style="max-height: 350px;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Staff Name</th>
+                                    <th class="text-center" style="width:140px;">Duty Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBodyList"></tbody>
                         </table>
                     </div>
                 </div>
@@ -793,36 +775,22 @@
     </div>
 
     <div class="modal fade no-print" id="securityLockModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-danger text-white py-2">
-                    <h6 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Verify Identity</h6>
-                </div>
-                <div class="modal-body text-center p-3">
-                    <p class="small text-muted mb-2">Enter secret code to authorize database changes.</p>
-                    <input type="password" id="secretSecurityCodeInput" class="form-control text-center fw-bold fs-5 tracking-widest border-2 bg-light text-dark" placeholder="••••••••" autocomplete="off">
-                    <div id="securityModalErrorMsg" class="text-danger small fw-bold mt-2 d-none">Invalid Code. Access Denied.</div>
-                    <button class="btn btn-danger w-100 mt-3 fw-bold" onclick="submitSecurityVerification()">Verify Identity</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check text-warning me-2"></i>Shift Attendance</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                        <span class="small text-muted fw-bold text-uppercase">Check-In Registry</span>
-                        <button class="btn btn-xs btn-outline-danger py-0 px-2 fw-semibold" style="font-size:11px;" onclick="resetAllAttendanceOffManually()">Reset All</button>
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-white" style="background-color: #111827; border: 2px solid #ffc107;">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-shield-lock-fill text-warning display-4"></i>
                     </div>
-                    <ul class="list-group list-group-flush" id="attendanceListBody" style="max-height:350px; overflow-y:auto;">
-                        <li class="list-group-item text-center py-3 text-muted">Loading list nodes...</li>
-                    </ul>
+                    <h5 class="fw-bold mb-1">Verify Identity</h5>
+                    <p class="small text-muted mb-3">Administrative Action Authentication Required</p>
+                    <div class="mb-3">
+                        <input type="password" id="secretSecurityCodeInput" class="form-control text-center bg-dark text-white border-secondary tracking-widest fw-bold" placeholder="••••" maxlength="12">
+                        <div id="securityModalErrorMsg" class="text-danger small mt-2 d-none fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Access Code Invalid</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-white" onclick="cancelSecurityVerificationGate()">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-warning w-100 fw-bold" onclick="submitSecurityVerification()">Verify</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -831,21 +799,23 @@
     <div class="modal fade" id="leaderboardModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-trophy-fill me-2"></i>Team Performance Leaderboard</h5>
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-trophy-fill me-2"></i>Performance Leaderboard Metric</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <table class="table table-striped mb-0 align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 70px;" class="text-center">Rank</th>
-                                <th>Worker</th>
-                                <th class="text-end pe-4">Total Boxes Removed</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboardTableBody"></tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 70px;" class="text-center">Rank</th>
+                                    <th>Worker</th>
+                                    <th class="text-end pe-4">Total Boxes Removed</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -886,6 +856,31 @@
         </div>
     </div>
 
+    <div class="modal fade" id="reportOptionsPromptModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-funnel-fill me-2"></i>Select Report Option</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <p class="small text-muted mb-3">Choose the payment statuses to compile into the report:</p>
+                    <div class="d-flex flex-column gap-2">
+                        <button type="button" class="btn btn-outline-primary fw-bold text-start" onclick="executeSelectedReportDownload('ALL')">
+                            <i class="bi bi-collection me-2"></i> Include All Logs
+                        </button>
+                        <button type="button" class="btn btn-outline-warning fw-bold text-dark text-start" onclick="executeSelectedReportDownload('UNPAID')">
+                            <i class="bi bi-hourglass-split me-2"></i> Unpaid Records Only
+                        </button>
+                        <button type="button" class="btn btn-outline-success fw-bold text-start" onclick="executeSelectedReportDownload('PAID')">
+                            <i class="bi bi-check-circle-fill me-2"></i> Paid Records Only
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
             <small>© 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
@@ -897,13 +892,12 @@
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const SECRET_CODE = "den1472";
         const RATE_PER_BOX = 1;
-        const SESSION_DURATION_MS = 45 * 60 * 1000; // Updated to 45 minutes
-
+        const SESSION_DURATION_MS = 45 * 60 * 1000; 
         const UNIQUE_DEVICE_ID = (() => {
-            let id = localStorage.getItem('meru_device_token_identity');
-            if(!id) {
-                id = 'DEV-' + Math.floor(1000 + Math.random() * 9000);
-                localStorage.setItem('meru_device_token_identity', id);
+            let id = localStorage.getItem('meru_device_uuid_token');
+            if(!id){
+                id = 'DEV-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                localStorage.setItem('meru_device_uuid_token', id);
             }
             return id;
         })();
@@ -912,63 +906,54 @@
         let masterDynamicWorkersArray = [];
         let globalAttendanceObj = {};
         let globalMessagesCacheArray = [];
-        let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map')) || {};
-
-        let securityBootstrapModal;
+        let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
+        
         let pendingActionCallback = null;
-        let activeStatusFilterCriteria = "ALL";
-        let isInitialBootLoad = true;
+        let activeStatusFilterCriteria = "ALL"; 
+        let securityBootstrapModal = null;
+        let reportOptionsPromptBootstrapModal = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
+            reportOptionsPromptBootstrapModal = new bootstrap.Modal(document.getElementById('reportOptionsPromptModal'));
             
             const savedTheme = localStorage.getItem('meru_web_theme') || 'light';
             setAppViewTheme(savedTheme);
-
-            initializeSidebarLayoutControls();
             
-            // Set default date picker layout to current localized timestamp
-            const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('dateWorked').value = todayStr;
-
-            // Operational initialization pipeline runs
-            fetchWorkersRegistryFromCloud();
+            document.getElementById('dateWorked').value = new Date().toISOString().split('T')[0];
+            
+            setupSidebarLayoutInteractions();
+            
+            // Core Data Ingest Sync loops
+            fetchRosterRegistryFromCloud();
+            fetchAttendanceStateCloud();
             fetchLogsFromCloud();
             fetchMessagesTimelineFeed(true);
+            
+            // Realtime background sync workers
+            setInterval(fetchLogsFromCloud, 20000);
+            setInterval(fetchMessagesTimelineFeed, 10000);
+            setInterval(updateNetworkIndicatorStatus, 4000);
+            
+            // Live clock handle
+            setInterval(() => {
+                document.getElementById('navLiveClock').innerText = new Date().toLocaleTimeString();
+            }, 1000);
 
-            // Interface interval clock updates
-            setInterval(executeLiveClockTicker, 1000);
-            updateNetworkIndicatorStatus();
-            window.addEventListener('online', updateNetworkIndicatorStatus);
-            window.addEventListener('offline', updateNetworkIndicatorStatus);
-
-            // Attach Work Entry Interceptor Submission Hook
+            // LOG WORK ENTRY Interceptor Form submission logic wrapper
             document.getElementById('workLogForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                // Route work entry submission securely through the 45-min security gate
                 runWithSecurityGate(() => {
                     executeWorkLogSubmissionPayload();
                 });
             });
-
-            document.getElementById('messageBoardForm').addEventListener('submit', executeMessageSubmissionTimelineChannel);
-
-            // Cross-Terminal Synchronization polling sequence
-            setInterval(() => {
-                fetchLogsFromCloud();
-                fetchMessagesTimelineFeed(false);
-            }, 8000);
         });
 
-        function executeLiveClockTicker() {
-            const timeStr = new Date().toLocaleTimeString();
-            document.getElementById('navLiveClock').innerText = timeStr;
-        }
-
-        function initializeSidebarLayoutControls() {
+        function setupSidebarLayoutInteractions() {
             const sb = document.getElementById('mainSidebarLayout');
             const zone = document.getElementById('sidebarTriggerZone');
             const btn = document.getElementById('sidebarToggleActionBtn');
+            
             zone.addEventListener('mouseenter', () => sb.classList.add('active'));
             sb.addEventListener('mouseleave', () => sb.classList.remove('active'));
             btn.addEventListener('click', () => sb.classList.toggle('active'));
@@ -1049,74 +1034,9 @@
             }
         }
 
-        function togglePaidBoxesInput() {
-            const choice = document.getElementById('paidBoxesSelection').value;
-            const container = document.getElementById('customPaidBoxesContainer');
-            const inputField = document.getElementById('paidBoxes');
-            if(choice === "CUSTOM") {
-                container.classList.remove('d-none');
-                inputField.setAttribute('required', 'true');
-                inputField.focus();
-            } else {
-                container.classList.add('d-none');
-                inputField.removeAttribute('required');
-                inputField.value = '';
-            }
-        }
-
-        function executeWorkLogSubmissionPayload() {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
-
-            const employeeName = document.getElementById('employeeName').value;
-            const vehiclePlate = document.getElementById('vehiclePlate').value.trim().toUpperCase();
-            const dateWorked = document.getElementById('dateWorked').value;
-            const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10) || 0;
-            const selectionChoice = document.getElementById('paidBoxesSelection').value;
-            
-            let paidBoxes = totalBoxes;
-            if (selectionChoice === "CUSTOM") {
-                paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10) || 0;
-            }
-
-            const calculatedPayout = paidBoxes * RATE_PER_BOX;
-
-            const payload = {
-                employeeName,
-                vehiclePlate,
-                dateWorked,
-                totalBoxes,
-                paidBoxes,
-                calculatedPayout,
-                status: "UNPAID",
-                timestamp: Date.now()
-            };
-
-            fetch(`${FIREBASE_URL}logs.json`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Database rejected submission payload stream.");
-                document.getElementById('vehiclePlate').value = '';
-                document.getElementById('totalBoxes').value = '';
-                document.getElementById('paidBoxesSelection').value = 'ALL';
-                togglePaidBoxesInput();
-                
-                submitBtn.innerHTML = "Success!";
-                setTimeout(() => {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = "Save Record";
-                }, 1200);
-                fetchLogsFromCloud();
-            })
-            .catch(() => {
-                alert("Network communication timeout error. Change parameters and verify pipeline connection.");
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = "Save Record";
-            });
+        function cancelSecurityVerificationGate() {
+            pendingActionCallback = null;
+            securityBootstrapModal.hide();
         }
 
         function fetchLogsFromCloud() {
@@ -1129,8 +1049,8 @@
                     Object.keys(data).forEach(k => {
                         globalLogsArray.push({ id: k, ...data[k] });
                     });
-                    // Newest logs rank up top
-                    globalLogsArray.sort((a,b) => b.timestamp - a.timestamp);
+                    // AUTOMATIC DATA REARRANGEMENT SORT BY DATE (Descending - Newest First)
+                    globalLogsArray.sort((a,b) => new Date(b.dateWorked) - new Date(a.dateWorked));
                 }
                 document.getElementById('loadingSpinner').style.display = 'none';
                 executeCalculatedSystemMetrics();
@@ -1148,13 +1068,13 @@
             let pendingLogsCount = 0;
             let lastEnteredText = "None Available";
             let lastPaymentText = "None Processed";
-
+            
             const validLogs = globalLogsArray.filter(l => l.status !== "CANCELLED");
             if(globalLogsArray.length > 0) {
                 const latest = globalLogsArray[0];
                 lastEnteredText = `${latest.employeeName} (${latest.totalBoxes} Boxes on ${formatDateDisplay(latest.dateWorked)})`;
             }
-
+            
             const strictlyPaidLogs = globalLogsArray.filter(l => l.status === "PAID");
             if(strictlyPaidLogs.length > 0) {
                 const latestPaid = strictlyPaidLogs[0];
@@ -1182,45 +1102,41 @@
         function handleLiveSearchFilter() {
             const query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
             const selectedStatusOption = document.getElementById('tableStatusSelector').value;
-            
             const tbody = document.getElementById('logTableBody');
             tbody.innerHTML = '';
+            
+            let filtered = globalLogsArray;
+            if (activeStatusFilterCriteria !== "ALL") {
+                filtered = filtered.filter(l => l.status === activeStatusFilterCriteria);
+            }
+            if (selectedStatusOption !== "ALL") {
+                filtered = filtered.filter(l => l.status === selectedStatusOption);
+            }
+            if (query) {
+                filtered = filtered.filter(l => l.employeeName.toLowerCase().includes(query) || l.vehiclePlate.toLowerCase().includes(query));
+            }
 
-            const filteredList = globalLogsArray.filter(log => {
-                const matchesSearch = log.employeeName.toLowerCase().includes(query) || log.vehiclePlate.toLowerCase().includes(query);
-                
-                let matchesStatus = true;
-                if(selectedStatusOption !== "ALL") {
-                    matchesStatus = (log.status === selectedStatusOption);
-                } else if(activeStatusFilterCriteria !== "ALL") {
-                    matchesStatus = (log.status === activeStatusFilterCriteria);
-                }
-                
-                return matchesSearch && matchesStatus;
-            });
-
-            document.getElementById('displayedRowsCounter').innerText = `Showing ${filteredList.length} entries`;
-
-            if(filteredList.length === 0) {
+            document.getElementById('displayedRowsCounter').innerText = `Showing ${filtered.length} entries`;
+            
+            if(filtered.length === 0) {
                 document.getElementById('noDataMessage').classList.remove('d-none');
                 return;
             }
             document.getElementById('noDataMessage').classList.add('d-none');
 
-            filteredList.forEach(log => {
-                let statusBadge = '';
-                let rowClass = '';
-                
+            filtered.forEach(log => {
+                let rowClass = "";
+                let statusBadge = "";
                 if (log.status === "PAID") {
+                    rowClass = "disabled-row";
                     statusBadge = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Paid</span>
                                    <div class="payment-details mt-1"><i class="bi bi-calendar2-check"></i> ${formatDateDisplay(log.paymentDate)}</div>`;
-                    rowClass = 'disabled-row';
                 } else if (log.status === "UNPAID") {
                     statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Unpaid</span>`;
                 } else if (log.status === "CANCELLED") {
-                    statusBadge = `<span class="badge bg-danger"><i class="bi bi-x-octagon-fill me-1"></i> Voided</span>
-                                   <div class="cancellation-details mt-1"><i class="bi bi-shield-exclamation"></i> Reason: ${escapeHtml(log.cancellationReason || 'Admin Override')}</div>`;
-                    rowClass = 'cancelled-row';
+                    rowClass = "cancelled-row text-muted";
+                    statusBadge = `<span class="badge bg-danger"><i class="bi bi-x-octagon-fill me-1"></i> Cancelled</span>
+                                   <div class="cancellation-details mt-1" title="${escapeHtml(log.cancellationReason || '')}"><i class="bi bi-info-circle"></i> Voided</div>`;
                 }
 
                 tbody.innerHTML += `
@@ -1256,7 +1172,6 @@
         function triggerDetailedAuditLogInspection(id) {
             const record = globalLogsArray.find(l => l.id === id);
             if (!record) return;
-
             const modalBody = document.getElementById('inspectionViewModalBody');
             modalBody.innerHTML = `
                 <div class="p-2">
@@ -1271,32 +1186,82 @@
                         ${record.status === 'CANCELLED' ? `<tr><th class="bg-light text-danger">Void Audit Context</th><td>${escapeHtml(record.cancellationReason || 'None')}</td></tr>` : ''}
                     </table>
                 </div>`;
-            
             const myModal = new bootstrap.Modal(document.getElementById('inspectionViewModal'));
             myModal.show();
         }
 
-        function filterByStatusSelector(statusCode) {
-            activeStatusFilterCriteria = statusCode;
-            document.getElementById('tableStatusSelector').value = statusCode;
+        function filterByStatusSelector(status) {
+            activeStatusFilterCriteria = status;
+            document.getElementById('mainSidebarLayout').classList.remove('active');
             handleLiveSearchFilter();
         }
 
-        function processPaymentPayoutAction(firebaseKey) {
-            const matchRecord = globalLogsArray.find(l => l.id === firebaseKey);
-            if(!matchRecord) return;
+        function togglePaidBoxesInput() {
+            const selectVal = document.getElementById('paidBoxesSelection').value;
+            const container = document.getElementById('customPaidBoxesContainer');
+            if (selectVal === "CUSTOM") {
+                container.classList.remove('d-none');
+                document.getElementById('paidBoxes').required = true;
+            } else {
+                container.classList.add('d-none');
+                document.getElementById('paidBoxes').required = false;
+                document.getElementById('paidBoxes').value = '';
+            }
+        }
 
-            if (confirm(`Confirm settlement payment action for Ksh ${matchRecord.calculatedPayout.toLocaleString()} owed to ${matchRecord.employeeName}?`)) {
+        function executeWorkLogSubmissionPayload() {
+            const employeeName = document.getElementById('employeeName').value;
+            const vehiclePlate = document.getElementById('vehiclePlate').value.trim().toUpperCase();
+            const dateWorked = document.getElementById('dateWorked').value;
+            const totalBoxes = parseInt(document.getElementById('totalBoxes').value, 10);
+            const paidBoxesSelection = document.getElementById('paidBoxesSelection').value;
+            
+            let paidBoxes = totalBoxes;
+            if (paidBoxesSelection === "CUSTOM") {
+                paidBoxes = parseInt(document.getElementById('paidBoxes').value, 10) || 0;
+            }
+
+            if (!employeeName || !vehiclePlate || !dateWorked || isNaN(totalBoxes)) {
+                alert("Please fill out all record configuration coordinates securely.");
+                return;
+            }
+
+            const calculatedPayout = paidBoxes * RATE_PER_BOX;
+
+            const payload = {
+                employeeName,
+                vehiclePlate,
+                dateWorked,
+                totalBoxes,
+                paidBoxes,
+                calculatedPayout,
+                status: "UNPAID",
+                timestamp: Date.now(),
+                deviceRef: UNIQUE_DEVICE_ID
+            };
+
+            fetch(`${FIREBASE_URL}logs.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                document.getElementById('workLogForm').reset();
+                document.getElementById('dateWorked').value = new Date().toISOString().split('T')[0];
+                togglePaidBoxesInput();
+                fetchLogsFromCloud();
+                alert("Work log telemetry saved cleanly to cloud registry.");
+            });
+        }
+
+        function processPaymentPayoutAction(id) {
+            if (confirm("Confirm financial settlement clearance for this worker log tracking row entry node?")) {
                 runWithSecurityGate(() => {
-                    const updatePayload = {
-                        status: "PAID",
-                        paymentDate: new Date().toISOString().split('T')[0]
-                    };
-                    
-                    fetch(`${FIREBASE_URL}logs/${firebaseKey}.json`, {
+                    const paymentDate = new Date().toISOString().split('T')[0];
+                    fetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updatePayload)
+                        body: JSON.stringify({ status: "PAID", paymentDate: paymentDate })
                     })
                     .then(() => {
                         fetchLogsFromCloud();
@@ -1305,31 +1270,40 @@
             }
         }
 
+        // DOWNLOAD REPORT Trigger Interface Gate Wrapper
         function generatePDF() {
+            runWithSecurityGate(() => {
+                reportOptionsPromptBootstrapModal.show();
+            });
+        }
+
+        // Processes Selected Filter Options (All, Unpaid, Paid) and generates structured data layout starting directly at page top
+        function executeSelectedReportDownload(chosenStatusOption) {
+            reportOptionsPromptBootstrapModal.hide();
+            
             const nameMatch = document.getElementById('filterName').value.trim().toLowerCase();
             const startMatch = document.getElementById('filterStartDate').value;
             const endMatch = document.getElementById('filterEndDate').value;
-            const tableStatusFilter = document.getElementById('tableStatusSelector').value;
 
-            const filteredArray = globalLogsArray.filter(log => {
-                const matchName = !nameMatch || log.employeeName.toLowerCase().includes(nameMatch);
-                const matchStart = !startMatch || (log.dateWorked >= startMatch);
-                const matchEnd = !endMatch || (log.dateWorked <= endMatch);
-                
-                let matchStatus = true;
-                if(tableStatusFilter !== "ALL") {
-                    matchStatus = (log.status === tableStatusFilter);
-                } else if (activeStatusFilterCriteria !== "ALL") {
-                    matchStatus = (log.status === activeStatusFilterCriteria);
-                } else {
-                    matchStatus = (log.status !== "CANCELLED");
-                }
-                
-                return matchName && matchStart && matchEnd && matchStatus;
-            });
+            let recordsToCompile = globalLogsArray;
 
-            if(filteredArray.length === 0) {
-                alert("The context matrix selection limits contain no records to print inside audit engine document builds.");
+            // Filter out tracking structures based on requested choice
+            if (chosenStatusOption !== 'ALL') {
+                recordsToCompile = recordsToCompile.filter(l => l.status === chosenStatusOption);
+            }
+
+            if (nameMatch) {
+                recordsToCompile = recordsToCompile.filter(l => l.employeeName.toLowerCase().includes(nameMatch));
+            }
+            if (startMatch) {
+                recordsToCompile = recordsToCompile.filter(l => l.dateWorked >= startMatch);
+            }
+            if (endMatch) {
+                recordsToCompile = recordsToCompile.filter(l => l.dateWorked <= endMatch);
+            }
+
+            if (recordsToCompile.length === 0) {
+                alert("No structural operational matrix lines found tracking the designated report filter coordinates.");
                 return;
             }
 
@@ -1338,9 +1312,9 @@
             let grandTotalPaid = 0;
             let grandTotalUnpaid = 0;
 
-            filteredArray.forEach(l => {
-                if(!summaryMap[l.employeeName]) {
-                    summaryMap[l.employeeName] = { boxes:0, paidAmt:0, unpaidAmt:0 };
+            recordsToCompile.forEach(l => {
+                if (!summaryMap[l.employeeName]) {
+                    summaryMap[l.employeeName] = { boxes: 0, paidAmt: 0, unpaidAmt: 0 };
                 }
                 summaryMap[l.employeeName].boxes += parseInt(l.totalBoxes, 10) || 0;
                 if (l.status === 'PAID') {
@@ -1354,19 +1328,20 @@
             });
 
             let printWrapper = document.createElement('div');
-            printWrapper.style.padding = '30px';
+            // Strict top padding elimination layout to cleanly force startup at top of page 1
+            printWrapper.style.padding = '10px 25px 25px 25px';
             printWrapper.style.color = '#000000';
             printWrapper.style.backgroundColor = '#ffffff';
 
             let reportHeaderMetaData = `
-                <div style="border-bottom:3px solid #000; padding-bottom:12px; margin-bottom:20px;">
-                    <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
+                <div style="border-bottom:3px solid #000; padding-bottom:10px; margin-bottom:15px; margin-top:0px;">
+                    <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px; font-size:22px;">Meru Dairy Offload System Report</h2>
+                    <p style="margin:2px 0; font-size:12px; color:#333;"><strong>Report Option Filter Mode:</strong> ${chosenStatusOption} Records Statement</p>
+                    <p style="margin:2px 0; font-size:12px; color:#555;">Document Scope: ${nameMatch ? 'Employee Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
+                    <p style="margin:2px 0; font-size:12px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
                 </div>
-                <h4>Personnel Aggregations Summary Statement</h4>
-                <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:25px; font-size:12px;">
+                <h4 style="margin-top:0; margin-bottom:10px;">Personnel Aggregations Summary Statement</h4>
+                <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px;">
                     <thead style="background-color:#f8fafc;">
                         <tr>
                             <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name</th>
@@ -1377,62 +1352,73 @@
                     </thead>
                     <tbody>`;
 
-            Object.keys(summaryMap).sort().forEach(empName => {
+            Object.keys(summaryMap).sort().forEach(emp => {
                 reportHeaderMetaData += `
                     <tr>
-                        <td style="padding:7px; border:1px solid #ddd;"><strong>${empName}</strong></td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:center; font-family:monospace;">${summaryMap[empName].boxes.toLocaleString()} Boxes</td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:right; font-family:monospace; color:#198754;">Ksh ${summaryMap[empName].paidAmt.toLocaleString()}</td>
-                        <td style="padding:7px; border:1px solid #ddd; text-align:right; font-family:monospace; color:#b45309;">Ksh ${summaryMap[empName].unpaidAmt.toLocaleString()}</td>
+                        <td style="padding:7px; border:1px solid #ddd;"><strong>${escapeHtml(emp)}</strong></td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:center;">${summaryMap[emp].boxes.toLocaleString()} Boxes</td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${summaryMap[emp].paidAmt.toLocaleString()}</td>
+                        <td style="padding:7px; border:1px solid #ddd; text-align:right; color:#b45309;">Ksh ${summaryMap[emp].unpaidAmt.toLocaleString()}</td>
                     </tr>`;
             });
 
             reportHeaderMetaData += `
-                    <tr style="background-color:#f1f5f9; font-weight:bold; border-top:2px solid #000;">
-                        <td style="padding:8px; border:1px solid #ddd;">GRAND SYSTEM AUDIT TOTALS</td>
+                    <tr style="background-color:#f1f5f9; font-weight:bold;">
+                        <td style="padding:8px; border:1px solid #ddd;">GRAND TOTAL MATRIX</td>
                         <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()} Boxes</td>
                         <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${grandTotalPaid.toLocaleString()}</td>
-                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#b45309;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
                     </tr>
-                    </tbody>
-                </table>`;
+                </tbody>
+            </table>`;
 
             let transactionalTimelineLogsTable = `
-                <h4 style="margin-top:25px;">Detailed Transactional Shift Logs Timeline</h4>
-                <table class="table table-bordered" style="width:100%; border-collapse:collapse; font-size:11px;">
-                    <thead style="background-color:#f2f2f2;">
+                <h4>Detailed Transactional Operation Log Matrix (Includes All Relevant History Structure States)</h4>
+                <table class="table table-striped" style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <thead style="background-color:#0f172a; color:#ffffff;">
                         <tr>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Date Worked</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Employee Name</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Vehicle Number Plate</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Employee</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Vehicle Plate</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Date of Work</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Settlement / Processing Dates</th>
                             <th style="padding:6px; border:1px solid #ddd; text-align:center;">Boxes Handled</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:right;">Payout Worth</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Settlement Status</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:right;">Payout Equivalent</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Audit Status</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
-            [...filteredArray].sort((a,b)=>b.dateWorked.localeCompare(a.dateWorked)).forEach(log => {
+            recordsToCompile.forEach(log => {
+                // Ensure dates loop cleanly and map correctly across both paid and unpaid contexts
+                let operationalProcessingDateLabel = "";
+                if(log.status === 'PAID') {
+                    operationalProcessingDateLabel = `Settled: ${formatDateDisplay(log.paymentDate || log.dateWorked)}`;
+                } else if(log.status === 'UNPAID') {
+                    operationalProcessingDateLabel = `Owed Pending (Logged: ${formatDateDisplay(log.dateWorked)})`;
+                } else {
+                    operationalProcessingDateLabel = `Voided Context`;
+                }
+
                 transactionalTimelineLogsTable += `
                     <tr>
-                        <td style="padding:5px; border:1px solid #ddd; font-family:monospace;">${formatDateDisplay(log.dateWorked)}</td>
-                        <td style="padding:5px; border:1px solid #ddd;"><strong>${log.employeeName}</strong></td>
-                        <td style="padding:5px; border:1px solid #ddd; font-family:monospace; text-align:center;">${log.vehiclePlate}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:right; font-family:monospace;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
-                        <td style="padding:5px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${escapeHtml(log.employeeName)}</td>
+                        <td style="padding:6px; border:1px solid #ddd; font-family:monospace;">${escapeHtml(log.vehiclePlate)}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${formatDateDisplay(log.dateWorked)}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center; font-style:italic; color:#475569;">${operationalProcessingDateLabel}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.totalBoxes} (Pay: ${log.paidBoxes})</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:right; font-weight:bold;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
                     </tr>`;
             });
 
             transactionalTimelineLogsTable += `</tbody></table>`;
-            
             printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
 
             const printSettingsOptionsObject = {
-                margin: [10, 10, 10, 10],
+                margin: [5, 10, 10, 10], // Tighter top margin specification bounds
                 filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, y: 0 }, // Forces canvas rendering anchor coordinates directly to top index boundaries
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
@@ -1442,7 +1428,6 @@
         function buildTruckAnalytics() {
             const tbody = document.getElementById('truckTableBody');
             tbody.innerHTML = '';
-
             let truckAggregations = {};
             globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
                 if(!truckAggregations[log.vehiclePlate]) {
@@ -1451,14 +1436,11 @@
                 truckAggregations[log.vehiclePlate].trips++;
                 truckAggregations[log.vehiclePlate].boxes += parseInt(log.totalBoxes, 10) || 0;
             });
-
             const sortedPlates = Object.keys(truckAggregations).sort((a,b) => truckAggregations[b].boxes - truckAggregations[a].boxes);
-            
             if(sortedPlates.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No active vehicle logs captured inside current index records matrix frames.</td></tr>`;
                 return;
             }
-
             sortedPlates.forEach(plate => {
                 tbody.innerHTML += `
                     <tr class="text-dark">
@@ -1472,318 +1454,64 @@
         function buildLeaderboard() {
             const tbody = document.getElementById('leaderboardTableBody');
             tbody.innerHTML = '';
-
-            let boardMap = {};
+            let leaderboardMap = {};
             globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
-                boardMap[log.employeeName] = (boardMap[log.employeeName] || 0) + (parseInt(log.totalBoxes, 10) || 0);
+                leaderboardMap[log.employeeName] = (leaderboardMap[log.employeeName] || 0) + (parseInt(log.totalBoxes, 10) || 0);
             });
-
-            const sortedWorkers = Object.keys(boardMap).sort((a,b) => boardMap[b] - boardMap[a]);
-
+            const sortedWorkers = Object.keys(leaderboardMap).sort((a,b) => leaderboardMap[b] - leaderboardMap[a]);
             if(sortedWorkers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No operational work parameters aggregated yet. Run logs pipeline entries.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No active performance tracking records inside index fields.</td></tr>`;
                 return;
             }
-
-            sortedWorkers.forEach((workerName, index) => {
-                let medalBadge = `<span class="badge bg-light text-dark border font-monospace">${index + 1}</span>`;
-                if (index === 0) medalBadge = `🥇`;
-                if (index === 1) medalBadge = `🥈`;
-                if (index === 2) medalBadge = `🥉`;
-
+            sortedWorkers.forEach((worker, index) => {
+                let rankDisplay = index + 1;
+                if(index === 0) rankDisplay = '🥇';
+                else if(index === 1) rankDisplay = '🥈';
+                else if(index === 2) rankDisplay = '🥉';
                 tbody.innerHTML += `
                     <tr class="text-dark">
-                        <td class="text-center fw-bold">${medalBadge}</td>
-                        <td><strong>${escapeHtml(workerName)}</strong></td>
-                        <td class="text-end pe-4 font-monospace fw-bold text-success">${boardMap[workerName].toLocaleString()} Boxes</td>
+                        <td class="text-center fw-bold">${rankDisplay}</td>
+                        <td class="fw-bold">${escapeHtml(worker)}</td>
+                        <td class="text-end pe-4 font-monospace fw-bold text-success">${leaderboardMap[worker].toLocaleString()} Boxes</td>
                     </tr>`;
             });
         }
 
-        function fetchMessagesTimelineFeed(isBootSequence) {
-            const url = `${FIREBASE_URL}comms_board.json`;
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                const legacyArrayLength = globalMessagesCacheArray.length;
-                globalMessagesCacheArray = [];
-                
-                if (data) {
-                    Object.keys(data).forEach(firebaseId => {
-                        globalMessagesCacheArray.push({ id: firebaseId, ...data[firebaseId] });
-                    });
-                    // Sort descending by unix epoch time
-                    globalMessagesCacheArray.sort((a, b) => b.timestamp - a.timestamp);
-                }
-                evaluateUnreadMessagesBadgeCount();
-                renderMessageBoardTimelineView();
-
-                // Cross-Terminal Intercept Popup Trigger
-                if (!isBootSequence && globalMessagesCacheArray.length > legacyArrayLength) {
-                    const structuralLatestMsg = globalMessagesCacheArray[0];
-                    if (structuralLatestMsg && structuralLatestMsg.deviceId !== UNIQUE_DEVICE_ID) {
-                        triggerCrossTerminalLiveAlertPopup(structuralLatestMsg);
-                    }
-                }
-                isInitialBootLoad = false;
-            })
-            .catch(err => console.error("Communication Feed Fetch Failure: ", err));
-        }
-
-        function evaluateUnreadMessagesBadgeCount() {
-            let unreadCount = 0;
-            globalMessagesCacheArray.forEach(msg => {
-                if (!clientReadMessagesTrackerObj[msg.id]) {
-                    unreadCount++;
-                }
-            });
-
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            const modalBadge = document.getElementById('modalInboxUnreadCountBadge');
-            
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount;
-                badge.classList.remove('d-none');
-                if(modalBadge) modalBadge.innerText = `${unreadCount} Unread Notes`;
-            } else {
-                badge.classList.add('d-none');
-                if(modalBadge) modalBadge.innerText = `0 Unread Messages`;
-            }
-        }
-
-        function renderMessageBoardTimelineView() {
-            const container = document.getElementById('messagesContainerTimeline');
-            if(!container) return;
-
-            // Show logs initiated on this current browser instance on the private log view
-            const localDeviceMessages = globalMessagesCacheArray.filter(msg => msg.deviceId === UNIQUE_DEVICE_ID);
-            
-            if (localDeviceMessages.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5 text-muted col-12">
-                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
-                        No notes posted from this specific device. Use the form above to add an administrative notice.
-                    </div>`;
-                return;
-            }
-
-            let timelineHtml = '';
-            localDeviceMessages.forEach(msg => {
-                const dateText = new Date(msg.timestamp).toLocaleDateString();
-                const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                timelineHtml += `
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card border bg-light shadow-sm">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold text-dark m-0"><i class="bi bi-person"></i> ${escapeHtml(msg.sender)}</h6>
-                                    <small class="text-muted font-monospace" style="font-size:11px;">${dateText} ${timeText}</small>
-                                </div>
-                                <p class="card-text small text-dark p-2 bg-white rounded border border-light shadow-inner mb-0" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</p>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = timelineHtml;
-        }
-
-        function renderNotificationsInboxModal() {
-            const container = document.getElementById('globalNotificationHubListBody');
-            if (!container) return;
-
-            if (globalMessagesCacheArray.length === 0) {
-                container.innerHTML = `<div class="text-center py-4 text-muted">No communication notes inside notification center archive view.</div>`;
-                return;
-            }
-
-            let inboxHtml = '<div class="d-flex flex-column gap-2">';
-            globalMessagesCacheArray.forEach(msg => {
-                const isRead = clientReadMessagesTrackerObj[msg.id] === true;
-                const isFromMe = msg.deviceId === UNIQUE_DEVICE_ID;
-                const formatDateTimeStr = `${new Date(msg.timestamp).toLocaleDateString()} ${new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-
-                inboxHtml += `
-                    <div class="card border rounded p-3 ${isRead ? 'bg-white text-muted' : 'bg-warning-subtle shadow-sm'}" style="transition: all 0.2s;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold ${isFromMe ? 'text-primary' : 'text-dark'}">
-                                <i class="bi bi-person-circle"></i> ${escapeHtml(msg.sender)} ${isFromMe ? ' <span class="badge bg-secondary font-monospace" style="font-size:9px;">My Device</span>' : ''}
-                            </span>
-                            <small class="text-muted font-monospace small">${formatDateTimeStr}</small>
-                        </div>
-                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
-                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: ${msg.deviceId}</span>
-                            <div class="d-flex gap-1">
-                                ${!isRead ? `
-                                <button class="btn btn-xs btn-success py-0 px-2 fw-bold" style="font-size:11px;" onclick="markSingleMessageAsReadHub('${msg.id}')">
-                                    <i class="bi bi-check2"></i> Mark Read
-                                </button>` : '<span class="text-success small align-self-center me-1"><i class="bi bi-check2-all"></i> Read</span>'}
-                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('${msg.id}', '${escapeHtml(msg.sender)}')">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            inboxHtml += '</div>';
-            container.innerHTML = inboxHtml;
-        }
-
-        function markSingleMessageAsReadHub(msgId) {
-            clientReadMessagesTrackerObj[msgId] = true;
-            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            evaluateUnreadMessagesBadgeCount();
-            renderNotificationsInboxModal();
-        }
-
-        function markAllNotificationsAsReadHub() {
-            globalMessagesCacheArray.forEach(msg => {
-                clientReadMessagesTrackerObj[msg.id] = true;
-            });
-            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            evaluateUnreadMessagesBadgeCount();
-            renderNotificationsInboxModal();
-        }
-
-        function deleteSingleMessageFromCloud(msgId, senderName) {
-            if (confirm(`Confirm deletion of this notification message entry from ${senderName}?`)) {
-                runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { method: 'DELETE' })
-                    .then(() => {
-                        fetchMessagesTimelineFeed(false);
-                        setTimeout(() => renderNotificationsInboxModal(), 400);
-                    });
-                });
-            }
-        }
-
-        let liveAlertProgressTimerInterval = null;
-        function triggerCrossTerminalLiveAlertPopup(msgObj) {
-            closeLiveAlertPopupBanner();
-            
-            document.getElementById('popupAlertSender').innerText = msgObj.sender;
-            document.getElementById('popupAlertTime').innerText = new Date(msgObj.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            
-            const element = document.getElementById('crossTerminalAlertPopup');
-            element.style.display = 'block';
-
-            const progressLine = document.getElementById('popupAlertProgressLine');
-            let percentage = 100;
-            
-            liveAlertProgressTimerInterval = setInterval(() => {
-                percentage -= 1;
-                progressLine.style.width = percentage + '%';
-                progressLine.setAttribute('aria-valuenow', percentage);
-                
-                if(percentage <= 0) {
-                    closeLiveAlertPopupBanner();
-                }
-            }, 80);
-        }
-
-        function closeLiveAlertPopupBanner() {
-            if(liveAlertProgressTimerInterval) {
-                clearInterval(liveAlertProgressTimerInterval);
-                liveAlertProgressTimerInterval = null;
-            }
-            document.getElementById('crossTerminalAlertPopup').style.display = 'none';
-        }
-
-        function viewAlertMessageViaNotificationHub() {
-            closeLiveAlertPopupBanner();
-            const modalEl = document.getElementById('notificationsInboxModal');
-            const bModal = new bootstrap.Modal(modalEl);
-            renderNotificationsInboxModal();
-            bModal.show();
-        }
-
-        function executeMessageSubmissionTimelineChannel(event) {
-            event.preventDefault();
-            const senderName = document.getElementById('msgWorkerDropdown').value;
-            const textContent = document.getElementById('msgTextBody').value.trim();
-
-            if(!senderName || !textContent) return;
-
-            const newPayload = {
-                sender: senderName,
-                text: textContent,
-                timestamp: Date.now(),
-                deviceId: UNIQUE_DEVICE_ID
-            };
-
-            const url = `${FIREBASE_URL}comms_board.json`;
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newPayload)
-            })
-            .then(res => {
-                if(!res.ok) throw new Error("Cloud submission rejected");
-                document.getElementById('msgTextBody').value = '';
-                fetchMessagesTimelineFeed(false);
-            })
-            .catch(err => {
-                console.error("Transmission broken: ", err);
-                alert("Failed to sync message to cloud database node.");
-            });
-        }
-
-        function fetchWorkersRegistryFromCloud() {
-            const url = `${FIREBASE_URL}workers.json`;
-            fetch(url)
+        function fetchRosterRegistryFromCloud() {
+            fetch(`${FIREBASE_URL}roster_registry.json`)
             .then(res => res.json())
             .then(data => {
                 masterDynamicWorkersArray = [];
                 if (data) {
-                    Object.keys(data).forEach(key => {
-                        masterDynamicWorkersArray.push({ id: key, name: data[key].name });
+                    Object.keys(data).forEach(k => {
+                        masterDynamicWorkersArray.push({ id: k, name: data[k].name });
                     });
                 }
-                syncSystemAttendanceStateProperties();
-            })
-            .catch(err => console.error("Worker Registry Cloud Error: ", err));
-        }
-
-        function syncSystemAttendanceStateProperties() {
-            const url = `${FIREBASE_URL}attendance.json`;
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                globalAttendanceObj = data || {};
-                rebuildDynamicDomSelectPickers();
-            })
-            .catch(err => {
-                console.error("Attendance Sync Error: ", err);
-                rebuildDynamicDomSelectPickers();
+                rebuildFormEmployeeSelectionMenus();
             });
         }
 
-        function rebuildDynamicDomSelectPickers() {
+        function rebuildFormEmployeeSelectionMenus() {
             const entrySelect = document.getElementById('employeeName');
             const commsSelect = document.getElementById('msgWorkerDropdown');
-            
             const legacyEntryVal = entrySelect.value;
             const legacyCommsVal = commsSelect.value;
-
+            
             entrySelect.innerHTML = '<option value="" disabled selected>Select member</option>';
             commsSelect.innerHTML = '<option value="" disabled selected>Identify worker...</option>';
-
-            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            
             let activeCounter = 0;
-
+            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            
             sortedList.forEach(w => {
                 commsSelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
-                
                 if (globalAttendanceObj[w.name] === true) {
                     activeCounter++;
                     entrySelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
                 }
             });
-
             if(legacyEntryVal) entrySelect.value = legacyEntryVal;
             if(legacyCommsVal) commsSelect.value = legacyCommsVal;
-
             const activeBadge = document.getElementById('sidebarActiveCount');
             if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
         }
@@ -1791,12 +1519,10 @@
         function renderRosterRegistryManagementTable() {
             const tbody = document.getElementById('rosterRegistryTableBody');
             tbody.innerHTML = '';
-
             if (masterDynamicWorkersArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
                 return;
             }
-
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
             sortedList.forEach(worker => {
                 tbody.innerHTML += `
@@ -1814,134 +1540,167 @@
         function addNewWorkerToRegistryCloud() {
             const nameField = document.getElementById('newRegistryWorkerName');
             const workerNameInput = nameField.value.trim();
-
             if(!workerNameInput) {
                 alert("Please specify a complete name configuration entry string value.");
                 return;
             }
-
             const nameCollisionExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === workerNameInput.toLowerCase());
             if (nameCollisionExists) {
-                alert("Conflict Identified: A profile index matching that specified worker descriptor layout exists.");
+                alert("Identity registration string match collision discovered. Personnel tracking name already configured inside cluster.");
                 return;
             }
-
-            runWithSecurityGate(() => {
-                fetch(`${FIREBASE_URL}workers.json`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: workerNameInput })
-                })
-                .then(() => {
-                    nameField.value = '';
-                    fetchWorkersRegistryFromCloud();
-                    setTimeout(() => renderRosterRegistryManagementTable(), 600);
-                });
+            fetch(`${FIREBASE_URL}roster_registry.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: workerNameInput })
+            })
+            .then(() => {
+                nameField.value = '';
+                fetchRosterRegistryFromCloud();
+                setTimeout(() => renderRosterRegistryManagementTable(), 400);
             });
         }
 
-        function removeWorkerFromRegistry(firebaseId, cleanName) {
-            if(confirm(`Confirm deletion of entry: "${cleanName}" from global roster records?`)) {
+        function removeWorkerFromRegistry(id, name) {
+            if (confirm(`Warning: Are you sure you want to delete worker "${name}" from the saved records registry identity profile logs?`)) {
                 runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}workers/${firebaseId}.json`, { method: 'DELETE' })
+                    fetch(`${FIREBASE_URL}roster_registry/${id}.json`, { method: 'DELETE' })
                     .then(() => {
-                        fetch(`${FIREBASE_URL}attendance/${cleanName}.json`, { method: 'DELETE' })
-                        .then(() => {
-                            fetchWorkersRegistryFromCloud();
-                            setTimeout(() => renderRosterRegistryManagementTable(), 600);
-                        });
+                        fetchRosterRegistryFromCloud();
+                        setTimeout(() => renderRosterRegistryManagementTable(), 400);
                     });
                 });
             }
         }
 
-        function renderAttendanceUiList() {
-            const list = document.getElementById('attendanceListBody');
-            list.innerHTML = '';
-
-            if(masterDynamicWorkersArray.length === 0) {
-                list.innerHTML = `<li class="list-group-item text-center py-4 text-muted">Register team members inside the system database roster profile template to establish shift status controllers.</li>`;
+        // PREVIEW DELETION MATRIX ACTION HANDLER (RUN VERIFY IDENTITY)
+        function renderPreviewDeletionTable() {
+            document.getElementById('mainSidebarLayout').classList.remove('active');
+            const tbody = document.getElementById('previewDeletionTableBody');
+            tbody.innerHTML = '';
+            
+            if (globalLogsArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No individual worker records available to delete inside saved log history.</td></tr>`;
                 return;
             }
 
-            const sorted = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sorted.forEach(w => {
-                const isCheckedOn = globalAttendanceObj[w.name] === true;
-                list.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                        <span class="fw-bold text-dark">${escapeHtml(w.name)}</span>
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" style="cursor:pointer;" ${isCheckedOn ? 'checked' : ''} onchange="toggleWorkerAttendanceSwitch(this, '${escapeHtml(w.name)}')">
-                        </div>
-                    </li>`;
+            globalLogsArray.forEach(log => {
+                tbody.innerHTML += `
+                    <tr class="text-dark">
+                        <td class="ps-3">
+                            <span class="fw-bold">${escapeHtml(log.employeeName)}</span>
+                            <small class="text-muted font-monospace d-block" style="font-size:10px;">${escapeHtml(log.vehiclePlate)}</small>
+                        </td>
+                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
+                        <td>
+                            <span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="purgeIndividualWorkerLogRecord('${log.id}', '${escapeHtml(log.employeeName)}')">
+                                <i class="bi bi-trash-fill"></i> Delete
+                            </button>
+                        </td>
+                    </tr>`;
             });
         }
 
-        function toggleWorkerAttendanceSwitch(checkboxElement, nameKey) {
-            const newState = checkboxElement.checked;
-            fetch(`${FIREBASE_URL}attendance/${nameKey}.json`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(newState)
-            })
-            .then(() => {
-                globalAttendanceObj[nameKey] = newState;
-                rebuildDynamicDomSelectPickers();
-            });
-        }
-
-        function resetAllAttendanceOffManually() {
-            if(confirm("Toggle attendance shift parameters OFF for all configured worker index templates?")) {
-                fetch(`${FIREBASE_URL}attendance.json`, { method: 'DELETE' })
-                .then(() => {
-                    globalAttendanceObj = {};
-                    rebuildDynamicDomSelectPickers();
-                    renderAttendanceUiList();
+        // PURGES INDIVIDUAL LOG DATA FROM CLOUD SECURITY MATRIX HANDLER
+        function purgeIndividualWorkerLogRecord(logId, name) {
+            if (confirm(`Dangerous Action: Are you absolutely sure you want to permanently delete this structural log work entry for "${name}" from saved identity logs?`)) {
+                runWithSecurityGate(() => {
+                    fetch(`${FIREBASE_URL}logs/${logId}.json`, {
+                        method: 'DELETE'
+                    })
+                    .then(() => {
+                        fetchLogsFromCloud();
+                        setTimeout(() => renderPreviewDeletionTable(), 400);
+                        alert("Individual structural work entry record successfully purged from indexes.");
+                    });
                 });
             }
         }
 
+        function fetchAttendanceStateCloud() {
+            fetch(`${FIREBASE_URL}attendance.json`)
+            .then(res => res.json())
+            .then(data => {
+                globalAttendanceObj = data || {};
+                rebuildFormEmployeeSelectionMenus();
+            });
+        }
+
+        function renderAttendanceUiList() {
+            const tbody = document.getElementById('attendanceTableBodyList');
+            tbody.innerHTML = '';
+            if(masterDynamicWorkersArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No roster members deployed inside index frames. Configure team roster first.</td></tr>`;
+                return;
+            }
+            const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            sortedList.forEach(w => {
+                const checked = globalAttendanceObj[w.name] === true;
+                tbody.innerHTML += `
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-block">
+                                <input class="form-check-input" type="checkbox" role="switch" ${checked?'checked':''} onclick="toggleAttendanceStateNode('${escapeHtml(w.name)}', ${!checked})">
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function toggleAttendanceStateNode(name, targetState) {
+            fetch(`${FIREBASE_URL}attendance/${name}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(targetState)
+            })
+            .then(() => {
+                fetchAttendanceStateCloud();
+                setTimeout(() => renderAttendanceUiList(), 300);
+            });
+        }
+
         function launchSecureWorkCancellationPanel() {
             document.getElementById('mainSidebarLayout').classList.remove('active');
-            
             const tbody = document.getElementById('workCancellationTableBody');
             tbody.innerHTML = '';
-
             const activeRecords = globalLogsArray.filter(l => l.status !== "CANCELLED");
-
             if(activeRecords.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active tracking records available inside cloud logs timeline nodes to target.</td></tr>`;
                 const myModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
                 myModal.show();
                 return;
             }
-
             activeRecords.forEach(log => {
                 tbody.innerHTML += `
                     <tr class="text-dark">
-                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
-                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
-                        <td><span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span></td>
+                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)} <small class="text-muted font-monospace d-block">${escapeHtml(log.vehiclePlate)}</small></td>
+                        <td>${formatDateDisplay(log.dateWorked)}</td>
+                        <td class="font-monospace fw-bold">${log.totalBoxes} Boxes</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-danger fw-bold py-1 px-3" onclick="executeVoidCancellationSequence('${log.id}', '${escapeHtml(log.employeeName)}')">Void</button>
+                            <button class="btn btn-sm btn-danger fw-bold" onclick="executeWorkCancellationActionGate('${log.id}')">Void Log</button>
                         </td>
                     </tr>`;
             });
-
-            const targetModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-            targetModal.show();
+            const myModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+            myModal.show();
         }
 
-        function executeVoidCancellationSequence(firebaseId, employeeLabel) {
-            const contextReason = prompt(`Specify the reason for voiding this record entry for ${employeeLabel}:`);
-            if (contextReason === null) return; 
-
-            const validatedReason = contextReason.trim() || "Administrative Override Entry Change";
-
+        function executeWorkCancellationActionGate(firebaseId) {
+            const reason = prompt("Specify systemic audit tracking context or cause logic verification constraint string for voiding entry node:");
+            if (reason === null) return;
+            if (!reason.trim()) {
+                alert("An audit tracking note explanation context coordinate must be designated.");
+                return;
+            }
             runWithSecurityGate(() => {
                 const patchPayload = {
                     status: "CANCELLED",
-                    cancellationReason: validatedReason
+                    cancellationReason: reason.trim(),
+                    voidTimestamp: Date.now()
                 };
 
                 fetch(`${FIREBASE_URL}logs/${firebaseId}.json`, {
@@ -1978,6 +1737,196 @@
                 });
             }
         }
+
+        // COMMS BROADCAST & NEW MESSAGE NOTIFICATION HANDLERS
+        function fetchMessagesTimelineFeed(isInitialBoot = false) {
+            fetch(`${FIREBASE_URL}comms_board.json`)
+            .then(res => res.json())
+            .then(data => {
+                let incomingArray = [];
+                if (data) {
+                    Object.keys(data).forEach(k => {
+                        incomingArray.push({ id: k, ...data[k] });
+                    });
+                    incomingArray.sort((a,b) => b.timestamp - a.timestamp);
+                }
+                
+                if (!isInitialBoot && incomingArray.length > globalMessagesCacheArray.length) {
+                    const freshMessageNode = incomingArray[0];
+                    if (freshMessageNode.deviceId !== UNIQUE_DEVICE_ID) {
+                        triggerCrossTerminalLiveAlertPopup(freshMessageNode);
+                    }
+                }
+                
+                globalMessagesCacheArray = incomingArray;
+                evaluateUnreadMessagesBadgeCount();
+                renderMessageBoardTimelineView();
+            });
+        }
+
+        function evaluateUnreadMessagesBadgeCount() {
+            let unreadCount = 0;
+            globalMessagesCacheArray.forEach(msg => {
+                if (!clientReadMessagesTrackerObj[msg.id]) {
+                    unreadCount++;
+                }
+            });
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            const modalBadge = document.getElementById('modalInboxUnreadCountBadge');
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.classList.remove('d-none');
+                if(modalBadge) modalBadge.innerText = `${unreadCount} Unread Notes`;
+            } else {
+                badge.classList.add('d-none');
+                if(modalBadge) modalBadge.innerText = `0 Unread Messages`;
+            }
+        }
+
+        function renderMessageBoardTimelineView() {
+            const container = document.getElementById('messagesContainerTimeline');
+            if(!container) return;
+            const localDeviceMessages = globalMessagesCacheArray.filter(msg => msg.deviceId === UNIQUE_DEVICE_ID);
+            if (localDeviceMessages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted col-12">
+                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
+                        No notes posted from this specific device. Use the form above to add an administrative notice.
+                    </div>`;
+                return;
+            }
+            let timelineHtml = '';
+            localDeviceMessages.forEach(msg => {
+                const dateText = new Date(msg.timestamp).toLocaleDateString();
+                const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                timelineHtml += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border bg-light shadow-sm">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold text-dark m-0"><i class="bi bi-person"></i> ${escapeHtml(msg.sender)}</h6>
+                                    <small class="text-muted font-monospace" style="font-size:11px;">${dateText} ${timeText}</small>
+                                </div>
+                                <p class="card-text small text-dark p-2 bg-white rounded border border-light shadow-inner mb-0" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</p>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = timelineHtml;
+        }
+
+        function renderNotificationsInboxModal() {
+            const container = document.getElementById('globalNotificationHubListBody');
+            if (!container) return;
+            if (globalMessagesCacheArray.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-muted"><i class="bi bi-mailbox display-6 d-block mb-2"></i>Inbox timeline feed clear.</div>`;
+                return;
+            }
+            let inboxHtml = '<div class="d-flex flex-column gap-2">';
+            globalMessagesCacheArray.forEach(msg => {
+                const isRead = clientReadMessagesTrackerObj[msg.id] === true;
+                const timeStr = new Date(msg.timestamp).toLocaleString();
+                inboxHtml += `
+                    <div class="card border rounded p-3 ${isRead?'bg-white text-muted':'bg-warning-subtle shadow-sm'}" style="transition: all 0.2s;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark"><i class="bi bi-person-circle"></i> ${escapeHtml(msg.sender)}</span>
+                            <small class="text-muted font-monospace small">${timeStr}</small>
+                        </div>
+                        <div class="p-2 my-1 rounded border bg-white text-dark small" style="white-space: pre-wrap;">${escapeHtml(msg.text)}</div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1">
+                            <span class="small font-monospace text-muted" style="font-size:10px;">Device Reference: ${escapeHtml(msg.deviceId || 'Unknown')}</span>
+                            <div class="d-flex gap-1">
+                                ${!isRead ? `<button class="btn btn-xs btn-success py-0 px-2 fw-bold" style="font-size:11px;" onclick="markSingleMessageAsReadHub('${msg.id}')"><i class="bi bi-check2"></i> Mark Read</button>` : '<span class="text-success small align-self-center me-1"><i class="bi bi-check2-all"></i> Read</span>'}
+                                <button class="btn btn-xs btn-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="deleteSingleMessageFromCloud('${msg.id}', '${escapeHtml(msg.sender)}')"><i class="bi bi-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            inboxHtml += '</div>';
+            container.innerHTML = inboxHtml;
+        }
+
+        function markSingleMessageAsReadHub(msgId) {
+            clientReadMessagesTrackerObj[msgId] = true;
+            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
+            evaluateUnreadMessagesBadgeCount();
+            renderNotificationsInboxModal();
+        }
+
+        function deleteSingleMessageFromCloud(msgId, senderName) {
+            if (confirm(`Confirm deletion of this notification message entry from ${senderName}?`)) {
+                runWithSecurityGate(() => {
+                    fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { method: 'DELETE' })
+                    .then(() => {
+                        fetchMessagesTimelineFeed(false);
+                        setTimeout(() => renderNotificationsInboxModal(), 400);
+                    });
+                });
+            }
+        }
+
+        let liveAlertProgressTimerInterval = null;
+        function triggerCrossTerminalLiveAlertPopup(msgObj) {
+            closeLiveAlertPopupBanner();
+            document.getElementById('popupAlertSender').innerText = msgObj.sender;
+            document.getElementById('popupAlertTime').innerText = new Date(msgObj.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const element = document.getElementById('crossTerminalAlertPopup');
+            element.style.display = 'block';
+            const progressLine = document.getElementById('popupAlertProgressLine');
+            let percentage = 100;
+            liveAlertProgressTimerInterval = setInterval(() => {
+                percentage -= 1;
+                progressLine.style.width = percentage + '%';
+                if(percentage <= 0) {
+                    closeLiveAlertPopupBanner();
+                }
+            }, 80);
+        }
+
+        function closeLiveAlertPopupBanner() {
+            if(liveAlertProgressTimerInterval) {
+                clearInterval(liveAlertProgressTimerInterval);
+                liveAlertProgressTimerInterval = null;
+            }
+            document.getElementById('crossTerminalAlertPopup').style.display = 'none';
+        }
+
+        function viewAlertMessageViaNotificationHub() {
+            closeLiveAlertPopupBanner();
+            const modalEl = document.getElementById('notificationsInboxModal');
+            const bModal = new bootstrap.Modal(modalEl);
+            renderNotificationsInboxModal();
+            bModal.show();
+        }
+
+        document.getElementById('messageBoardForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const senderName = document.getElementById('msgWorkerDropdown').value;
+            const textContent = document.getElementById('msgTextBody').value.trim();
+            
+            if(!senderName || !textContent) {
+                alert("Please complete all message registry coordinate elements correctly.");
+                return;
+            }
+
+            const payload = {
+                sender: senderName,
+                text: textContent,
+                timestamp: Date.now(),
+                deviceId: UNIQUE_DEVICE_ID
+            };
+
+            fetch(`${FIREBASE_URL}comms_board.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                document.getElementById('msgTextBody').value = '';
+                fetchMessagesTimelineFeed(false);
+                alert("Administrative message broadcast sent live.");
+            });
+        });
     </script>
 
 </body>
