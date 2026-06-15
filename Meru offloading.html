@@ -1272,16 +1272,12 @@
 
         // DOWNLOAD REPORT Trigger Interface Gate Wrapper
         function generatePDF() {
+    // 1. Get explicit filtering values from the PDF sidebar card section only
     const filterNameInput = document.getElementById('filterName').value.trim().toLowerCase();
     const startDateVal = document.getElementById('filterStartDate').value;
     const endDateVal = document.getElementById('filterEndDate').value;
-    const tableStatusFilter = document.getElementById('tableStatusSelector').value;
 
-    let activeStatusFilterCriteria = "All Status Aggregates";
-    if (tableStatusFilter === 'UNPAID') activeStatusFilterCriteria = "Unpaid Pending Matrix Only";
-    if (tableStatusFilter === 'PAID') activeStatusFilterCriteria = "Settled Records Matrix Only";
-    if (tableStatusFilter === 'CANCELLED') activeStatusFilterCriteria = "Cancelled Void Logs Only";
-
+    // Force PDF scope parameters to be independent of the live dashboard table display status
     let nameMatch = filterNameInput ? filterNameInput : null;
     let startMatch = startDateVal ? formatDateDisplay(startDateVal) : null;
     let endMatch = endDateVal ? formatDateDisplay(endDateVal) : null;
@@ -1293,8 +1289,9 @@
     let grandTotalPaid = 0;
     let grandTotalUnpaid = 0;
 
+    // Loop through ALL global logs array without restricting by dashboard dropdown selector status
     globalLogsArray.forEach(l => {
-        if (tableStatusFilter !== 'ALL' && l.status !== tableStatusFilter) return;
+        // Only apply filters if explicitly configured inside the PDF generator inputs
         if (filterNameInput && l.employeeName.toLowerCase() !== filterNameInput) return;
 
         if (startDateVal) {
@@ -1324,7 +1321,7 @@
         grandTotalBoxes += parseInt(l.totalBoxes, 10) || 0;
     });
 
-    // Generate accurate execution local date and time string
+    // 2. Generate accurate execution local date and time string
     const currentGenerationTimestamp = new Date().toLocaleString('en-GB', {
         day: '2-digit',
         month: '2-digit',
@@ -1335,7 +1332,7 @@
     });
 
     let printWrapper = document.createElement('div');
-    // Set explicit padding to 0 top, 20px sides to push headers to the absolute top of the page
+    // Absolute top alignment settings
     printWrapper.style.padding = '0px 20px 20px 20px';
     printWrapper.style.color = '#000000';
     printWrapper.style.backgroundColor = '#ffffff';
@@ -1345,7 +1342,7 @@
             <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
             <p style="margin:2px 0; font-size:13px; color:#555;"><strong>Generated On:</strong> ${currentGenerationTimestamp}</p>
             <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
-            <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
+            <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: Complete Consolidated Ledger (All Statuses Included)</p>
             <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
         </div>
         <h4>Personnel Aggregations Summary Statement</h4>
@@ -1417,8 +1414,8 @@
     printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
 
     const printSettingsOptionsObject = {
-        margin: [0, 10, 10, 10], // Adjusted top margin to 0 to maximize printable area alignment right at the top
-        filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+        margin: [0, 10, 10, 10], // Margins set to zero top alignment
+        filename: `Meru_Dairy_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
