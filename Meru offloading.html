@@ -973,7 +973,7 @@
         const SECRET_CODE = "den1472";
         const SUPER_ADMIN_PHONE = "254742960571";
         const PHINI_PHONE = "0741048773";
-        const ADMIN_PHONES = ["25472960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
+        const ADMIN_PHONES = ["254742960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
         const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
@@ -1127,9 +1127,9 @@
             const cleanPhone = phoneInput.replace(/\+/g, '');
 
             if (ADMIN_PHONES.includes(cleanPhone)) {
-                let displayName = "Admin";
+                let displayName = "Phini";
                 if (cleanPhone === SUPER_ADMIN_PHONE) {
-                    displayName = "SuperAdmin";
+                    displayName = "Admin";
                 } else if (cleanPhone === PHINI_PHONE || cleanPhone === "254741048773") {
                     const match = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === cleanPhone);
                     displayName = match ? match.name : "Phini";
