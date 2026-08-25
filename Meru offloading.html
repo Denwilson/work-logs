@@ -31,6 +31,36 @@
             padding-top: 85px; 
             transition: background-color 0.3s ease, color 0.3s ease;
         }
+
+        /* FULLSCREEN SPLASH SCREEN & LOGIN OVERLAYS */
+        #splashScreenOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #0f172a;
+            color: #ffffff;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #loginScreenOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+            z-index: 99998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .spinner-custom {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-width: 0.35em;
+        }
+
         .main-content {
             flex: 1;
             transition: all 0.3s ease;
@@ -229,19 +259,6 @@
             font-size: 0.85rem;
         }
 
-        .interactive-contact {
-            color: #0d6efd;
-            text-decoration: underline;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .copy-toast {
-            font-size: 0.75rem;
-            color: #198754;
-            display: none;
-            margin-top: 2px;
-        }
-
         /* ALERT BROADCAST BANNER POPUP */
         .broadcast-alert-banner {
             position: fixed;
@@ -267,6 +284,34 @@
     </style>
 </head>
 <body>
+
+    <!-- ANIMATED SPLASH SCREEN OVERLAY -->
+    <div id="splashScreenOverlay">
+        <div class="spinner-border text-warning spinner-custom mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4 class="fw-bold tracking-wide text-uppercase">Meru Dairy Offload</h4>
+        <p class="text-muted small">Loading System Resources...</p>
+    </div>
+
+    <!-- MEMBER PHONE LOGIN OVERLAY -->
+    <div id="loginScreenOverlay" class="d-none">
+        <div class="card bg-dark text-white p-4 border border-warning shadow-lg" style="max-width: 400px; width: 90%;">
+            <div class="text-center mb-3">
+                <i class="bi bi-shield-lock-fill text-warning display-4"></i>
+                <h4 class="fw-bold mt-2">Member Authentication</h4>
+                <p class="text-muted small">Enter your phone number to access the terminal</p>
+            </div>
+            <form id="memberLoginForm" onsubmit="executeMemberPhoneLogin(event)">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phone Number</label>
+                    <input type="text" id="loginPhoneNumberInput" class="form-control bg-secondary text-white border-0 text-center fs-5 fw-bold" placeholder="e.g. 254742960571" required>
+                    <div id="loginErrorMessage" class="text-danger small mt-2 d-none text-center fw-bold"><i class="bi bi-exclamation-circle-fill"></i> Unrecognized Phone Number</div>
+                </div>
+                <button type="submit" class="btn btn-warning w-100 fw-bold py-2">LOGIN TO SYSTEM</button>
+            </form>
+        </div>
+    </div>
 
     <div class="hover-trigger-zone" id="sidebarTriggerZone"></div>
 
@@ -328,6 +373,11 @@
                     <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                 </ul>
             </li>
+            <li>
+                <a href="#" class="sidebar-link text-danger" onclick="logoutCurrentMember(); return false;">
+                    <i class="bi bi-box-arrow-right text-danger"></i> Switch User
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -357,9 +407,10 @@
                             <i class="bi bi-truck text-light"></i> Trucks
                         </a>
                     </li>
+                    <!-- USER GREETING HEADER -->
                     <li class="nav-item">
-                        <span class="menu-pill-btn text-light shadow-sm" style="cursor: default; background: rgba(255,255,255,0.02);">
-                            <i class="bi bi-clock text-warning"></i> <span id="navLiveClock">00:00:00</span>
+                        <span class="menu-pill-btn text-warning shadow-sm fw-bold" style="cursor: default; background: rgba(255,193,7,0.1); border-color:#ffc107;">
+                            <i class="bi bi-person-circle text-warning"></i> <span id="navUserGreeting">Hello Member, welcome back</span>
                         </span>
                     </li>
                 </ul>
@@ -589,10 +640,8 @@
                     <form id="messageBoardForm">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Select Your Name</label>
-                                <select id="msgWorkerDropdown" class="form-select bg-light text-dark" required="">
-                                    <option value="" disabled="" selected="">Identify worker...</option>
-                                </select>
+                                <label class="form-label fw-bold">Your Account</label>
+                                <input type="text" id="msgWorkerDropdown" class="form-control bg-light text-dark fw-bold" readonly>
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label fw-bold">Message Content</label>
@@ -634,8 +683,9 @@
         </div>
     </div>
 
+    <!-- ROSTER REGISTRY MATRIX MODAL (MEMBER PHONE INCLUDED) -->
     <div class="modal fade" id="rosterRegistryModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-md">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content text-dark">
                 <div class="modal-header bg-primary text-white py-3">
                     <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2"></i>Team Roster Settings Matrix</h5>
@@ -645,14 +695,17 @@
                     <div class="p-3 bg-light rounded border mb-3">
                         <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill text-primary"></i> Deploy New Member</h6>
                         <div class="row g-2">
-                            <div class="col-md-8">
-                                <input type="text" id="newRegistryWorkerName" class="form-control bg-white text-dark" placeholder="Enter full name...">
+                            <div class="col-md-5">
+                                <input type="text" id="newRegistryWorkerName" class="form-control bg-white text-dark" placeholder="Full name...">
                             </div>
                             <div class="col-md-4">
+                                <input type="text" id="newRegistryWorkerPhone" class="form-control bg-white text-dark" placeholder="Phone e.g. 254712345678">
+                            </div>
+                            <div class="col-md-3">
                                 <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add Member</button>
                             </div>
                         </div>
-                        <small class="text-muted mt-2"><i class="bi bi-shield-exclamation"></i> Names must be unique. Existing records protected.</small>
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-shield-exclamation"></i> Names and phone numbers must be unique.</small>
                     </div>
                     <h6 class="fw-bold text-dark mb-2">Configured Roster Members</h6>
                     <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
@@ -660,6 +713,7 @@
                             <thead class="table-light sticky-top">
                                 <tr>
                                     <th class="ps-3">Full Name</th>
+                                    <th>Phone Number</th>
                                     <th class="text-center no-print" style="width: 100px;">Action</th>
                                 </tr>
                             </thead>
@@ -856,31 +910,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="reportOptionsPromptModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-sm modal-dialog-centered">
-            <div class="modal-content text-dark">
-                <div class="modal-header bg-dark text-white py-2">
-                    <h6 class="modal-title fw-bold"><i class="bi bi-funnel-fill me-2"></i>Select Report Option</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-3">
-                    <p class="small text-muted mb-3">Choose the payment statuses to compile into the report:</p>
-                    <div class="d-flex flex-column gap-2">
-                        <button type="button" class="btn btn-outline-primary fw-bold text-start" onclick="executeSelectedReportDownload('ALL')">
-                            <i class="bi bi-collection me-2"></i> Include All Logs
-                        </button>
-                        <button type="button" class="btn btn-outline-warning fw-bold text-dark text-start" onclick="executeSelectedReportDownload('UNPAID')">
-                            <i class="bi bi-hourglass-split me-2"></i> Unpaid Records Only
-                        </button>
-                        <button type="button" class="btn btn-outline-success fw-bold text-start" onclick="executeSelectedReportDownload('PAID')">
-                            <i class="bi bi-check-circle-fill me-2"></i> Paid Records Only
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
             <small>© 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
@@ -891,6 +920,7 @@
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const SECRET_CODE = "den1472";
+        const ADMIN_PHONE = "254742960571"; // ADMIN DEFAULT PHONE
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
         const UNIQUE_DEVICE_ID = (() => {
@@ -908,14 +938,13 @@
         let globalMessagesCacheArray = [];
         let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
         
+        let activeLoggedInUser = null; 
         let pendingActionCallback = null;
         let activeStatusFilterCriteria = "ALL"; 
         let securityBootstrapModal = null;
-        let reportOptionsPromptBootstrapModal = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
-            reportOptionsPromptBootstrapModal = new bootstrap.Modal(document.getElementById('reportOptionsPromptModal'));
             
             const savedTheme = localStorage.getItem('meru_web_theme') || 'light';
             setAppViewTheme(savedTheme);
@@ -934,20 +963,73 @@
             setInterval(fetchLogsFromCloud, 20000);
             setInterval(fetchMessagesTimelineFeed, 10000);
             setInterval(updateNetworkIndicatorStatus, 4000);
-            
-            // Live clock handle
-            setInterval(() => {
-                document.getElementById('navLiveClock').innerText = new Date().toLocaleTimeString();
-            }, 1000);
 
-            // LOG WORK ENTRY Interceptor Form submission logic wrapper
+            // LOG WORK ENTRY Form handler
             document.getElementById('workLogForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 runWithSecurityGate(() => {
                     executeWorkLogSubmissionPayload();
                 });
             });
+
+            // 4-SECOND ANIMATED SPLASH TIMEOUT DISPATCHER
+            setTimeout(() => {
+                document.getElementById('splashScreenOverlay').classList.add('d-none');
+                checkMemberAuthSession();
+            }, 4000);
         });
+
+        function checkMemberAuthSession() {
+            const savedUser = localStorage.getItem('meru_active_member');
+            if (savedUser) {
+                activeLoggedInUser = JSON.parse(savedUser);
+                applyMemberSessionToUi();
+            } else {
+                document.getElementById('loginScreenOverlay').classList.remove('d-none');
+            }
+        }
+
+        function executeMemberPhoneLogin(e) {
+            e.preventDefault();
+            const phoneInput = document.getElementById('loginPhoneNumberInput').value.trim();
+            const errorMsg = document.getElementById('loginErrorMessage');
+            errorMsg.classList.add('d-none');
+
+            // ADMIN BYPASS LOGIC
+            if (phoneInput === ADMIN_PHONE) {
+                activeLoggedInUser = { name: "Admin", phone: ADMIN_PHONE, isAdmin: true };
+                localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+                document.getElementById('loginScreenOverlay').classList.add('d-none');
+                applyMemberSessionToUi();
+                return;
+            }
+
+            // REGULAR MEMBER LOOKUP
+            const matchedMember = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim() === phoneInput);
+            if (matchedMember) {
+                activeLoggedInUser = { name: matchedMember.name, phone: matchedMember.phone, isAdmin: false };
+                localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+                document.getElementById('loginScreenOverlay').classList.add('d-none');
+                applyMemberSessionToUi();
+            } else {
+                errorMsg.classList.remove('d-none');
+            }
+        }
+
+        function applyMemberSessionToUi() {
+            if (!activeLoggedInUser) return;
+            document.getElementById('navUserGreeting').innerText = `Hello ${activeLoggedInUser.name}, welcome back`;
+            
+            // Auto select or tag active worker on posting forms
+            const msgInput = document.getElementById('msgWorkerDropdown');
+            if(msgInput) msgInput.value = activeLoggedInUser.name;
+        }
+
+        function logoutCurrentMember() {
+            localStorage.removeItem('meru_active_member');
+            activeLoggedInUser = null;
+            document.getElementById('loginScreenOverlay').classList.remove('d-none');
+        }
 
         function setupSidebarLayoutInteractions() {
             const sb = document.getElementById('mainSidebarLayout');
@@ -1002,7 +1084,14 @@
             }
         }
 
+        /* VERIFY IDENTITY GATE WITH ADMIN PHONE EXEMPTION */
         function runWithSecurityGate(callbackAction) {
+            if (activeLoggedInUser && (activeLoggedInUser.phone === ADMIN_PHONE || activeLoggedInUser.isAdmin)) {
+                // ADMIN BYPASS: Execute action directly without asking for verification code
+                callbackAction();
+                return;
+            }
+
             const lastSessionVerificationTimestamp = localStorage.getItem('meru_offload_session_time');
             const now = Date.now();
             if (lastSessionVerificationTimestamp && (now - parseInt(lastSessionVerificationTimestamp, 10) < SESSION_DURATION_MS)) {
@@ -1049,7 +1138,6 @@
                     Object.keys(data).forEach(k => {
                         globalLogsArray.push({ id: k, ...data[k] });
                     });
-                    // AUTOMATIC DATA REARRANGEMENT SORT BY DATE (Descending - Newest First)
                     globalLogsArray.sort((a,b) => new Date(b.dateWorked) - new Date(a.dateWorked));
                 }
                 document.getElementById('loadingSpinner').style.display = 'none';
@@ -1144,6 +1232,7 @@
                         <td>
                             <div class="fw-bold text-dark">${escapeHtml(log.employeeName)}</div>
                             <div class="text-muted small font-monospace">${escapeHtml(log.vehiclePlate)}</div>
+                            ${log.loggedBy ? `<div class="text-muted small" style="font-size:10px;">By: ${escapeHtml(log.loggedBy)}</div>` : ''}
                         </td>
                         <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
                         <td>
@@ -1177,6 +1266,7 @@
                 <div class="p-2">
                     <table class="table table-bordered table-sm mb-0">
                         <tr><th class="bg-light" style="width:160px;">Employee</th><td><strong>${escapeHtml(record.employeeName)}</strong></td></tr>
+                        <tr><th class="bg-light">Logged By</th><td>${escapeHtml(record.loggedBy || 'System')}</td></tr>
                         <tr><th class="bg-light">Vehicle Number</th><td class="font-monospace">${escapeHtml(record.vehiclePlate)}</td></tr>
                         <tr><th class="bg-light">Date of Work</th><td>${formatDateDisplay(record.dateWorked)}</td></tr>
                         <tr><th class="bg-light">Total Capacity</th><td>${record.totalBoxes} Boxes Handled</td></tr>
@@ -1237,7 +1327,8 @@
                 calculatedPayout,
                 status: "UNPAID",
                 timestamp: Date.now(),
-                deviceRef: UNIQUE_DEVICE_ID
+                deviceRef: UNIQUE_DEVICE_ID,
+                loggedBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown"
             };
 
             fetch(`${FIREBASE_URL}logs.json`, {
@@ -1261,7 +1352,7 @@
                     fetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: "PAID", paymentDate: paymentDate })
+                        body: JSON.stringify({ status: "PAID", paymentDate: paymentDate, settledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown" })
                     })
                     .then(() => {
                         fetchLogsFromCloud();
@@ -1270,162 +1361,155 @@
             }
         }
 
-        // DOWNLOAD REPORT Trigger Interface Gate Wrapper
         function generatePDF() {
-    const filterNameInput = document.getElementById('filterName').value.trim().toLowerCase();
-    const startDateVal = document.getElementById('filterStartDate').value;
-    const endDateVal = document.getElementById('filterEndDate').value;
-    const tableStatusFilter = document.getElementById('tableStatusSelector').value;
+            const filterNameInput = document.getElementById('filterName').value.trim().toLowerCase();
+            const startDateVal = document.getElementById('filterStartDate').value;
+            const endDateVal = document.getElementById('filterEndDate').value;
+            const tableStatusFilter = document.getElementById('tableStatusSelector').value;
 
-    let activeStatusFilterCriteria = "All Status Aggregates";
-    if (tableStatusFilter === 'UNPAID') activeStatusFilterCriteria = "Unpaid Pending Matrix Only";
-    if (tableStatusFilter === 'PAID') activeStatusFilterCriteria = "Settled Records Matrix Only";
-    if (tableStatusFilter === 'CANCELLED') activeStatusFilterCriteria = "Cancelled Void Logs Only";
+            let activeStatusFilterCriteria = "All Status Aggregates";
+            if (tableStatusFilter === 'UNPAID') activeStatusFilterCriteria = "Unpaid Pending Matrix Only";
+            if (tableStatusFilter === 'PAID') activeStatusFilterCriteria = "Settled Records Matrix Only";
+            if (tableStatusFilter === 'CANCELLED') activeStatusFilterCriteria = "Cancelled Void Logs Only";
 
-    let nameMatch = filterNameInput ? filterNameInput : null;
-    let startMatch = startDateVal ? formatDateDisplay(startDateVal) : null;
-    let endMatch = endDateVal ? formatDateDisplay(endDateVal) : null;
+            let nameMatch = filterNameInput ? filterNameInput : null;
+            let startMatch = startDateVal ? formatDateDisplay(startDateVal) : null;
+            let endMatch = endDateVal ? formatDateDisplay(endDateVal) : null;
 
-    let summaryMap = {};
-    let filteredTransactionsList = [];
+            let summaryMap = {};
+            let filteredTransactionsList = [];
 
-    let grandTotalBoxes = 0;
-    let grandTotalPaid = 0;
-    let grandTotalUnpaid = 0;
+            let grandTotalBoxes = 0;
+            let grandTotalPaid = 0;
+            let grandTotalUnpaid = 0;
 
-    globalLogsArray.forEach(l => {
-        if (tableStatusFilter !== 'ALL' && l.status !== tableStatusFilter) return;
-        if (filterNameInput && l.employeeName.toLowerCase() !== filterNameInput) return;
+            globalLogsArray.forEach(l => {
+                if (tableStatusFilter !== 'ALL' && l.status !== tableStatusFilter) return;
+                if (filterNameInput && l.employeeName.toLowerCase() !== filterNameInput) return;
 
-        if (startDateVal) {
-            if (l.dateWorked < startDateVal) return;
-        }
-        if (endDateVal) {
-            if (l.dateWorked > endDateVal) return;
-        }
+                if (startDateVal) {
+                    if (l.dateWorked < startDateVal) return;
+                }
+                if (endDateVal) {
+                    if (l.dateWorked > endDateVal) return;
+                }
 
-        filteredTransactionsList.push(l);
+                filteredTransactionsList.push(l);
 
-        if (!summaryMap[l.employeeName]) {
-            summaryMap[l.employeeName] = { boxes: 0, paidAmt: 0, unpaidAmt: 0 };
-        }
+                if (!summaryMap[l.employeeName]) {
+                    summaryMap[l.employeeName] = { boxes: 0, paidAmt: 0, unpaidAmt: 0 };
+                }
 
-        if (l.status !== 'CANCELLED') {
-            summaryMap[l.employeeName].boxes += parseInt(l.totalBoxes, 10) || 0;
-        }
+                if (l.status !== 'CANCELLED') {
+                    summaryMap[l.employeeName].boxes += parseInt(l.totalBoxes, 10) || 0;
+                }
 
-        if (l.status === 'PAID') {
-            summaryMap[l.employeeName].paidAmt += parseFloat(l.calculatedPayout) || 0;
-            grandTotalPaid += parseFloat(l.calculatedPayout) || 0;
-        } else if (l.status === 'UNPAID') {
-            summaryMap[l.employeeName].unpaidAmt += parseFloat(l.calculatedPayout) || 0;
-            grandTotalUnpaid += parseFloat(l.calculatedPayout) || 0;
-        }
-        grandTotalBoxes += parseInt(l.totalBoxes, 10) || 0;
-    });
+                if (l.status === 'PAID') {
+                    summaryMap[l.employeeName].paidAmt += parseFloat(l.calculatedPayout) || 0;
+                    grandTotalPaid += parseFloat(l.calculatedPayout) || 0;
+                } else if (l.status === 'UNPAID') {
+                    summaryMap[l.employeeName].unpaidAmt += parseFloat(l.calculatedPayout) || 0;
+                    grandTotalUnpaid += parseFloat(l.calculatedPayout) || 0;
+                }
+                grandTotalBoxes += parseInt(l.totalBoxes, 10) || 0;
+            });
 
-    // Generate accurate execution local date and time string
-    const currentGenerationTimestamp = new Date().toLocaleString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
+            const currentGenerationTimestamp = new Date().toLocaleString('en-GB', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+            });
 
-    let printWrapper = document.createElement('div');
-    // Set explicit padding to 0 top, 20px sides to push headers to the absolute top of the page
-    printWrapper.style.padding = '0px 20px 20px 20px';
-    printWrapper.style.color = '#000000';
-    printWrapper.style.backgroundColor = '#ffffff';
+            let printWrapper = document.createElement('div');
+            printWrapper.style.padding = '0px 20px 20px 20px';
+            printWrapper.style.color = '#000000';
+            printWrapper.style.backgroundColor = '#ffffff';
 
-    let reportHeaderMetaData = `
-        <div style="border-bottom:3px solid #000; padding-top:10px; padding-bottom:12px; margin-bottom:20px;">
-            <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
-            <p style="margin:2px 0; font-size:13px; color:#555;"><strong>Generated On:</strong> ${currentGenerationTimestamp}</p>
-            <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
-            <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
-            <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
-        </div>
-        <h4>Personnel Aggregations Summary Statement</h4>
-        <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:25px; font-size:12px;">
-            <thead style="background-color:#f8fafc;">
-                <tr>
-                    <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name</th>
-                    <th style="padding:8px; border:1px solid #ddd; text-align:center;">Total Offloaded Capacity</th>
-                    <th style="padding:8px; border:1px solid #ddd; text-align:right;">Settled Claims Val</th>
-                    <th style="padding:8px; border:1px solid #ddd; text-align:right;">Outstanding Owed Balance</th>
+            let reportHeaderMetaData = `
+                <div style="border-bottom:3px solid #000; padding-top:10px; padding-bottom:12px; margin-bottom:20px;">
+                    <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
+                    <p style="margin:2px 0; font-size:13px; color:#555;"><strong>Generated On:</strong> ${currentGenerationTimestamp}</p>
+                    <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
+                    <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
+                    <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
+                </div>
+                <h4>Personnel Aggregations Summary Statement</h4>
+                <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:25px; font-size:12px;">
+                    <thead style="background-color:#f8fafc;">
+                        <tr>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:center;">Total Offloaded Capacity</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Settled Claims Val</th>
+                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Outstanding Owed Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            Object.keys(summaryMap).sort().forEach(emp => {
+                reportHeaderMetaData += `
+                    <tr>
+                        <td style="padding:8px; border:1px solid #ddd;">${escapeHtml(emp)}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center;">${summaryMap[emp].boxes.toLocaleString()} Boxes</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754; font-weight:600;">Ksh ${summaryMap[emp].paidAmt.toLocaleString()}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#b45309; font-weight:600;">Ksh ${summaryMap[emp].unpaidAmt.toLocaleString()}</td>
+                    </tr>`;
+            });
+
+            reportHeaderMetaData += `
+                <tr style="background-color:#f1f5f9; font-weight:bold;">
+                    <td style="padding:8px; border:1px solid #ddd;">GRAND SYSTEM TOTALS</td>
+                    <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()} Boxes</td>
+                    <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${grandTotalPaid.toLocaleString()}</td>
+                    <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
                 </tr>
-            </thead>
-            <tbody>`;
+                </tbody></table>`;
 
-    Object.keys(summaryMap).sort().forEach(emp => {
-        reportHeaderMetaData += `
-            <tr>
-                <td style="padding:8px; border:1px solid #ddd;">${escapeHtml(emp)}</td>
-                <td style="padding:8px; border:1px solid #ddd; text-align:center;">${summaryMap[emp].boxes.toLocaleString()} Boxes</td>
-                <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754; font-weight:600;">Ksh ${summaryMap[emp].paidAmt.toLocaleString()}</td>
-                <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#b45309; font-weight:600;">Ksh ${summaryMap[emp].unpaidAmt.toLocaleString()}</td>
-            </tr>`;
-    });
+            let transactionalTimelineLogsTable = `
+                <h4 style="margin-top:30px;">Itemized Auditable Transaction Log Ledger</h4>
+                <table class="table table-striped table-bordered" style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <thead style="background-color:#f8fafc;">
+                        <tr>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Employee / Vehicle</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Date Logged</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Total Loaded</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Billable Units</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:right;">Payout Value</th>
+                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
-    reportHeaderMetaData += `
-        <tr style="background-color:#f1f5f9; font-weight:bold;">
-            <td style="padding:8px; border:1px solid #ddd;">GRAND SYSTEM TOTALS</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()} Boxes</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${grandTotalPaid.toLocaleString()}</td>
-            <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
-        </tr>
-        </tbody></table>`;
+            if (filteredTransactionsList.length === 0) {
+                transactionalTimelineLogsTable += `<tr><td colspan="6" style="padding:20px; text-align:center; color:#666;">No auditable records synchronized within configured timeline filters.</td></tr>`;
+            }
 
-    let transactionalTimelineLogsTable = `
-        <h4 style="margin-top:30px;">Itemized Auditable Transaction Log Ledger</h4>
-        <table class="table table-striped table-bordered" style="width:100%; border-collapse:collapse; font-size:11px;">
-            <thead style="background-color:#f8fafc;">
-                <tr>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:left;">Employee / Vehicle</th>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:center;">Date Logged</th>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:center;">Total Loaded</th>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:center;">Billable Units</th>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:right;">Payout Value</th>
-                    <th style="padding:6px; border:1px solid #ddd; text-align:center;">Status</th>
-                </tr>
-            </thead>
-            <tbody>`;
+            filteredTransactionsList.forEach(log => {
+                transactionalTimelineLogsTable += `
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">
+                            <strong>${escapeHtml(log.employeeName)}</strong>
+                            <div style="font-size:10px; color:#555;">Plate: ${escapeHtml(log.vehiclePlate)}</div>
+                        </td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${formatDateDisplay(log.dateWorked)}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.paidBoxes}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:right; font-weight:600;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
+                        <td style="padding:6px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
+                    </tr>`;
+            });
 
-    if (filteredTransactionsList.length === 0) {
-        transactionalTimelineLogsTable += `<tr><td colspan="6" style="padding:20px; text-align:center; color:#666;">No auditable records synchronized within configured timeline filters.</td></tr>`;
-    }
+            transactionalTimelineLogsTable += `</tbody></table>`;
+            printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
 
-    filteredTransactionsList.forEach(log => {
-        transactionalTimelineLogsTable += `
-            <tr>
-                <td style="padding:6px; border:1px solid #ddd;">
-                    <strong>${escapeHtml(log.employeeName)}</strong>
-                    <div style="font-size:10px; color:#555;">Plate: ${escapeHtml(log.vehiclePlate)}</div>
-                </td>
-                <td style="padding:6px; border:1px solid #ddd; text-align:center;">${formatDateDisplay(log.dateWorked)}</td>
-                <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
-                <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.paidBoxes}</td>
-                <td style="padding:6px; border:1px solid #ddd; text-align:right; font-weight:600;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
-                <td style="padding:6px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
-            </tr>`;
-    });
+            const printSettingsOptionsObject = {
+                margin: [0, 10, 10, 10],
+                filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
 
-    transactionalTimelineLogsTable += `</tbody></table>`;
-    printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
-
-    const printSettingsOptionsObject = {
-        margin: [0, 10, 10, 10], // Adjusted top margin to 0 to maximize printable area alignment right at the top
-        filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().from(printWrapper).set(printSettingsOptionsObject).save();
-}
+            html2pdf().from(printWrapper).set(printSettingsOptionsObject).save();
+        }
 
         function buildTruckAnalytics() {
             const tbody = document.getElementById('truckTableBody');
@@ -1486,7 +1570,7 @@
                 masterDynamicWorkersArray = [];
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        masterDynamicWorkersArray.push({ id: k, name: data[k].name });
+                        masterDynamicWorkersArray.push({ id: k, name: data[k].name, phone: data[k].phone || "" });
                     });
                 }
                 rebuildFormEmployeeSelectionMenus();
@@ -1497,23 +1581,21 @@
             const entrySelect = document.getElementById('employeeName');
             const commsSelect = document.getElementById('msgWorkerDropdown');
             const legacyEntryVal = entrySelect.value;
-            const legacyCommsVal = commsSelect.value;
             
             entrySelect.innerHTML = '<option value="" disabled selected>Select member</option>';
-            commsSelect.innerHTML = '<option value="" disabled selected>Identify worker...</option>';
             
             let activeCounter = 0;
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
             
             sortedList.forEach(w => {
-                commsSelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
                 if (globalAttendanceObj[w.name] === true) {
                     activeCounter++;
                     entrySelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
                 }
             });
             if(legacyEntryVal) entrySelect.value = legacyEntryVal;
-            if(legacyCommsVal) commsSelect.value = legacyCommsVal;
+            if(commsSelect && activeLoggedInUser) commsSelect.value = activeLoggedInUser.name;
+
             const activeBadge = document.getElementById('sidebarActiveCount');
             if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
         }
@@ -1522,7 +1604,7 @@
             const tbody = document.getElementById('rosterRegistryTableBody');
             tbody.innerHTML = '';
             if (masterDynamicWorkersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
@@ -1530,6 +1612,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
+                        <td class="font-monospace">${escapeHtml(worker.phone || 'N/A')}</td>
                         <td class="text-center no-print">
                             <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistry('${worker.id}', '${escapeHtml(worker.name)}')">
                                 <i class="bi bi-trash"></i>
@@ -1541,9 +1624,12 @@
 
         function addNewWorkerToRegistryCloud() {
             const nameField = document.getElementById('newRegistryWorkerName');
+            const phoneField = document.getElementById('newRegistryWorkerPhone');
             const workerNameInput = nameField.value.trim();
-            if(!workerNameInput) {
-                alert("Please specify a complete name configuration entry string value.");
+            const workerPhoneInput = phoneField.value.trim();
+
+            if(!workerNameInput || !workerPhoneInput) {
+                alert("Please specify both name and phone number configuration entries.");
                 return;
             }
             const nameCollisionExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === workerNameInput.toLowerCase());
@@ -1554,10 +1640,11 @@
             fetch(`${FIREBASE_URL}roster_registry.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: workerNameInput })
+                body: JSON.stringify({ name: workerNameInput, phone: workerPhoneInput })
             })
             .then(() => {
                 nameField.value = '';
+                phoneField.value = '';
                 fetchRosterRegistryFromCloud();
                 setTimeout(() => renderRosterRegistryManagementTable(), 400);
             });
@@ -1575,7 +1662,6 @@
             }
         }
 
-        // PREVIEW DELETION MATRIX ACTION HANDLER (RUN VERIFY IDENTITY)
         function renderPreviewDeletionTable() {
             document.getElementById('mainSidebarLayout').classList.remove('active');
             const tbody = document.getElementById('previewDeletionTableBody');
@@ -1606,7 +1692,6 @@
             });
         }
 
-        // PURGES INDIVIDUAL LOG DATA FROM CLOUD SECURITY MATRIX HANDLER
         function purgeIndividualWorkerLogRecord(logId, name) {
             if (confirm(`Dangerous Action: Are you absolutely sure you want to permanently delete this structural log work entry for "${name}" from saved identity logs?`)) {
                 runWithSecurityGate(() => {
@@ -1702,7 +1787,8 @@
                 const patchPayload = {
                     status: "CANCELLED",
                     cancellationReason: reason.trim(),
-                    voidTimestamp: Date.now()
+                    voidTimestamp: Date.now(),
+                    cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown"
                 };
 
                 fetch(`${FIREBASE_URL}logs/${firebaseId}.json`, {
@@ -1740,7 +1826,7 @@
             }
         }
 
-        // COMMS BROADCAST & NEW MESSAGE NOTIFICATION HANDLERS
+        // COMMS BOARD logic attached to active authenticated session
         function fetchMessagesTimelineFeed(isInitialBoot = false) {
             fetch(`${FIREBASE_URL}comms_board.json`)
             .then(res => res.json())
@@ -1903,11 +1989,11 @@
 
         document.getElementById('messageBoardForm').addEventListener('submit', function(event) {
             event.preventDefault();
-            const senderName = document.getElementById('msgWorkerDropdown').value;
+            const senderName = activeLoggedInUser ? activeLoggedInUser.name : "Anonymous";
             const textContent = document.getElementById('msgTextBody').value.trim();
             
-            if(!senderName || !textContent) {
-                alert("Please complete all message registry coordinate elements correctly.");
+            if(!textContent) {
+                alert("Please enter message content.");
                 return;
             }
 
