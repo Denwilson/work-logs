@@ -293,6 +293,9 @@
             font-weight: bold;
             color: #128c7e;
             margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         [data-theme="dark"] .chat-sender {
             color: #25d366;
@@ -302,6 +305,27 @@
             color: #888;
             text-align: right;
             margin-top: 4px;
+        }
+        .user-avatar-sm {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .user-avatar-nav {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid #ffc107;
+        }
+        .media-attachment-img {
+            max-width: 220px;
+            max-height: 200px;
+            border-radius: 6px;
+            margin-top: 5px;
+            display: block;
         }
 
         @media print {
@@ -408,9 +432,15 @@
 
     <nav class="navbar navbar-dark custom-navbar fixed-top shadow no-print">
         <div class="container-fluid px-3">
-            <div class="d-flex flex-column text-white">
-                <div class="fw-bold" id="navUserGreeting" style="font-size: 1rem;">Hello Member, Welcome back.</div>
-                <div class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</div>
+            <div class="d-flex align-items-center gap-2 text-white">
+                <div class="d-inline-block text-white text-decoration-none" onclick="refreshToDefaultDashboard()" style="cursor: pointer;" title="Go to Dashboard">
+                    <div class="fw-bold" id="navUserGreeting" style="font-size: 1rem;">Hello Member, Welcome back.</div>
+                    <div class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</div>
+                </div>
+                <div class="ms-1" onclick="triggerProfilePictureUpload()" title="Click to upload profile photo">
+                    <img id="navUserProfileImage" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="user-avatar-nav" alt="Profile">
+                    <input type="file" id="profileImageFileInput" class="d-none" accept="image/*" onchange="uploadUserProfileAvatar(event)">
+                </div>
             </div>
 
             <div class="d-flex align-items-center gap-2">
@@ -615,9 +645,42 @@
                     <div id="groupChatContainer" class="chat-container mb-3"></div>
                     
                     <form id="groupChatForm" onsubmit="postGroupChatMessage(event)">
-                        <div class="input-group">
-                            <input type="text" id="chatMessageInput" class="form-control bg-light text-dark" placeholder="Type a message..." required autocomplete="off">
+                        <div class="input-group mb-2">
+                            <input type="text" id="chatMessageInput" class="form-control bg-light text-dark" placeholder="Type a message..." autocomplete="off">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-emoji-smile"></i>
+                            </button>
+                            <ul class="dropdown-menu p-2" style="max-width: 250px;">
+                                <li>
+                                    <div class="fw-bold small text-muted mb-1">Stickers</div>
+                                    <div class="d-flex flex-wrap gap-2 fs-5">
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('sticker', '👍')">👍</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('sticker', '❤️')">❤️</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('sticker', '🔥')">🔥</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('sticker', '👏')">👏</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('sticker', '😊')">😊</span>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <div class="fw-bold small text-muted mb-1">Gifts</div>
+                                    <div class="d-flex flex-wrap gap-2 fs-5">
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('gift', '🎁')">🎁</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('gift', '🎉')">🎉</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('gift', '🏆')">🏆</span>
+                                        <span style="cursor:pointer" onclick="appendChatAttachment('gift', '⭐')">⭐</span>
+                                    </div>
+                                </li>
+                            </ul>
+                            <label class="btn btn-outline-secondary mb-0" title="Attach Photo/Image">
+                                <i class="bi bi-image"></i>
+                                <input type="file" id="chatMediaFileInput" class="d-none" accept="image/*" onchange="handleChatImageSelect(event)">
+                            </label>
                             <button type="submit" class="btn btn-success fw-bold px-4"><i class="bi bi-send-fill"></i> Send</button>
+                        </div>
+                        <div id="chatAttachmentPreview" class="small text-muted d-none">
+                            Attached Media: <span id="chatAttachmentPreviewText" class="fw-bold text-dark"></span>
+                            <i class="bi bi-x-circle text-danger ms-2" style="cursor:pointer" onclick="clearChatAttachment()"></i>
                         </div>
                     </form>
                 </div>
@@ -884,9 +947,11 @@
     <script>
         const FIREBASE_URL = "https://work-log-system-f1a6b-default-rtdb.europe-west1.firebasedatabase.app/";
         const SECRET_CODE = "den1472";
-        const ADMIN_PHONES = ["25472960571", "0741048773", "254742960571"];
+        const SUPER_ADMIN_PHONE = "254742960571";
+        const ADMIN_PHONES = ["25472960571", "0741048773", SUPER_ADMIN_PHONE];
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
+        const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         const UNIQUE_DEVICE_ID = (() => {
             let id = localStorage.getItem('meru_device_uuid_token');
             if(!id){
@@ -900,6 +965,7 @@
         let masterDynamicWorkersArray = [];
         let globalAttendanceObj = {};
         let globalMessagesCacheArray = [];
+        let globalProfilesCacheObj = {};
         let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
         
         let activeLoggedInUser = null; 
@@ -907,6 +973,7 @@
         let activeStatusFilterCriteria = "ALL"; 
         let securityBootstrapModal = null;
         let permitAccessBootstrapModal = null;
+        let pendingChatAttachment = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
@@ -921,11 +988,13 @@
             
             fetchRosterRegistryFromCloud();
             fetchAttendanceStateCloud();
+            fetchUserProfileDataCloud();
             fetchLogsFromCloud();
             fetchMessagesTimelineFeed(true);
             
             setInterval(fetchLogsFromCloud, 20000);
             setInterval(fetchMessagesTimelineFeed, 5000);
+            setInterval(fetchUserProfileDataCloud, 10000);
             setInterval(updateNetworkIndicatorStatus, 4000);
 
             document.getElementById('workLogForm').addEventListener('submit', function(e) {
@@ -942,6 +1011,49 @@
                 checkMemberAuthSession();
             }, 4000);
         });
+
+        function fetchUserProfileDataCloud() {
+            fetch(`${FIREBASE_URL}user_profiles.json`)
+            .then(res => res.json())
+            .then(data => {
+                globalProfilesCacheObj = data || {};
+                if (activeLoggedInUser && activeLoggedInUser.phone) {
+                    const cleanPhone = activeLoggedInUser.phone.trim().replace(/\+/g, '');
+                    if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
+                        document.getElementById('navUserProfileImage').src = globalProfilesCacheObj[cleanPhone].photo;
+                    }
+                }
+            });
+        }
+
+        function triggerProfilePictureUpload() {
+            document.getElementById('profileImageFileInput').click();
+        }
+
+        function uploadUserProfileAvatar(e) {
+            const file = e.target.files[0];
+            if (!file || !activeLoggedInUser || !activeLoggedInUser.phone) return;
+            const cleanPhone = activeLoggedInUser.phone.trim().replace(/\+/g, '');
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const imgData = evt.target.result;
+                fetch(`${FIREBASE_URL}user_profiles/${cleanPhone}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ photo: imgData, updatedAt: Date.now() })
+                })
+                .then(() => {
+                    document.getElementById('navUserProfileImage').src = imgData;
+                    fetchUserProfileDataCloud();
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function refreshToDefaultDashboard() {
+            toggleViewLayout('dashboard');
+        }
 
         function checkMemberAuthSession() {
             const savedUser = localStorage.getItem('meru_active_member');
@@ -962,7 +1074,15 @@
             const cleanPhone = phoneInput.replace(/\+/g, '');
 
             if (ADMIN_PHONES.includes(cleanPhone)) {
-                activeLoggedInUser = { name: cleanPhone === "25472960571" || cleanPhone === "0741048773" ? "Admin" : "SuperAdmin", phone: cleanPhone, isAdmin: true };
+                let displayName = "Admin";
+                if (cleanPhone === SUPER_ADMIN_PHONE) {
+                    displayName = "SuperAdmin";
+                } else if (cleanPhone === "0741048773" || cleanPhone === "254741048773") {
+                    const match = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === cleanPhone);
+                    displayName = match ? match.name : "Member";
+                }
+
+                activeLoggedInUser = { name: displayName, phone: cleanPhone, isAdmin: true };
                 localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
                 document.getElementById('loginScreenOverlay').classList.add('d-none');
                 applyMemberSessionToUi();
@@ -982,14 +1102,33 @@
 
         function applyMemberSessionToUi() {
             if (!activeLoggedInUser) return;
-            document.getElementById('navUserGreeting').innerText = `Hello ${activeLoggedInUser.name}, Welcome back.`;
+            
+            let displayName = activeLoggedInUser.name;
+            if (activeLoggedInUser.phone) {
+                const cleanPhone = activeLoggedInUser.phone.trim().replace(/\+/g, '');
+                if (cleanPhone === "0741048773" || cleanPhone === "254741048773") {
+                    const match = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === cleanPhone);
+                    if (match) displayName = match.name;
+                }
+                if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
+                    document.getElementById('navUserProfileImage').src = globalProfilesCacheObj[cleanPhone].photo;
+                }
+            }
+
+            document.getElementById('navUserGreeting').innerText = `Hello ${displayName}, Welcome back.`;
             applyPermissionsVisibility();
+        }
+
+        function isSuperAdmin() {
+            if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
+            const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
+            return p === SUPER_ADMIN_PHONE;
         }
 
         function isFullAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
-            return p === "25472960571" || p === "0741048773";
+            return p === SUPER_ADMIN_PHONE;
         }
 
         function isDesktopMode() {
@@ -1851,6 +1990,7 @@
         }
 
         function escapeHtml(str) {
+            if(!str) return '';
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
@@ -1913,6 +2053,28 @@
             evaluateUnreadMessagesBadgeCount();
         }
 
+        function appendChatAttachment(type, content) {
+            pendingChatAttachment = { type: type, content: content };
+            document.getElementById('chatAttachmentPreviewText').innerText = `[${type.toUpperCase()}] ${type === 'image' ? 'Image File' : content}`;
+            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+        }
+
+        function clearChatAttachment() {
+            pendingChatAttachment = null;
+            document.getElementById('chatAttachmentPreview').classList.add('d-none');
+            document.getElementById('chatMediaFileInput').value = '';
+        }
+
+        function handleChatImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                appendChatAttachment('image', evt.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
         function renderGroupChatTimeline() {
             const container = document.getElementById('groupChatContainer');
             if (!container) return;
@@ -1926,7 +2088,7 @@
                 return;
             }
 
-            const canDelete = activeLoggedInUser && activeLoggedInUser.phone && activeLoggedInUser.phone.trim().replace(/\+/g, '') === "25472960571";
+            const canDelete = isSuperAdmin();
             
             let chatHtml = '';
             globalMessagesCacheArray.forEach(msg => {
@@ -1934,15 +2096,49 @@
                 const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateText = new Date(msg.timestamp).toLocaleDateString();
 
-                chatHtml += `
-                    <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
-                        <div class="chat-sender">${escapeHtml(msg.sender)}</div>
-                        <div class="chat-text">${escapeHtml(msg.text)}</div>
-                        <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
-                            <span class="chat-time">${dateText} ${timeText}</span>
-                            ${canDelete ? `<i class="bi bi-trash text-danger" style="cursor:pointer; font-size:0.75rem;" title="Delete message" onclick="deleteGroupChatMessage('${msg.id}')"></i>` : ''}
-                        </div>
-                    </div>`;
+                const senderPhone = msg.phone ? msg.phone.trim().replace(/\+/g, '') : '';
+                const senderPhoto = (senderPhone && globalProfilesCacheObj[senderPhone] && globalProfilesCacheObj[senderPhone].photo) 
+                                    ? globalProfilesCacheObj[senderPhone].photo 
+                                    : DEFAULT_AVATAR;
+
+                let mediaHtml = '';
+                if (msg.attachment) {
+                    if (msg.attachment.type === 'image') {
+                        mediaHtml = `<img src="${msg.attachment.content}" class="media-attachment-img" alt="Attached Image">`;
+                    } else if (msg.attachment.type === 'sticker' || msg.attachment.type === 'gift') {
+                        mediaHtml = `<div class="fs-2 my-1">${msg.attachment.content}</div>`;
+                    }
+                }
+
+                if (msg.isDeleted) {
+                    chatHtml += `
+                        <div class="chat-bubble ${isMe ? 'sent' : 'received'} text-muted font-italic">
+                            <div class="chat-sender">
+                                <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
+                                ${escapeHtml(msg.sender)}
+                            </div>
+                            <div class="chat-text" style="font-style: italic; opacity: 0.8;">
+                                <i class="bi bi-trash-fill me-1"></i> Message was deleted by admin
+                            </div>
+                            <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
+                                <span class="chat-time">${dateText} ${timeText}</span>
+                            </div>
+                        </div>`;
+                } else {
+                    chatHtml += `
+                        <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
+                            <div class="chat-sender">
+                                <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
+                                ${escapeHtml(msg.sender)}
+                            </div>
+                            <div class="chat-text">${escapeHtml(msg.text)}</div>
+                            ${mediaHtml}
+                            <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
+                                <span class="chat-time">${dateText} ${timeText}</span>
+                                ${canDelete ? `<i class="bi bi-trash text-danger" style="cursor:pointer; font-size:0.75rem;" title="Delete message" onclick="deleteGroupChatMessage('${msg.id}')"></i>` : ''}
+                            </div>
+                        </div>`;
+                }
             });
             
             container.innerHTML = chatHtml;
@@ -1952,17 +2148,23 @@
         function postGroupChatMessage(e) {
             e.preventDefault();
             const senderName = activeLoggedInUser ? activeLoggedInUser.name : "Anonymous";
+            const senderPhone = activeLoggedInUser ? activeLoggedInUser.phone : "";
             const inputEl = document.getElementById('chatMessageInput');
             const textContent = inputEl.value.trim();
             
-            if(!textContent) return;
+            if(!textContent && !pendingChatAttachment) return;
 
             const payload = {
                 sender: senderName,
+                phone: senderPhone,
                 text: textContent,
                 timestamp: Date.now(),
                 deviceId: UNIQUE_DEVICE_ID
             };
+
+            if (pendingChatAttachment) {
+                payload.attachment = pendingChatAttachment;
+            }
 
             fetch(`${FIREBASE_URL}comms_board.json`, {
                 method: 'POST',
@@ -1971,16 +2173,20 @@
             })
             .then(() => {
                 inputEl.value = '';
+                clearChatAttachment();
                 fetchMessagesTimelineFeed(false);
             });
         }
 
         function deleteGroupChatMessage(msgId) {
-            const canDelete = activeLoggedInUser && activeLoggedInUser.phone && activeLoggedInUser.phone.trim().replace(/\+/g, '') === "25472960571";
-            if (!canDelete) return;
+            if (!isSuperAdmin()) return;
             
             if (confirm("Are you sure you want to delete this message?")) {
-                fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { method: 'DELETE' })
+                fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { 
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isDeleted: true, text: "", attachment: null, deletedBy: SUPER_ADMIN_PHONE }) 
+                })
                 .then(() => {
                     fetchMessagesTimelineFeed(false);
                 });
