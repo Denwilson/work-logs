@@ -258,6 +258,7 @@
             padding: 15px;
             background: #e5ddd5;
             border-radius: 8px;
+            scroll-behavior: smooth;
         }
         [data-theme="dark"] .chat-container {
             background: #0b141a;
@@ -357,9 +358,101 @@
             background: rgba(255,193,7,0.25);
         }
 
+        /* --- Custom Bird Flying Button & Animation --- */
+        #birdMenuTriggerBtn {
+            position: fixed;
+            bottom: 25px;
+            left: 20px;
+            z-index: 9999;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+            border: 2px solid #ffc107;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            animation: birdFloat 3s ease-in-out infinite;
+        }
+        #birdMenuTriggerBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
+        }
+        #birdMenuTriggerBtn:active {
+            transform: scale(0.95);
+        }
+        @keyframes birdFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .bird-icon-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bird-svg {
+            width: 32px;
+            height: 32px;
+            fill: #ffffff;
+            animation: flapWings 0.6s ease-in-out infinite alternate;
+            transform-origin: center;
+        }
+        @keyframes flapWings {
+            0% { transform: scaleY(1) rotate(0deg); }
+            100% { transform: scaleY(0.75) rotate(-5deg); }
+        }
+        .sound-wave {
+            position: absolute;
+            top: 2px;
+            right: -8px;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #ffc107;
+            border-top: 2px solid #ffc107;
+            border-radius: 50%;
+            opacity: 0;
+            animation: emitWave 1.2s infinite ease-out;
+        }
+        .sound-wave-2 {
+            top: -2px;
+            right: -13px;
+            width: 14px;
+            height: 14px;
+            animation-delay: 0.4s;
+        }
+        @keyframes emitWave {
+            0% { opacity: 1; transform: scale(0.5); }
+            100% { opacity: 0; transform: scale(1.6); }
+        }
+
+        .online-status-badge {
+            font-size: 0.75rem;
+            color: #20c997;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-indicator-text {
+            font-size: 0.8rem;
+            font-style: italic;
+            color: #198754;
+            min-height: 20px;
+            transition: all 0.3s ease;
+        }
+        [data-theme="dark"] .typing-indicator-text {
+            color: #20c997;
+        }
+
         @media print {
             body { padding-top: 0 !important; }
-            .custom-sidebar, .hover-trigger-zone { display: none !important; }
+            .custom-sidebar, .hover-trigger-zone, #birdMenuTriggerBtn { display: none !important; }
         }
     </style>
 </head>
@@ -390,6 +483,17 @@
             </form>
         </div>
     </div>
+
+    <!-- Animated Bird Flying Button at Bottom Left -->
+    <button id="birdMenuTriggerBtn" onclick="toggleSidebarViaBird()" title="Open Menu">
+        <div class="bird-icon-wrapper">
+            <svg class="bird-svg" viewBox="0 0 24 24">
+                <path d="M22,6 C19,7 16,5 14,3 C13,6 10,8 6,7 C4,10 2,12 2,15 C2,18 5,20 8,20 C14,20 19,16 21,11 C22,9 22.5,7.5 22,6 Z"/>
+            </svg>
+            <div class="sound-wave"></div>
+            <div class="sound-wave sound-wave-2"></div>
+        </div>
+    </button>
 
     <div class="hover-trigger-zone" id="sidebarTriggerZone"></div>
 
@@ -468,7 +572,13 @@
                 </div>
                 <div class="d-inline-block text-white text-decoration-none" onclick="refreshToDefaultDashboard()" style="cursor: pointer;" title="Go to Dashboard">
                     <div class="fw-bold" id="navUserGreeting" style="font-size: 1rem;">Hello Member, Welcome back.</div>
-                    <div class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</span>
+                        <!-- Online devices count after 'Meru DairyOffload' -->
+                        <span class="online-status-badge ms-1" id="navOnlineDevicesCount">
+                            <span class="pulse-dot online" style="width:7px; height:7px;"></span> <span id="navOnlineCountText">1 online</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -667,15 +777,26 @@
 
         <div id="view-messages-panel" class="d-none">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-chat-dots-fill me-2"></i>Live Group Chat</h5>
+                <div class="card-header bg-success text-white py-3 d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-chat-dots-fill me-1"></i>Live Group Chat
+                        <!-- Online count after Live Group Chat -->
+                        <span class="online-status-badge text-white ms-2" style="font-size:0.8rem; opacity:0.9;" id="messagesOnlineDevicesCount">
+                            <span class="pulse-dot online" style="width:8px; height:8px;"></span> <span id="msgOnlineCountText">1 online</span>
+                        </span>
+                    </h5>
                 </div>
+                <!-- Real-time typing indicators container below Live Group Chat -->
+                <div class="px-3 pt-2 bg-light border-bottom">
+                    <div id="typingIndicatorBox" class="typing-indicator-text"></div>
+                </div>
+
                 <div class="card-body p-3">
                     <div id="groupChatContainer" class="chat-container mb-3"></div>
                     
                     <form id="groupChatForm" onsubmit="postGroupChatMessage(event)">
                         <div class="input-group mb-2">
-                            <input type="text" id="chatMessageInput" class="form-control bg-light text-dark" placeholder="Type a message..." autocomplete="off">
+                            <input type="text" id="chatMessageInput" class="form-control bg-light text-dark" placeholder="Type a message..." autocomplete="off" oninput="handleUserTypingEvent()">
                             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-emoji-smile"></i>
                             </button>
@@ -973,6 +1094,7 @@
         const SECRET_CODE = "den1472";
         const SUPER_ADMIN_PHONE = "254742960571";
         const PHINI_PHONE = "0741048773";
+        // Requirement 1: Added 0741048773 and 254741048773 as full admins alongside 254742960571
         const ADMIN_PHONES = ["254742960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
@@ -999,6 +1121,11 @@
         let securityBootstrapModal = null;
         let permitAccessBootstrapModal = null;
         let pendingChatAttachment = null;
+
+        // Dynamic typing & online state trackers
+        let typingTimeoutTimer = null;
+        let isUserCurrentlyTyping = false;
+        let renderedMessageIds = new Set();
 
         const STICKERS_LIST = [
             "👍","❤️","🔥","👏","😊","😂","😍","🎉","✨","🙌","😎","💡","🚀","💯","💪","🤝","😁",
@@ -1030,8 +1157,14 @@
             fetchLogsFromCloud();
             fetchMessagesTimelineFeed(true);
             
+            // Heartbeat & Online Presence Tracking
+            sendDevicePresenceHeartbeat();
+            setInterval(sendDevicePresenceHeartbeat, 5000);
+            setInterval(fetchLiveOnlineDevices, 4000);
+            setInterval(fetchLiveTypingStatus, 2000);
+
             setInterval(fetchLogsFromCloud, 20000);
-            setInterval(fetchMessagesTimelineFeed, 5000);
+            setInterval(fetchMessagesTimelineFeed, 3000); // Smoother high-frequency message checks
             setInterval(fetchUserProfileDataCloud, 10000);
             setInterval(updateNetworkIndicatorStatus, 4000);
 
@@ -1049,6 +1182,152 @@
                 checkMemberAuthSession();
             }, 4000);
         });
+
+        // Requirement 2: Bird Fly & Wave Sound Synthesis Logic
+        function toggleSidebarViaBird() {
+            const sb = document.getElementById('mainSidebarLayout');
+            sb.classList.toggle('active');
+            playBirdWaveSound();
+        }
+
+        function playBirdWaveSound() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if(!AudioCtx) return;
+                const ctx = new AudioCtx();
+                
+                // Bird Chirp Tone 1
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(1400, ctx.currentTime);
+                osc1.frequency.exponentialRampToValueAtTime(2600, ctx.currentTime + 0.12);
+                gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start();
+                osc1.stop(ctx.currentTime + 0.15);
+
+                // Bird Chirp Tone 2 (Echo wave)
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1800, ctx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(3200, ctx.currentTime + 0.15);
+                    gain2.gain.setValueAtTime(0.35, ctx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.18);
+                }, 100);
+            } catch(e) {}
+        }
+
+        // Requirement 5: Device Heartbeat & Live Online Counter System
+        function sendDevicePresenceHeartbeat() {
+            const now = Date.now();
+            fetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lastActive: now,
+                    userName: activeLoggedInUser ? activeLoggedInUser.name : 'Guest Device'
+                })
+            }).catch(() => {});
+        }
+
+        function fetchLiveOnlineDevices() {
+            fetch(`${FIREBASE_URL}online_devices.json`)
+            .then(res => res.json())
+            .then(data => {
+                if(!data) {
+                    updateOnlineDeviceDisplays(1);
+                    return;
+                }
+                const now = Date.now();
+                let activeCount = 0;
+                Object.keys(data).forEach(devId => {
+                    // Active within last 12 seconds counts as online
+                    if(data[devId] && data[devId].lastActive && (now - data[devId].lastActive < 12000)) {
+                        activeCount++;
+                    }
+                });
+                if(activeCount === 0) activeCount = 1;
+                updateOnlineDeviceDisplays(activeCount);
+            }).catch(() => {});
+        }
+
+        function updateOnlineDeviceDisplays(count) {
+            const countText = `${count} online`;
+            const navText = document.getElementById('navOnlineCountText');
+            const msgText = document.getElementById('msgOnlineCountText');
+            if(navText) navText.innerText = countText;
+            if(msgText) msgText.innerText = countText;
+        }
+
+        // Requirement 4: Real-time Multi-user Typing Indicators
+        function handleUserTypingEvent() {
+            if(!activeLoggedInUser) return;
+            const inputVal = document.getElementById('chatMessageInput').value;
+            
+            if(inputVal.trim().length > 0) {
+                if(!isUserCurrentlyTyping) {
+                    isUserCurrentlyTyping = true;
+                    updateTypingStatusCloud(true);
+                }
+                clearTimeout(typingTimeoutTimer);
+                typingTimeoutTimer = setTimeout(() => {
+                    isUserCurrentlyTyping = false;
+                    updateTypingStatusCloud(false);
+                }, 2500);
+            } else {
+                isUserCurrentlyTyping = false;
+                updateTypingStatusCloud(false);
+            }
+        }
+
+        function updateTypingStatusCloud(isTyping) {
+            if(!activeLoggedInUser) return;
+            fetch(`${FIREBASE_URL}typing_status/${UNIQUE_DEVICE_ID}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: activeLoggedInUser.name,
+                    isTyping: isTyping,
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+        }
+
+        function fetchLiveTypingStatus() {
+            fetch(`${FIREBASE_URL}typing_status.json`)
+            .then(res => res.json())
+            .then(data => {
+                const box = document.getElementById('typingIndicatorBox');
+                if(!box) return;
+                if(!data) {
+                    box.innerText = '';
+                    return;
+                }
+                const now = Date.now();
+                let typingNames = [];
+                Object.keys(data).forEach(devId => {
+                    if(devId !== UNIQUE_DEVICE_ID && data[devId] && data[devId].isTyping && (now - data[devId].timestamp < 4000)) {
+                        typingNames.push(data[devId].name);
+                    }
+                });
+
+                if(typingNames.length === 0) {
+                    box.innerText = '';
+                } else {
+                    const namesString = typingNames.join(', ');
+                    box.innerText = `${namesString} typing...`;
+                }
+            }).catch(() => {});
+        }
 
         function initStickerAndGiftPickers() {
             const stContainer = document.getElementById('stickersGrid');
@@ -1126,6 +1405,7 @@
 
             const cleanPhone = phoneInput.replace(/\+/g, '');
 
+            // Requirement 1: Allow 0741048773 & 254741048773 to perform all admin privileges exactly like 254742960571
             if (ADMIN_PHONES.includes(cleanPhone)) {
                 let displayName = "Phini";
                 if (cleanPhone === SUPER_ADMIN_PHONE) {
@@ -1180,16 +1460,18 @@
             applyPermissionsVisibility();
         }
 
+        // Requirement 1: Updated check so 0741048773 is treated as Super Admin
         function isSuperAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
-            return p === SUPER_ADMIN_PHONE;
+            return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
         }
 
+        // Requirement 1: Updated check so 0741048773 has full admin access across the app
         function isFullAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
-            return p === SUPER_ADMIN_PHONE;
+            return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
         }
 
         function isDesktopMode() {
@@ -1290,7 +1572,7 @@
                 dash.classList.add('d-none');
                 msgPanel.classList.remove('d-none');
                 markAllMessagesAsRead();
-                renderGroupChatTimeline();
+                renderGroupChatTimeline(true); // Force initial bottom scroll on view change
             } else {
                 msgPanel.classList.add('d-none');
                 dash.classList.remove('d-none');
@@ -2085,7 +2367,7 @@
                 
                 const msgPanel = document.getElementById('view-messages-panel');
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
-                    renderGroupChatTimeline();
+                    renderGroupChatTimeline(false);
                 }
             });
         }
@@ -2136,7 +2418,8 @@
             reader.readAsDataURL(file);
         }
 
-        function renderGroupChatTimeline() {
+        // Requirement 3: Smooth Message Rendering without freezing/hugging & Smart Scroll Preservation
+        function renderGroupChatTimeline(forceScrollToBottom = false) {
             const container = document.getElementById('groupChatContainer');
             if (!container) return;
             
@@ -2146,13 +2429,34 @@
                         <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
                         No messages yet. Start the conversation below!
                     </div>`;
+                renderedMessageIds.clear();
                 return;
             }
 
             const canDelete = isSuperAdmin();
             
-            let chatHtml = '';
+            // Check if user is scrolled up viewing old messages
+            const isUserScrolledUp = container.scrollTop + container.clientHeight < container.scrollHeight - 50;
+
+            // Efficiently construct DOM elements using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            let newMessagesAppended = false;
+
+            // Check if full re-render is needed or incremental append
+            const containerHasEmptyState = container.querySelector('.bi-chat-left-dots');
+
+            if (containerHasEmptyState || renderedMessageIds.size === 0) {
+                container.innerHTML = '';
+                renderedMessageIds.clear();
+            }
+
             globalMessagesCacheArray.forEach(msg => {
+                // Skip already rendered static elements for smooth performance
+                if (renderedMessageIds.has(msg.id)) return;
+
+                newMessagesAppended = true;
+                renderedMessageIds.add(msg.id);
+
                 const isMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name || msg.deviceId === UNIQUE_DEVICE_ID);
                 const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const dateText = new Date(msg.timestamp).toLocaleDateString();
@@ -2173,39 +2477,50 @@
                     }
                 }
 
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.setAttribute('data-msg-id', msg.id);
+
                 if (msg.isDeleted) {
-                    chatHtml += `
-                        <div class="chat-bubble ${isMe ? 'sent' : 'received'} text-muted font-italic">
-                            <div class="chat-sender">
-                                <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
-                                ${escapeHtml(msg.sender)}
-                            </div>
-                            <div class="chat-text" style="font-style: italic; opacity: 0.8;">
-                                <i class="bi bi-trash-fill me-1"></i> message was deleted by admin
-                            </div>
-                            <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
-                                <span class="chat-time">${dateText} ${timeText}</span>
-                            </div>
+                    bubbleDiv.className = `chat-bubble ${isMe ? 'sent' : 'received'} text-muted font-italic`;
+                    bubbleDiv.innerHTML = `
+                        <div class="chat-sender">
+                            <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
+                            ${escapeHtml(msg.sender)}
+                        </div>
+                        <div class="chat-text" style="font-style: italic; opacity: 0.8;">
+                            <i class="bi bi-trash-fill me-1"></i> message was deleted by admin
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
+                            <span class="chat-time">${dateText} ${timeText}</span>
                         </div>`;
                 } else {
-                    chatHtml += `
-                        <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
-                            <div class="chat-sender">
-                                <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
-                                ${escapeHtml(msg.sender)}
-                            </div>
-                            <div class="chat-text">${escapeHtml(msg.text)}</div>
-                            ${mediaHtml}
-                            <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
-                                <span class="chat-time">${dateText} ${timeText}</span>
-                                ${canDelete ? `<i class="bi bi-trash text-danger" style="cursor:pointer; font-size:0.75rem;" title="Delete message" onclick="deleteGroupChatMessage('${msg.id}')"></i>` : ''}
-                            </div>
+                    bubbleDiv.className = `chat-bubble ${isMe ? 'sent' : 'received'}`;
+                    bubbleDiv.innerHTML = `
+                        <div class="chat-sender">
+                            <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
+                            ${escapeHtml(msg.sender)}
+                        </div>
+                        <div class="chat-text">${escapeHtml(msg.text)}</div>
+                        ${mediaHtml}
+                        <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
+                            <span class="chat-time">${dateText} ${timeText}</span>
+                            ${canDelete ? `<i class="bi bi-trash text-danger" style="cursor:pointer; font-size:0.75rem;" title="Delete message" onclick="deleteGroupChatMessage('${msg.id}')"></i>` : ''}
                         </div>`;
                 }
+
+                fragment.appendChild(bubbleDiv);
             });
-            
-            container.innerHTML = chatHtml;
-            container.scrollTop = container.scrollHeight;
+
+            if (newMessagesAppended) {
+                container.appendChild(fragment);
+            }
+
+            // Requirement 3: Stop bringing user to bottom when reading previous messages at top
+            if (forceScrollToBottom || (!isUserScrolledUp && newMessagesAppended)) {
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
+            }
         }
 
         function postGroupChatMessage(e) {
@@ -2229,6 +2544,10 @@
                 payload.attachment = pendingChatAttachment;
             }
 
+            // Clear typing state immediately on message post
+            isUserCurrentlyTyping = false;
+            updateTypingStatusCloud(false);
+
             fetch(`${FIREBASE_URL}comms_board.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2251,6 +2570,7 @@
                     body: JSON.stringify({ isDeleted: true, text: "", attachment: null, deletedBy: SUPER_ADMIN_PHONE }) 
                 })
                 .then(() => {
+                    renderedMessageIds.clear();
                     fetchMessagesTimelineFeed(false);
                 });
             }
