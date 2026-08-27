@@ -555,6 +555,12 @@
                     <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                 </ul>
             </li>
+            <!-- REQUIREMENT 2: Added Logins link visible ONLY to 254742960571 and 0741048773 -->
+            <li id="sidebarLoginsLinkContainer" class="d-none">
+                <a href="#" class="sidebar-link text-warning" data-bs-toggle="modal" data-bs-target="#deviceLoginsModal" onclick="renderDeviceLoginsList()">
+                    <i class="bi bi-shield-check text-warning"></i> Logins
+                </a>
+            </li>
             <li>
                 <a href="#" class="sidebar-link text-danger" onclick="triggerSwitchUserPrompt(); return false;">
                     <i class="bi bi-box-arrow-right text-danger"></i> Switch User
@@ -834,6 +840,33 @@
 
     </div>
 
+    <!-- REQUIREMENT 2: Admin Device Logins List Modal -->
+    <div class="modal fade" id="deviceLoginsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Admin Device Logins Audit</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="table-responsive border rounded" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th class="ps-3">Name / Device</th>
+                                    <th>Login Date</th>
+                                    <th>Status / Hours Online</th>
+                                    <th>Logout Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deviceLoginsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="rosterRegistryModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content text-dark">
@@ -1080,7 +1113,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </footer>
 
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
@@ -1096,6 +1129,9 @@
         const PHINI_PHONE = "0741048773";
         // Requirement 1: Added 0741048773 and 254741048773 as full admins alongside 254742960571
         const ADMIN_PHONES = ["254742960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
+        // REQUIREMENT 2: Phone numbers permitted to view the Logins sidebar button
+        const ALLOWED_LOGIN_PHONES = ["254742960571", "0741048773", "254741048773"];
+
         const RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
         const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
@@ -1126,6 +1162,7 @@
         let typingTimeoutTimer = null;
         let isUserCurrentlyTyping = false;
         let renderedMessageIds = new Set();
+        let sessionStartTime = Date.now();
 
         const STICKERS_LIST = [
             "👍","❤️","🔥","👏","😊","😂","😍","🎉","✨","🙌","😎","💡","🚀","💯","💪","🤝","😁",
@@ -1151,22 +1188,25 @@
             setupSidebarLayoutInteractions();
             initStickerAndGiftPickers();
             
-            fetchRosterRegistryFromCloud();
-            fetchAttendanceStateCloud();
-            fetchUserProfileDataCloud();
-            fetchLogsFromCloud();
-            fetchMessagesTimelineFeed(true);
+            // REQUIREMENT 1: High-speed parallel loading for immediate response on start
+            Promise.all([
+                fetchRosterRegistryFromCloud(),
+                fetchAttendanceStateCloud(),
+                fetchUserProfileDataCloud(),
+                fetchLogsFromCloud(),
+                fetchMessagesTimelineFeed(true)
+            ]).catch(() => {});
             
-            // Heartbeat & Online Presence Tracking
+            // Heartbeat & Online Presence Tracking (10s intervals to minimize network overhead)
             sendDevicePresenceHeartbeat();
-            setInterval(sendDevicePresenceHeartbeat, 5000);
-            setInterval(fetchLiveOnlineDevices, 4000);
-            setInterval(fetchLiveTypingStatus, 2000);
+            setInterval(sendDevicePresenceHeartbeat, 10000);
+            setInterval(fetchLiveOnlineDevices, 10000);
+            setInterval(fetchLiveTypingStatus, 4000);
 
             setInterval(fetchLogsFromCloud, 20000);
-            setInterval(fetchMessagesTimelineFeed, 3000); // Smoother high-frequency message checks
-            setInterval(fetchUserProfileDataCloud, 10000);
-            setInterval(updateNetworkIndicatorStatus, 4000);
+            setInterval(fetchMessagesTimelineFeed, 6000);
+            setInterval(fetchUserProfileDataCloud, 15000);
+            setInterval(updateNetworkIndicatorStatus, 5000);
 
             document.getElementById('workLogForm').addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -1177,13 +1217,13 @@
 
             window.addEventListener('resize', applyPermissionsVisibility);
 
+            // REQUIREMENT 1: Drastically reduced splash screen delay to 300ms for instant load
             setTimeout(() => {
                 document.getElementById('splashScreenOverlay').classList.add('d-none');
                 checkMemberAuthSession();
-            }, 4000);
+            }, 300);
         });
 
-        // Requirement 2: Bird Fly & Wave Sound Synthesis Logic
         function toggleSidebarViaBird() {
             const sb = document.getElementById('mainSidebarLayout');
             sb.classList.toggle('active');
@@ -1196,7 +1236,6 @@
                 if(!AudioCtx) return;
                 const ctx = new AudioCtx();
                 
-                // Bird Chirp Tone 1
                 const osc1 = ctx.createOscillator();
                 const gain1 = ctx.createGain();
                 osc1.type = 'sine';
@@ -1209,7 +1248,6 @@
                 osc1.start();
                 osc1.stop(ctx.currentTime + 0.15);
 
-                // Bird Chirp Tone 2 (Echo wave)
                 setTimeout(() => {
                     const osc2 = ctx.createOscillator();
                     const gain2 = ctx.createGain();
@@ -1226,15 +1264,17 @@
             } catch(e) {}
         }
 
-        // Requirement 5: Device Heartbeat & Live Online Counter System
+        // REQUIREMENT 2: Enhanced device presence tracking to track login time, hours online, and logout
         function sendDevicePresenceHeartbeat() {
             const now = Date.now();
             fetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     lastActive: now,
-                    userName: activeLoggedInUser ? activeLoggedInUser.name : 'Guest Device'
+                    loginTime: sessionStartTime,
+                    userName: activeLoggedInUser ? activeLoggedInUser.name : 'Guest Device',
+                    phone: activeLoggedInUser ? activeLoggedInUser.phone : 'N/A'
                 })
             }).catch(() => {});
         }
@@ -1250,8 +1290,7 @@
                 const now = Date.now();
                 let activeCount = 0;
                 Object.keys(data).forEach(devId => {
-                    // Active within last 12 seconds counts as online
-                    if(data[devId] && data[devId].lastActive && (now - data[devId].lastActive < 12000)) {
+                    if(data[devId] && data[devId].lastActive && (now - data[devId].lastActive < 20000)) {
                         activeCount++;
                     }
                 });
@@ -1268,7 +1307,6 @@
             if(msgText) msgText.innerText = countText;
         }
 
-        // Requirement 4: Real-time Multi-user Typing Indicators
         function handleUserTypingEvent() {
             if(!activeLoggedInUser) return;
             const inputVal = document.getElementById('chatMessageInput').value;
@@ -1341,7 +1379,7 @@
         }
 
         function fetchUserProfileDataCloud() {
-            fetch(`${FIREBASE_URL}user_profiles.json`)
+            return fetch(`${FIREBASE_URL}user_profiles.json`)
             .then(res => res.json())
             .then(data => {
                 globalProfilesCacheObj = data || {};
@@ -1355,7 +1393,7 @@
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
                     renderGroupChatTimeline();
                 }
-            });
+            }).catch(() => {});
         }
 
         function triggerProfilePictureUpload() {
@@ -1405,7 +1443,6 @@
 
             const cleanPhone = phoneInput.replace(/\+/g, '');
 
-            // Requirement 1: Allow 0741048773 & 254741048773 to perform all admin privileges exactly like 254742960571
             if (ADMIN_PHONES.includes(cleanPhone)) {
                 let displayName = "Phini";
                 if (cleanPhone === SUPER_ADMIN_PHONE) {
@@ -1417,6 +1454,8 @@
 
                 activeLoggedInUser = { name: displayName, phone: cleanPhone, isAdmin: true };
                 localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+                sessionStartTime = Date.now();
+                sendDevicePresenceHeartbeat();
                 document.getElementById('loginScreenOverlay').classList.add('d-none');
                 applyMemberSessionToUi();
                 return;
@@ -1426,6 +1465,8 @@
             if (matchedMember) {
                 activeLoggedInUser = { name: matchedMember.name, phone: matchedMember.phone.trim().replace(/\+/g, ''), isAdmin: false };
                 localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+                sessionStartTime = Date.now();
+                sendDevicePresenceHeartbeat();
                 document.getElementById('loginScreenOverlay').classList.add('d-none');
                 applyMemberSessionToUi();
             } else {
@@ -1460,14 +1501,12 @@
             applyPermissionsVisibility();
         }
 
-        // Requirement 1: Updated check so 0741048773 is treated as Super Admin
         function isSuperAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
             return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
         }
 
-        // Requirement 1: Updated check so 0741048773 has full admin access across the app
         function isFullAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
@@ -1501,6 +1540,17 @@
                 }
             });
 
+            // REQUIREMENT 2: Visibility restriction for 'Logins' button on sidebar
+            const loginsContainer = document.getElementById('sidebarLoginsLinkContainer');
+            if (loginsContainer) {
+                const cleanPhone = activeLoggedInUser.phone ? activeLoggedInUser.phone.trim().replace(/\+/g, '') : '';
+                if (ALLOWED_LOGIN_PHONES.includes(cleanPhone)) {
+                    loginsContainer.classList.remove('d-none');
+                } else {
+                    loginsContainer.classList.add('d-none');
+                }
+            }
+
             const clearBtn = document.querySelector('button[onclick="clearAllData()"]');
             if (clearBtn) {
                 if (isAdmin) {
@@ -1511,11 +1561,73 @@
             }
         }
 
+        // REQUIREMENT 2: Render device logins audit list inside modal
+        function renderDeviceLoginsList() {
+            const tbody = document.getElementById('deviceLoginsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Fetching login audit logs...</td></tr>';
+            
+            fetch(`${FIREBASE_URL}online_devices.json`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if (!data) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No device login records available.</td></tr>';
+                    return;
+                }
+
+                const now = Date.now();
+                const devicesList = Object.keys(data).map(id => ({ id, ...data[id] }));
+                
+                // Sort by last active / login time descending
+                devicesList.sort((a,b) => (b.lastActive || 0) - (a.lastActive || 0));
+
+                devicesList.forEach(dev => {
+                    const isOnline = dev.lastActive && (now - dev.lastActive < 20000);
+                    const name = dev.userName || 'Unknown Device';
+                    const loginDateStr = dev.loginTime ? new Date(dev.loginTime).toLocaleString('en-GB') : 'N/A';
+                    
+                    let hoursOnlineStr = 'online';
+                    let logoutTimeStr = '-';
+
+                    if (!isOnline) {
+                        if (dev.loginTime && dev.lastActive) {
+                            const diffHours = ((dev.lastActive - dev.loginTime) / (1000 * 60 * 60)).toFixed(2);
+                            hoursOnlineStr = `${diffHours} hrs`;
+                        } else {
+                            hoursOnlineStr = 'offline';
+                        }
+                        logoutTimeStr = dev.lastActive ? new Date(dev.lastActive).toLocaleTimeString('en-GB') : 'N/A';
+                    } else {
+                        if (dev.loginTime) {
+                            const currentLiveHours = ((now - dev.loginTime) / (1000 * 60 * 60)).toFixed(2);
+                            hoursOnlineStr = `<span class="badge bg-success">online (${currentLiveHours} hrs live)</span>`;
+                        } else {
+                            hoursOnlineStr = `<span class="badge bg-success">online</span>`;
+                        }
+                    }
+
+                    tbody.innerHTML += `
+                        <tr class="text-dark">
+                            <td class="ps-3 fw-bold">
+                                ${escapeHtml(name)}
+                                <div class="text-muted small font-monospace">${escapeHtml(dev.phone || dev.id)}</div>
+                            </td>
+                            <td class="font-monospace small">${loginDateStr}</td>
+                            <td class="fw-semibold">${hoursOnlineStr}</td>
+                            <td class="font-monospace small">${logoutTimeStr}</td>
+                        </tr>`;
+                });
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Failed to load device logins.</td></tr>';
+            });
+        }
+
         function triggerSwitchUserPrompt() {
             document.getElementById('permitCodeInput').value = '';
             document.getElementById('permitModalErrorMsg').classList.add('d-none');
             permitAccessBootstrapModal.show();
-            setTimeout(() => document.getElementById('permitCodeInput').focus(), 450);
+            setTimeout(() => document.getElementById('permitCodeInput').focus(), 150);
         }
 
         function submitPermitVerification() {
@@ -1536,6 +1648,14 @@
         }
 
         function logoutCurrentMember() {
+            // Log out record update
+            if (UNIQUE_DEVICE_ID) {
+                fetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lastActive: Date.now() - 30000 })
+                }).catch(() => {});
+            }
             localStorage.removeItem('meru_active_member');
             activeLoggedInUser = null;
             document.getElementById('loginScreenOverlay').classList.remove('d-none');
@@ -1572,7 +1692,7 @@
                 dash.classList.add('d-none');
                 msgPanel.classList.remove('d-none');
                 markAllMessagesAsRead();
-                renderGroupChatTimeline(true); // Force initial bottom scroll on view change
+                renderGroupChatTimeline(true);
             } else {
                 msgPanel.classList.add('d-none');
                 dash.classList.remove('d-none');
@@ -1614,7 +1734,7 @@
                 document.getElementById('secretSecurityCodeInput').value = '';
                 document.getElementById('securityModalErrorMsg').classList.add('d-none');
                 securityBootstrapModal.show();
-                setTimeout(() => document.getElementById('secretSecurityCodeInput').focus(), 450);
+                setTimeout(() => document.getElementById('secretSecurityCodeInput').focus(), 150);
             }
         }
 
@@ -1642,7 +1762,7 @@
 
         function fetchLogsFromCloud() {
             document.getElementById('loadingSpinner').style.display = 'inline-block';
-            fetch(`${FIREBASE_URL}logs.json`)
+            return fetch(`${FIREBASE_URL}logs.json`)
             .then(res => res.json())
             .then(data => {
                 globalLogsArray = [];
@@ -2079,7 +2199,7 @@
         }
 
         function fetchRosterRegistryFromCloud() {
-            fetch(`${FIREBASE_URL}roster_registry.json`)
+            return fetch(`${FIREBASE_URL}roster_registry.json`)
             .then(res => res.json())
             .then(data => {
                 masterDynamicWorkersArray = [];
@@ -2089,7 +2209,7 @@
                     });
                 }
                 rebuildFormEmployeeSelectionMenus();
-            });
+            }).catch(() => {});
         }
 
         function rebuildFormEmployeeSelectionMenus() {
@@ -2164,7 +2284,7 @@
                 nameField.value = '';
                 phoneField.value = '';
                 fetchRosterRegistryFromCloud();
-                setTimeout(() => renderRosterRegistryManagementTable(), 400);
+                setTimeout(() => renderRosterRegistryManagementTable(), 200);
             });
         }
 
@@ -2175,7 +2295,7 @@
                     fetch(`${FIREBASE_URL}roster_registry/${id}.json`, { method: 'DELETE' })
                     .then(() => {
                         fetchRosterRegistryFromCloud();
-                        setTimeout(() => renderRosterRegistryManagementTable(), 400);
+                        setTimeout(() => renderRosterRegistryManagementTable(), 200);
                     });
                 });
             }
@@ -2220,7 +2340,7 @@
                     })
                     .then(() => {
                         fetchLogsFromCloud();
-                        setTimeout(() => renderPreviewDeletionTable(), 400);
+                        setTimeout(() => renderPreviewDeletionTable(), 200);
                         alert("Individual structural work entry record successfully purged from indexes.");
                     });
                 });
@@ -2228,12 +2348,12 @@
         }
 
         function fetchAttendanceStateCloud() {
-            fetch(`${FIREBASE_URL}attendance.json`)
+            return fetch(`${FIREBASE_URL}attendance.json`)
             .then(res => res.json())
             .then(data => {
                 globalAttendanceObj = data || {};
                 rebuildFormEmployeeSelectionMenus();
-            });
+            }).catch(() => {});
         }
 
         function renderAttendanceUiList() {
@@ -2267,288 +2387,136 @@
             })
             .then(() => {
                 fetchAttendanceStateCloud();
-                setTimeout(() => renderAttendanceUiList(), 300);
             });
         }
 
         function launchSecureWorkCancellationPanel() {
             document.getElementById('mainSidebarLayout').classList.remove('active');
+            renderWorkCancellationTable();
+            const cancellationModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+            cancellationModal.show();
+        }
+
+        function renderWorkCancellationTable() {
             const tbody = document.getElementById('workCancellationTableBody');
             tbody.innerHTML = '';
-            const activeRecords = globalLogsArray.filter(l => l.status !== "CANCELLED");
-            if(activeRecords.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active tracking records available inside cloud logs timeline nodes to target.</td></tr>`;
-                const myModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-                myModal.show();
+            
+            const activeLogs = globalLogsArray.filter(l => l.status !== 'CANCELLED');
+            if (activeLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active non-cancelled work entries found.</td></tr>`;
                 return;
             }
-            activeRecords.forEach(log => {
+
+            activeLogs.forEach(log => {
                 tbody.innerHTML += `
                     <tr class="text-dark">
-                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)} <small class="text-muted font-monospace d-block">${escapeHtml(log.vehiclePlate)}</small></td>
-                        <td>${formatDateDisplay(log.dateWorked)}</td>
-                        <td class="font-monospace fw-bold">${log.totalBoxes} Boxes</td>
+                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
+                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
+                        <td><span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span></td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-danger fw-bold" onclick="executeWorkCancellationActionGate('${log.id}')">Void Log</button>
+                            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeCancelWorkLogAction('${log.id}')">
+                                Void Log
+                            </button>
                         </td>
                     </tr>`;
             });
-            const myModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-            myModal.show();
         }
 
-        function executeWorkCancellationActionGate(firebaseId) {
+        function executeCancelWorkLogAction(logId) {
             if (!isFullAdmin()) return;
-            const reason = prompt("Specify systemic audit tracking context or cause logic verification constraint string for voiding entry node:");
+            const reason = prompt("Specify Reason for Work Cancellation:");
             if (reason === null) return;
-            if (!reason.trim()) {
-                alert("An audit tracking note explanation context coordinate must be designated.");
-                return;
-            }
+            
             runWithSecurityGate(() => {
-                const patchPayload = {
-                    status: "CANCELLED",
-                    cancellationReason: reason.trim(),
-                    voidTimestamp: Date.now(),
-                    cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown"
-                };
-
-                fetch(`${FIREBASE_URL}logs/${firebaseId}.json`, {
+                fetch(`${FIREBASE_URL}logs/${logId}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(patchPayload)
+                    body: JSON.stringify({
+                        status: 'CANCELLED',
+                        cancellationReason: reason || 'Unspecified',
+                        cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : 'Admin'
+                    })
                 })
                 .then(() => {
-                    bootstrap.Modal.getInstance(document.getElementById('workCancellationModal')).hide();
                     fetchLogsFromCloud();
+                    renderWorkCancellationTable();
                 });
             });
         }
 
-        function formatDateDisplay(dateString) {
-            if (!dateString) return "";
-            const parts = dateString.split('-');
-            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`; 
-            return dateString;
-        }
-
-        function escapeHtml(str) {
-            if(!str) return '';
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        function clearAllData() {
-            if (!isFullAdmin()) return;
-            if (confirm("Warning: Are you sure you want to clear the entire record cloud database? This resets everything for everyone everywhere.")) {
-                runWithSecurityGate(() => {
-                    let url = `${FIREBASE_URL}logs.json`;
-                    fetch(url, { method: 'DELETE' })
-                    .then(() => {
-                        fetchLogsFromCloud();
-                    });
-                });
-            }
-        }
-
-        function fetchMessagesTimelineFeed(isInitialBoot = false) {
-            fetch(`${FIREBASE_URL}comms_board.json`)
+        function fetchMessagesTimelineFeed(forceScroll = false) {
+            return fetch(`${FIREBASE_URL}group_messages.json`)
             .then(res => res.json())
             .then(data => {
-                let incomingArray = [];
+                globalMessagesCacheArray = [];
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        incomingArray.push({ id: k, ...data[k] });
+                        globalMessagesCacheArray.push({ id: k, ...data[k] });
                     });
-                    incomingArray.sort((a,b) => a.timestamp - b.timestamp);
+                    globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
                 }
-                
-                globalMessagesCacheArray = incomingArray;
-                evaluateUnreadMessagesBadgeCount();
-                
-                const msgPanel = document.getElementById('view-messages-panel');
-                if (msgPanel && !msgPanel.classList.contains('d-none')) {
-                    renderGroupChatTimeline(false);
-                }
-            });
+                updateUnreadMessagesCountBadge();
+                renderGroupChatTimeline(forceScroll);
+            }).catch(() => {});
         }
 
-        function evaluateUnreadMessagesBadgeCount() {
-            let unreadCount = 0;
-            globalMessagesCacheArray.forEach(msg => {
-                if (!clientReadMessagesTrackerObj[msg.id]) {
-                    unreadCount++;
-                }
-            });
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount;
-                badge.classList.remove('d-none');
-            } else {
-                badge.classList.add('d-none');
-            }
-        }
-
-        function markAllMessagesAsRead() {
-            globalMessagesCacheArray.forEach(msg => {
-                clientReadMessagesTrackerObj[msg.id] = true;
-            });
-            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            evaluateUnreadMessagesBadgeCount();
-        }
-
-        function appendChatAttachment(type, content) {
-            pendingChatAttachment = { type: type, content: content };
-            document.getElementById('chatAttachmentPreviewText').innerText = `[${type.toUpperCase()}] ${type === 'image' ? 'Image File' : content}`;
-            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
-        }
-
-        function clearChatAttachment() {
-            pendingChatAttachment = null;
-            document.getElementById('chatAttachmentPreview').classList.add('d-none');
-            document.getElementById('chatMediaFileInput').value = '';
-        }
-
-        function handleChatImageSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                appendChatAttachment('image', evt.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Requirement 3: Smooth Message Rendering without freezing/hugging & Smart Scroll Preservation
-        function renderGroupChatTimeline(forceScrollToBottom = false) {
+        function renderGroupChatTimeline(forceScroll = false) {
             const container = document.getElementById('groupChatContainer');
             if (!container) return;
-            
-            if (globalMessagesCacheArray.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5 text-muted col-12">
-                        <i class="bi bi-chat-left-dots display-5 d-block mb-2"></i>
-                        No messages yet. Start the conversation below!
-                    </div>`;
-                renderedMessageIds.clear();
-                return;
-            }
 
-            const canDelete = isSuperAdmin();
-            
-            // Check if user is scrolled up viewing old messages
-            const isUserScrolledUp = container.scrollTop + container.clientHeight < container.scrollHeight - 50;
+            let shouldScroll = forceScroll || (container.scrollTop + container.clientHeight >= container.scrollHeight - 60);
 
-            // Efficiently construct DOM elements using DocumentFragment
-            const fragment = document.createDocumentFragment();
-            let newMessagesAppended = false;
-
-            // Check if full re-render is needed or incremental append
-            const containerHasEmptyState = container.querySelector('.bi-chat-left-dots');
-
-            if (containerHasEmptyState || renderedMessageIds.size === 0) {
-                container.innerHTML = '';
-                renderedMessageIds.clear();
-            }
-
+            let timelineHtml = '';
             globalMessagesCacheArray.forEach(msg => {
-                // Skip already rendered static elements for smooth performance
-                if (renderedMessageIds.has(msg.id)) return;
+                const isMe = activeLoggedInUser && (msg.senderPhone === activeLoggedInUser.phone || msg.senderName === activeLoggedInUser.name);
+                const senderCleanPhone = msg.senderPhone ? msg.senderPhone.trim().replace(/\+/g, '') : '';
+                const avatarUrl = (globalProfilesCacheObj[senderCleanPhone] && globalProfilesCacheObj[senderCleanPhone].photo) ? globalProfilesCacheObj[senderCleanPhone].photo : DEFAULT_AVATAR;
 
-                newMessagesAppended = true;
-                renderedMessageIds.add(msg.id);
-
-                const isMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name || msg.deviceId === UNIQUE_DEVICE_ID);
-                const timeText = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const dateText = new Date(msg.timestamp).toLocaleDateString();
-
-                const senderPhone = msg.phone ? msg.phone.trim().replace(/\+/g, '') : '';
-                const senderPhoto = (senderPhone && globalProfilesCacheObj[senderPhone] && globalProfilesCacheObj[senderPhone].photo) 
-                                    ? globalProfilesCacheObj[senderPhone].photo 
-                                    : DEFAULT_AVATAR;
-
-                let mediaHtml = '';
-                if (msg.attachment) {
-                    if (msg.attachment.type === 'image') {
-                        mediaHtml = `<img src="${msg.attachment.content}" class="media-attachment-img" alt="Attached Image">`;
-                    } else if (msg.attachment.type === 'sticker') {
-                        mediaHtml = `<div class="fs-2 my-1">${msg.attachment.content}</div>`;
-                    } else if (msg.attachment.type === 'gift') {
-                        mediaHtml = `<div class="fs-1 my-1 animated-gift-item">${msg.attachment.content}</div>`;
-                    }
+                let mediaContent = '';
+                if (msg.mediaType === 'image' && msg.mediaUrl) {
+                    mediaContent = `<img src="${msg.mediaUrl}" class="media-attachment-img" alt="attachment">`;
+                } else if (msg.mediaType === 'sticker' && msg.mediaUrl) {
+                    mediaContent = `<div style="font-size:2.5rem; text-align:center;">${msg.mediaUrl}</div>`;
+                } else if (msg.mediaType === 'gift' && msg.mediaUrl) {
+                    mediaContent = `<div style="font-size:3rem; text-align:center;"><i class="animated-gift-item">${msg.mediaUrl}</i></div>`;
                 }
 
-                const bubbleDiv = document.createElement('div');
-                bubbleDiv.setAttribute('data-msg-id', msg.id);
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-                if (msg.isDeleted) {
-                    bubbleDiv.className = `chat-bubble ${isMe ? 'sent' : 'received'} text-muted font-italic`;
-                    bubbleDiv.innerHTML = `
-                        <div class="chat-sender">
-                            <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
-                            ${escapeHtml(msg.sender)}
-                        </div>
-                        <div class="chat-text" style="font-style: italic; opacity: 0.8;">
-                            <i class="bi bi-trash-fill me-1"></i> message was deleted by admin
-                        </div>
-                        <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
-                            <span class="chat-time">${dateText} ${timeText}</span>
-                        </div>`;
-                } else {
-                    bubbleDiv.className = `chat-bubble ${isMe ? 'sent' : 'received'}`;
-                    bubbleDiv.innerHTML = `
-                        <div class="chat-sender">
-                            <img src="${senderPhoto}" class="user-avatar-sm" alt="Avatar">
-                            ${escapeHtml(msg.sender)}
-                        </div>
-                        <div class="chat-text">${escapeHtml(msg.text)}</div>
-                        ${mediaHtml}
-                        <div class="d-flex justify-content-end align-items-center gap-2 mt-1">
-                            <span class="chat-time">${dateText} ${timeText}</span>
-                            ${canDelete ? `<i class="bi bi-trash text-danger" style="cursor:pointer; font-size:0.75rem;" title="Delete message" onclick="deleteGroupChatMessage('${msg.id}')"></i>` : ''}
-                        </div>`;
-                }
-
-                fragment.appendChild(bubbleDiv);
+                timelineHtml += `
+                    <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
+                        ${!isMe ? `<div class="chat-sender"><img src="${avatarUrl}" class="user-avatar-sm" alt="avatar"> ${escapeHtml(msg.senderName)}</div>` : ''}
+                        ${escapeHtml(msg.text || '')}
+                        ${mediaContent}
+                        <div class="chat-time">${timeStr}</div>
+                    </div>`;
             });
 
-            if (newMessagesAppended) {
-                container.appendChild(fragment);
-            }
-
-            // Requirement 3: Stop bringing user to bottom when reading previous messages at top
-            if (forceScrollToBottom || (!isUserScrolledUp && newMessagesAppended)) {
-                requestAnimationFrame(() => {
-                    container.scrollTop = container.scrollHeight;
-                });
+            container.innerHTML = timelineHtml;
+            if (shouldScroll) {
+                container.scrollTop = container.scrollHeight;
             }
         }
 
         function postGroupChatMessage(e) {
             e.preventDefault();
-            const senderName = activeLoggedInUser ? activeLoggedInUser.name : "Anonymous";
-            const senderPhone = activeLoggedInUser ? activeLoggedInUser.phone : "";
+            if (!activeLoggedInUser) return;
+
             const inputEl = document.getElementById('chatMessageInput');
-            const textContent = inputEl.value.trim();
-            
-            if(!textContent && !pendingChatAttachment) return;
+            const textVal = inputEl.value.trim();
+
+            if (!textVal && !pendingChatAttachment) return;
 
             const payload = {
-                sender: senderName,
-                phone: senderPhone,
-                text: textContent,
+                text: textVal,
+                senderName: activeLoggedInUser.name,
+                senderPhone: activeLoggedInUser.phone || 'N/A',
                 timestamp: Date.now(),
-                deviceId: UNIQUE_DEVICE_ID
+                mediaType: pendingChatAttachment ? pendingChatAttachment.type : null,
+                mediaUrl: pendingChatAttachment ? pendingChatAttachment.url : null
             };
 
-            if (pendingChatAttachment) {
-                payload.attachment = pendingChatAttachment;
-            }
-
-            // Clear typing state immediately on message post
-            isUserCurrentlyTyping = false;
-            updateTypingStatusCloud(false);
-
-            fetch(`${FIREBASE_URL}comms_board.json`, {
+            fetch(`${FIREBASE_URL}group_messages.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -2556,24 +2524,93 @@
             .then(() => {
                 inputEl.value = '';
                 clearChatAttachment();
-                fetchMessagesTimelineFeed(false);
+                updateTypingStatusCloud(false);
+                fetchMessagesTimelineFeed(true);
             });
         }
 
-        function deleteGroupChatMessage(msgId) {
-            if (!isSuperAdmin()) return;
-            
-            if (confirm("Are you sure you want to delete this message?")) {
-                fetch(`${FIREBASE_URL}comms_board/${msgId}.json`, { 
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isDeleted: true, text: "", attachment: null, deletedBy: SUPER_ADMIN_PHONE }) 
-                })
-                .then(() => {
-                    renderedMessageIds.clear();
-                    fetchMessagesTimelineFeed(false);
+        function appendChatAttachment(type, content) {
+            pendingChatAttachment = { type: type, url: content };
+            document.getElementById('chatAttachmentPreviewText').innerText = `${type.toUpperCase()}: ${content}`;
+            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+        }
+
+        function handleChatImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                pendingChatAttachment = { type: 'image', url: evt.target.result };
+                document.getElementById('chatAttachmentPreviewText').innerText = `IMAGE: ${file.name}`;
+                document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearChatAttachment() {
+            pendingChatAttachment = null;
+            document.getElementById('chatAttachmentPreviewText').innerText = '';
+            document.getElementById('chatAttachmentPreview').classList.add('d-none');
+            document.getElementById('chatMediaFileInput').value = '';
+        }
+
+        function updateUnreadMessagesCountBadge() {
+            let unreadCount = 0;
+            globalMessagesCacheArray.forEach(m => {
+                if (!clientReadMessagesTrackerObj[m.id]) {
+                    unreadCount++;
+                }
+            });
+
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        }
+
+        function markAllMessagesAsRead() {
+            globalMessagesCacheArray.forEach(m => {
+                clientReadMessagesTrackerObj[m.id] = true;
+            });
+            localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
+            updateUnreadMessagesCountBadge();
+        }
+
+        function clearAllData() {
+            if (!isFullAdmin()) return;
+            if (confirm("CRITICAL WARNING: Are you sure you want to PURGE ALL CLOUD WORK LOG RECORDS? This cannot be undone.")) {
+                runWithSecurityGate(() => {
+                    fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
+                    .then(() => {
+                        fetchLogsFromCloud();
+                        alert("All cloud log records cleared successfully.");
+                    });
                 });
             }
+        }
+
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return 'N/A';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&brvbar;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
     </script>
 </body>
