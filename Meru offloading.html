@@ -599,8 +599,9 @@
                     <i class="bi bi-chat-dots-fill text-success fs-5"></i>
                     <span id="globalNavUnreadBadgeCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">0</span>
                 </a>
-                <a class="menu-pill-btn" href="#" onclick="fetchLogsFromCloud(); return false;" title="Force Sync">
-                    <i class="bi bi-arrow-clockwise text-info fs-5"></i>
+                <!-- Updated Force Sync button to Home Icon and Default Home behavior -->
+                <a class="menu-pill-btn" href="index.html" onclick="refreshToDefaultDashboard(); return false;" title="Home / Default Page">
+                    <i class="bi bi-house-door-fill text-info fs-5"></i>
                 </a>
                 <div class="database-pulse-badge" id="terminalBadge" title="Live Status">
                     <span class="pulse-dot online" id="terminalPulseDot"></span>
@@ -1113,7 +1114,7 @@
                 </div>
             </div>
         </div>
-    </footer>
+    </div>
 
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
@@ -1150,6 +1151,8 @@
         let globalMessagesCacheArray = [];
         let globalProfilesCacheObj = {};
         let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
+        let knownLogIds = new Set();
+        let isInitialLoad = true;
         
         let activeLoggedInUser = null; 
         let pendingActionCallback = null;
@@ -1188,6 +1191,9 @@
             setupSidebarLayoutInteractions();
             initStickerAndGiftPickers();
             
+            // Request system notifications on startup
+            requestNotificationPermission();
+
             // REQUIREMENT 1: High-speed parallel loading for immediate response on start
             Promise.all([
                 fetchRosterRegistryFromCloud(),
@@ -1223,6 +1229,24 @@
                 checkMemberAuthSession();
             }, 300);
         });
+
+        // Web Browser Native Push Notification Request & Dispatch Logic
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+
+        function triggerSystemNotification(title, body) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: 'logo.png'
+                    });
+                } catch(e) {}
+            }
+        }
 
         function toggleSidebarViaBird() {
             const sb = document.getElementById('mainSidebarLayout');
@@ -1768,10 +1792,20 @@
                 globalLogsArray = [];
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        globalLogsArray.push({ id: k, ...data[k] });
+                        const record = { id: k, ...data[k] };
+                        globalLogsArray.push(record);
+                        
+                        // Device Popup Notification trigger for new record entries
+                        if (!knownLogIds.has(k)) {
+                            knownLogIds.add(k);
+                            if (!isInitialLoad && record.loggedBy !== (activeLoggedInUser ? activeLoggedInUser.name : '')) {
+                                triggerSystemNotification("New Offload Entry Added", `${record.employeeName}: ${record.totalBoxes} boxes offloaded (${record.vehiclePlate})`);
+                            }
+                        }
                     });
                     globalLogsArray.sort((a,b) => new Date(b.dateWorked) - new Date(a.dateWorked));
                 }
+                isInitialLoad = false;
                 document.getElementById('loadingSpinner').style.display = 'none';
                 executeCalculatedSystemMetrics();
                 handleLiveSearchFilter();
@@ -2251,8 +2285,8 @@
                         <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
                         <td class="font-monospace">${escapeHtml(worker.phone || 'N/A')}</td>
                         <td class="text-center no-print">
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeWorkerFromRegistry('${worker.id}', '${escapeHtml(worker.name)}')">
-                                <i class="bi bi-trash"></i>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkerFromRegistryCloud('${worker.id}')">
+                                <i class="bi bi-trash"></i> Delete
                             </button>
                         </td>
                     </tr>`;
@@ -2260,95 +2294,53 @@
         }
 
         function addNewWorkerToRegistryCloud() {
-            if (!isFullAdmin()) return;
-            const nameField = document.getElementById('newRegistryWorkerName');
-            const phoneField = document.getElementById('newRegistryWorkerPhone');
-            const workerNameInput = nameField.value.trim();
-            const workerPhoneInput = phoneField.value.trim();
+            const nameInput = document.getElementById('newRegistryWorkerName').value.trim();
+            const phoneInput = document.getElementById('newRegistryWorkerPhone').value.trim();
 
-            if(!workerNameInput || !workerPhoneInput) {
-                alert("Please specify both name and phone number configuration entries.");
+            if (!nameInput || !phoneInput) {
+                alert("Please specify worker full name and contact phone number.");
                 return;
             }
-            const nameCollisionExists = masterDynamicWorkersArray.some(w => w.name.toLowerCase() === workerNameInput.toLowerCase());
-            if (nameCollisionExists) {
-                alert("Identity registration string match collision discovered. Personnel tracking name already configured inside cluster.");
+
+            const cleanPhone = phoneInput.replace(/\+/g, '');
+            const existingName = masterDynamicWorkersArray.find(w => w.name.toLowerCase() === nameInput.toLowerCase());
+            const existingPhone = masterDynamicWorkersArray.find(w => w.phone && w.phone.replace(/\+/g, '') === cleanPhone);
+
+            if (existingName) {
+                alert("Worker name already present on active team registry!");
                 return;
             }
+            if (existingPhone) {
+                alert("Worker phone number already registered to another active profile!");
+                return;
+            }
+
             fetch(`${FIREBASE_URL}roster_registry.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: workerNameInput, phone: workerPhoneInput })
+                body: JSON.stringify({ name: nameInput, phone: cleanPhone })
             })
             .then(() => {
-                nameField.value = '';
-                phoneField.value = '';
-                fetchRosterRegistryFromCloud();
-                setTimeout(() => renderRosterRegistryManagementTable(), 200);
+                document.getElementById('newRegistryWorkerName').value = '';
+                document.getElementById('newRegistryWorkerPhone').value = '';
+                fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
+                triggerSystemNotification("Team Member Added", `${nameInput} was added to the team roster.`);
             });
         }
 
-        function removeWorkerFromRegistry(id, name) {
-            if (!isFullAdmin()) return;
-            if (confirm(`Warning: Are you sure you want to delete worker "${name}" from the saved records registry identity profile logs?`)) {
-                runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}roster_registry/${id}.json`, { method: 'DELETE' })
-                    .then(() => {
-                        fetchRosterRegistryFromCloud();
-                        setTimeout(() => renderRosterRegistryManagementTable(), 200);
-                    });
-                });
-            }
-        }
-
-        function renderPreviewDeletionTable() {
-            document.getElementById('mainSidebarLayout').classList.remove('active');
-            const tbody = document.getElementById('previewDeletionTableBody');
-            tbody.innerHTML = '';
-            
-            if (globalLogsArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No individual worker records available to delete inside saved log history.</td></tr>`;
-                return;
-            }
-
-            globalLogsArray.forEach(log => {
-                tbody.innerHTML += `
-                    <tr class="text-dark">
-                        <td class="ps-3">
-                            <span class="fw-bold">${escapeHtml(log.employeeName)}</span>
-                            <small class="text-muted font-monospace d-block" style="font-size:10px;">${escapeHtml(log.vehiclePlate)}</small>
-                        </td>
-                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
-                        <td>
-                            <span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span>
-                        </td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size:11px;" onclick="purgeIndividualWorkerLogRecord('${log.id}', '${escapeHtml(log.employeeName)}')">
-                                <i class="bi bi-trash-fill"></i> Delete
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-        }
-
-        function purgeIndividualWorkerLogRecord(logId, name) {
-            if (!isFullAdmin()) return;
-            if (confirm(`Dangerous Action: Are you absolutely sure you want to permanently delete this structural log work entry for "${name}" from saved identity logs?`)) {
-                runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}logs/${logId}.json`, {
-                        method: 'DELETE'
-                    })
-                    .then(() => {
-                        fetchLogsFromCloud();
-                        setTimeout(() => renderPreviewDeletionTable(), 200);
-                        alert("Individual structural work entry record successfully purged from indexes.");
-                    });
+        function deleteWorkerFromRegistryCloud(id) {
+            if (confirm("Remove worker profile permanently from configuration registry?")) {
+                fetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
+                    method: 'DELETE'
+                })
+                .then(() => {
+                    fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
                 });
             }
         }
 
         function fetchAttendanceStateCloud() {
-            return fetch(`${FIREBASE_URL}attendance.json`)
+            return fetch(`${FIREBASE_URL}daily_attendance.json`)
             .then(res => res.json())
             .then(data => {
                 globalAttendanceObj = data || {};
@@ -2359,62 +2351,61 @@
         function renderAttendanceUiList() {
             const tbody = document.getElementById('attendanceTableBodyList');
             tbody.innerHTML = '';
-            if(masterDynamicWorkersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No roster members deployed inside index frames. Configure team roster first.</td></tr>`;
+            if (masterDynamicWorkersArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No staff members enrolled in team roster registry.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sortedList.forEach(w => {
-                const checked = globalAttendanceObj[w.name] === true;
+            sortedList.forEach(worker => {
+                const isCheckedIn = globalAttendanceObj[worker.name] === true;
                 tbody.innerHTML += `
-                    <tr class="text-dark">
-                        <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
+                    <tr>
+                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
                         <td class="text-center">
                             <div class="form-check form-switch d-inline-block">
-                                <input class="form-check-input" type="checkbox" role="switch" ${checked?'checked':''} onclick="toggleAttendanceStateNode('${escapeHtml(w.name)}', ${!checked})">
+                                <input class="form-check-input" type="checkbox" style="cursor:pointer;" ${isCheckedIn ? 'checked' : ''} onchange="toggleWorkerAttendanceStatus('${escapeHtml(worker.name)}', this.checked)">
                             </div>
                         </td>
                     </tr>`;
             });
         }
 
-        function toggleAttendanceStateNode(name, targetState) {
-            if (!isFullAdmin()) return;
-            fetch(`${FIREBASE_URL}attendance/${name}.json`, {
+        function toggleWorkerAttendanceStatus(workerName, checkedState) {
+            globalAttendanceObj[workerName] = checkedState;
+            fetch(`${FIREBASE_URL}daily_attendance/${workerName}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(targetState)
+                body: JSON.stringify(checkedState)
             })
             .then(() => {
-                fetchAttendanceStateCloud();
+                rebuildFormEmployeeSelectionMenus();
             });
         }
 
         function launchSecureWorkCancellationPanel() {
-            document.getElementById('mainSidebarLayout').classList.remove('active');
-            renderWorkCancellationTable();
-            const cancellationModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-            cancellationModal.show();
+            runWithSecurityGate(() => {
+                renderWorkCancellationTable();
+                const cancelModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+                cancelModal.show();
+            });
         }
 
         function renderWorkCancellationTable() {
             const tbody = document.getElementById('workCancellationTableBody');
             tbody.innerHTML = '';
-            
-            const activeLogs = globalLogsArray.filter(l => l.status !== 'CANCELLED');
+            const activeLogs = globalLogsArray.filter(l => l.status !== "CANCELLED");
             if (activeLogs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active non-cancelled work entries found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active records eligible for cancellation status.</td></tr>`;
                 return;
             }
-
             activeLogs.forEach(log => {
                 tbody.innerHTML += `
-                    <tr class="text-dark">
+                    <tr>
                         <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
-                        <td class="font-monospace small">${formatDateDisplay(log.dateWorked)}</td>
-                        <td><span class="badge bg-secondary font-monospace">${log.totalBoxes} Boxes</span></td>
+                        <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
+                        <td>${log.totalBoxes} Boxes</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeCancelWorkLogAction('${log.id}')">
+                            <button class="btn btn-sm btn-danger fw-bold" onclick="cancelWorkLogCloudRecord('${log.id}')">
                                 Void Log
                             </button>
                         </td>
@@ -2422,154 +2413,112 @@
             });
         }
 
-        function executeCancelWorkLogAction(logId) {
-            if (!isFullAdmin()) return;
-            const reason = prompt("Specify Reason for Work Cancellation:");
-            if (reason === null) return;
-            
-            runWithSecurityGate(() => {
-                fetch(`${FIREBASE_URL}logs/${logId}.json`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        status: 'CANCELLED',
-                        cancellationReason: reason || 'Unspecified',
-                        cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : 'Admin'
-                    })
-                })
-                .then(() => {
-                    fetchLogsFromCloud();
-                    renderWorkCancellationTable();
-                });
+        function cancelWorkLogCloudRecord(id) {
+            const reasonPrompt = prompt("Enter explicit audit reason for cancelling this record:");
+            if (reasonPrompt === null) return;
+            fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: "CANCELLED", cancellationReason: reasonPrompt || "Unspecified", cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown" })
+            })
+            .then(() => {
+                fetchLogsFromCloud().then(() => renderWorkCancellationTable());
+                triggerSystemNotification("Work Log Cancelled", `Record voided for ${reasonPrompt || 'Unspecified reason'}`);
             });
         }
 
-        function fetchMessagesTimelineFeed(forceScroll = false) {
-            return fetch(`${FIREBASE_URL}group_messages.json`)
+        function renderPreviewDeletionTable() {
+            const tbody = document.getElementById('previewDeletionTableBody');
+            tbody.innerHTML = '';
+            if (globalLogsArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No records found inside telemetry storage.</td></tr>`;
+                return;
+            }
+            globalLogsArray.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
+                        <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
+                        <td>${log.totalBoxes} Boxes</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteIndividualWorkLogCloudRecord('${log.id}')">
+                                Purge
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function deleteIndividualWorkLogCloudRecord(id) {
+            runWithSecurityGate(() => {
+                if (confirm("Permanently purge record row entry index node from cloud storage database?")) {
+                    fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                        method: 'DELETE'
+                    })
+                    .then(() => {
+                        fetchLogsFromCloud().then(() => renderPreviewDeletionTable());
+                    });
+                }
+            });
+        }
+
+        function clearAllData() {
+            runWithSecurityGate(() => {
+                if (confirm("CRITICAL ALERT: Clear entire cloud database transaction logs repository permanently?")) {
+                    fetch(`${FIREBASE_URL}logs.json`, {
+                        method: 'DELETE'
+                    })
+                    .then(() => {
+                        globalLogsArray = [];
+                        executeCalculatedSystemMetrics();
+                        handleLiveSearchFilter();
+                        alert("Cloud database database index records reset cleanly.");
+                    });
+                }
+            });
+        }
+
+        function fetchMessagesTimelineFeed(isInitial = false) {
+            return fetch(`${FIREBASE_URL}messages.json`)
             .then(res => res.json())
             .then(data => {
                 globalMessagesCacheArray = [];
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        globalMessagesCacheArray.push({ id: k, ...data[k] });
+                        const msg = { id: k, ...data[k] };
+                        globalMessagesCacheArray.push(msg);
+                        
+                        // Push automatic Notification if new unread message arrives
+                        if (!renderedMessageIds.has(k)) {
+                            renderedMessageIds.add(k);
+                            if (!isInitial && msg.sender !== (activeLoggedInUser ? activeLoggedInUser.name : '')) {
+                                triggerSystemNotification(`New Message from ${msg.sender}`, msg.text || (msg.mediaUrl ? '[Image Attachment]' : 'Sent a sticker/gift'));
+                            }
+                        }
                     });
-                    globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
+                    globalMessagesCacheArray.sort((a,b) => a.timestamp - b.timestamp);
                 }
-                updateUnreadMessagesCountBadge();
-                renderGroupChatTimeline(forceScroll);
+                updateUnreadMessagesBadgeCount();
+                const msgPanel = document.getElementById('view-messages-panel');
+                if (msgPanel && !msgPanel.classList.contains('d-none')) {
+                    renderGroupChatTimeline(isInitial);
+                }
             }).catch(() => {});
         }
 
-        function renderGroupChatTimeline(forceScroll = false) {
-            const container = document.getElementById('groupChatContainer');
-            if (!container) return;
-
-            let shouldScroll = forceScroll || (container.scrollTop + container.clientHeight >= container.scrollHeight - 60);
-
-            let timelineHtml = '';
-            globalMessagesCacheArray.forEach(msg => {
-                const isMe = activeLoggedInUser && (msg.senderPhone === activeLoggedInUser.phone || msg.senderName === activeLoggedInUser.name);
-                const senderCleanPhone = msg.senderPhone ? msg.senderPhone.trim().replace(/\+/g, '') : '';
-                const avatarUrl = (globalProfilesCacheObj[senderCleanPhone] && globalProfilesCacheObj[senderCleanPhone].photo) ? globalProfilesCacheObj[senderCleanPhone].photo : DEFAULT_AVATAR;
-
-                let mediaContent = '';
-                if (msg.mediaType === 'image' && msg.mediaUrl) {
-                    mediaContent = `<img src="${msg.mediaUrl}" class="media-attachment-img" alt="attachment">`;
-                } else if (msg.mediaType === 'sticker' && msg.mediaUrl) {
-                    mediaContent = `<div style="font-size:2.5rem; text-align:center;">${msg.mediaUrl}</div>`;
-                } else if (msg.mediaType === 'gift' && msg.mediaUrl) {
-                    mediaContent = `<div style="font-size:3rem; text-align:center;"><i class="animated-gift-item">${msg.mediaUrl}</i></div>`;
-                }
-
-                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-
-                timelineHtml += `
-                    <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
-                        ${!isMe ? `<div class="chat-sender"><img src="${avatarUrl}" class="user-avatar-sm" alt="avatar"> ${escapeHtml(msg.senderName)}</div>` : ''}
-                        ${escapeHtml(msg.text || '')}
-                        ${mediaContent}
-                        <div class="chat-time">${timeStr}</div>
-                    </div>`;
-            });
-
-            container.innerHTML = timelineHtml;
-            if (shouldScroll) {
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-
-        function postGroupChatMessage(e) {
-            e.preventDefault();
-            if (!activeLoggedInUser) return;
-
-            const inputEl = document.getElementById('chatMessageInput');
-            const textVal = inputEl.value.trim();
-
-            if (!textVal && !pendingChatAttachment) return;
-
-            const payload = {
-                text: textVal,
-                senderName: activeLoggedInUser.name,
-                senderPhone: activeLoggedInUser.phone || 'N/A',
-                timestamp: Date.now(),
-                mediaType: pendingChatAttachment ? pendingChatAttachment.type : null,
-                mediaUrl: pendingChatAttachment ? pendingChatAttachment.url : null
-            };
-
-            fetch(`${FIREBASE_URL}group_messages.json`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                inputEl.value = '';
-                clearChatAttachment();
-                updateTypingStatusCloud(false);
-                fetchMessagesTimelineFeed(true);
-            });
-        }
-
-        function appendChatAttachment(type, content) {
-            pendingChatAttachment = { type: type, url: content };
-            document.getElementById('chatAttachmentPreviewText').innerText = `${type.toUpperCase()}: ${content}`;
-            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
-        }
-
-        function handleChatImageSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                pendingChatAttachment = { type: 'image', url: evt.target.result };
-                document.getElementById('chatAttachmentPreviewText').innerText = `IMAGE: ${file.name}`;
-                document.getElementById('chatAttachmentPreview').classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function clearChatAttachment() {
-            pendingChatAttachment = null;
-            document.getElementById('chatAttachmentPreviewText').innerText = '';
-            document.getElementById('chatAttachmentPreview').classList.add('d-none');
-            document.getElementById('chatMediaFileInput').value = '';
-        }
-
-        function updateUnreadMessagesCountBadge() {
+        function updateUnreadMessagesBadgeCount() {
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            if(!badge) return;
             let unreadCount = 0;
             globalMessagesCacheArray.forEach(m => {
-                if (!clientReadMessagesTrackerObj[m.id]) {
-                    unreadCount++;
-                }
+                if(!clientReadMessagesTrackerObj[m.id]) unreadCount++;
             });
 
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            if (badge) {
-                if (unreadCount > 0) {
-                    badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
-                    badge.classList.remove('d-none');
-                } else {
-                    badge.classList.add('d-none');
-                }
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
             }
         }
 
@@ -2578,39 +2527,147 @@
                 clientReadMessagesTrackerObj[m.id] = true;
             });
             localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            updateUnreadMessagesCountBadge();
+            updateUnreadMessagesBadgeCount();
         }
 
-        function clearAllData() {
-            if (!isFullAdmin()) return;
-            if (confirm("CRITICAL WARNING: Are you sure you want to PURGE ALL CLOUD WORK LOG RECORDS? This cannot be undone.")) {
-                runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}logs.json`, { method: 'DELETE' })
-                    .then(() => {
-                        fetchLogsFromCloud();
-                        alert("All cloud log records cleared successfully.");
-                    });
-                });
+        function renderGroupChatTimeline(scrollToBottom = false) {
+            const container = document.getElementById('groupChatContainer');
+            if (!container) return;
+
+            const shouldScroll = scrollToBottom || (container.scrollHeight - container.scrollTop <= container.clientHeight + 100);
+            container.innerHTML = '';
+
+            if (globalMessagesCacheArray.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-chat-square-dots display-4 d-block mb-2"></i>No chat messages posted yet. Be the first to start the conversation!</div>';
+                return;
+            }
+
+            globalMessagesCacheArray.forEach(msg => {
+                const isSentByMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name || (msg.phone && activeLoggedInUser.phone && msg.phone.trim().replace(/\+/g, '') === activeLoggedInUser.phone.trim().replace(/\+/g, '')));
+                
+                let avatarSrc = DEFAULT_AVATAR;
+                if (msg.phone) {
+                    const cleanPhone = msg.phone.trim().replace(/\+/g, '');
+                    if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
+                        avatarSrc = globalProfilesCacheObj[cleanPhone].photo;
+                    }
+                }
+
+                let contentHtml = '';
+                if (msg.text) {
+                    contentHtml += `<div>${escapeHtml(msg.text)}</div>`;
+                }
+                if (msg.mediaUrl) {
+                    contentHtml += `<img src="${msg.mediaUrl}" class="media-attachment-img shadow-sm" alt="Attachment" onclick="window.open('${msg.mediaUrl}', '_blank')">`;
+                }
+                if (msg.attachmentType === 'sticker') {
+                    contentHtml += `<div style="font-size:2rem; line-height:1;">${msg.attachmentVal}</div>`;
+                } else if (msg.attachmentType === 'gift') {
+                    contentHtml += `<div style="font-size:2.2rem; line-height:1;"><i class="animated-gift-item">${msg.attachmentVal}</i></div>`;
+                }
+
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                container.innerHTML += `
+                    <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} shadow-sm">
+                        <div class="chat-sender">
+                            <img src="${avatarSrc}" class="user-avatar-sm" alt="Avatar">
+                            <span>${escapeHtml(msg.sender)}</span>
+                        </div>
+                        ${contentHtml}
+                        <div class="chat-time">${timeStr}</div>
+                    </div>`;
+            });
+
+            if (shouldScroll) {
+                container.scrollTop = container.scrollHeight;
             }
         }
 
+        function appendChatAttachment(type, value) {
+            pendingChatAttachment = { type, value };
+            document.getElementById('chatAttachmentPreviewText').innerText = `${type.toUpperCase()}: ${value}`;
+            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+        }
+
+        function handleChatImageSelect(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                pendingChatAttachment = { type: 'image', value: evt.target.result, fileName: file.name };
+                document.getElementById('chatAttachmentPreviewText').innerText = `Image (${file.name})`;
+                document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearChatAttachment() {
+            pendingChatAttachment = null;
+            document.getElementById('chatAttachmentPreview').classList.add('d-none');
+            document.getElementById('chatMediaFileInput').value = '';
+        }
+
+        function postGroupChatMessage(e) {
+            e.preventDefault();
+            if(!activeLoggedInUser) {
+                alert("Please authenticate to post messages.");
+                return;
+            }
+
+            const inputEl = document.getElementById('chatMessageInput');
+            const textVal = inputEl.value.trim();
+
+            if (!textVal && !pendingChatAttachment) return;
+
+            const payload = {
+                sender: activeLoggedInUser.name,
+                phone: activeLoggedInUser.phone || '',
+                text: textVal,
+                timestamp: Date.now(),
+                deviceRef: UNIQUE_DEVICE_ID
+            };
+
+            if (pendingChatAttachment) {
+                if (pendingChatAttachment.type === 'image') {
+                    payload.mediaUrl = pendingChatAttachment.value;
+                } else {
+                    payload.attachmentType = pendingChatAttachment.type;
+                    payload.attachmentVal = pendingChatAttachment.value;
+                }
+            }
+
+            inputEl.value = '';
+            clearChatAttachment();
+            updateTypingStatusCloud(false);
+
+            fetch(`${FIREBASE_URL}messages.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                fetchMessagesTimelineFeed(true);
+            });
+        }
+
         function formatDateDisplay(dateStr) {
-            if (!dateStr) return 'N/A';
+            if(!dateStr) return 'N/A';
             const parts = dateStr.split('-');
-            if (parts.length === 3) {
+            if(parts.length === 3) {
                 return `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
             return dateStr;
         }
 
         function escapeHtml(str) {
-            if (!str) return '';
+            if(!str) return '';
             return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&brvbar;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
