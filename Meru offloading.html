@@ -54,6 +54,20 @@
             align-items: center;
             justify-content: center;
         }
+        #accountDisabledOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(15px);
+            color: #ffffff;
+            z-index: 99997;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
         .spinner-custom {
             width: 3.5rem;
             height: 3.5rem;
@@ -481,6 +495,22 @@
                 </div>
                 <button type="submit" class="btn btn-warning w-100 fw-bold py-2">LOGIN TO SYSTEM</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Account Disabled Overlay Screen -->
+    <div id="accountDisabledOverlay" class="d-none">
+        <div class="card bg-dark text-white p-4 border border-danger shadow-lg" style="max-width: 420px; width: 90%;">
+            <div class="text-center">
+                <i class="bi bi-exclamation-octagon-fill text-danger display-1 mb-3"></i>
+                <h3 class="fw-bold text-danger mb-2">Access Suspended</h3>
+                <p class="text-light mb-3">Your registered account/device status is currently set to <strong>OFF / Inactive</strong> in Daily Attendance Management.</p>
+                <div class="p-3 bg-secondary bg-opacity-20 border border-secondary rounded mb-3 text-warning small">
+                    <i class="bi bi-lock-fill me-1"></i> System access disabled by Administrator. You remain logged in, but operations are restricted until enabled by an Admin.
+                </div>
+                <div class="spinner-border text-warning spinner-border-sm me-2" role="status"></div>
+                <span class="text-muted small">Waiting for administrator authorization...</span>
+            </div>
         </div>
     </div>
 
@@ -1209,6 +1239,7 @@
             setInterval(fetchLiveOnlineDevices, 10000);
             setInterval(fetchLiveTypingStatus, 4000);
 
+            setInterval(fetchAttendanceStateCloud, 5000);
             setInterval(fetchLogsFromCloud, 20000);
             setInterval(fetchMessagesTimelineFeed, 6000);
             setInterval(fetchUserProfileDataCloud, 15000);
@@ -1523,6 +1554,7 @@
             }
 
             applyPermissionsVisibility();
+            evaluateActiveAccountLockState();
         }
 
         function isSuperAdmin() {
@@ -1535,6 +1567,31 @@
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
             return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
+        }
+
+        function evaluateActiveAccountLockState() {
+            if (!activeLoggedInUser) return;
+            
+            if (isFullAdmin()) {
+                document.getElementById('accountDisabledOverlay').classList.add('d-none');
+                return;
+            }
+
+            const userName = activeLoggedInUser.name;
+            const isAttendanceActive = globalAttendanceObj[userName] !== false;
+
+            const disabledOverlay = document.getElementById('accountDisabledOverlay');
+            if (!isAttendanceActive) {
+                disabledOverlay.classList.remove('d-none');
+                const openModals = document.querySelectorAll('.modal.show');
+                openModals.forEach(m => {
+                    const inst = bootstrap.Modal.getInstance(m);
+                    if (inst) inst.hide();
+                });
+                document.getElementById('mainSidebarLayout').classList.remove('active');
+            } else {
+                disabledOverlay.classList.add('d-none');
+            }
         }
 
         function isDesktopMode() {
@@ -1648,6 +1705,10 @@
         }
 
         function triggerSwitchUserPrompt() {
+            if (globalAttendanceObj[activeLoggedInUser?.name] === false) {
+                alert("Account Disabled. System access and user switching are disabled by Administrator.");
+                return;
+            }
             document.getElementById('permitCodeInput').value = '';
             document.getElementById('permitModalErrorMsg').classList.add('d-none');
             permitAccessBootstrapModal.show();
@@ -2279,57 +2340,39 @@
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sortedList.forEach(worker => {
+            sortedList.forEach(w => {
                 tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
-                        <td class="font-monospace">${escapeHtml(worker.phone || 'N/A')}</td>
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
+                        <td class="font-monospace small">${escapeHtml(w.phone || 'N/A')}</td>
                         <td class="text-center no-print">
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkerFromRegistryCloud('${worker.id}')">
-                                <i class="bi bi-trash"></i> Delete
-                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkerFromRegistryCloud('${w.id}', '${escapeHtml(w.name)}')"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>`;
             });
         }
 
         function addNewWorkerToRegistryCloud() {
-            const nameInput = document.getElementById('newRegistryWorkerName').value.trim();
-            const phoneInput = document.getElementById('newRegistryWorkerPhone').value.trim();
-
-            if (!nameInput || !phoneInput) {
-                alert("Please specify worker full name and contact phone number.");
+            const name = document.getElementById('newRegistryWorkerName').value.trim();
+            const phone = document.getElementById('newRegistryWorkerPhone').value.trim();
+            if (!name) {
+                alert("Please enter a valid full name.");
                 return;
             }
-
-            const cleanPhone = phoneInput.replace(/\+/g, '');
-            const existingName = masterDynamicWorkersArray.find(w => w.name.toLowerCase() === nameInput.toLowerCase());
-            const existingPhone = masterDynamicWorkersArray.find(w => w.phone && w.phone.replace(/\+/g, '') === cleanPhone);
-
-            if (existingName) {
-                alert("Worker name already present on active team registry!");
-                return;
-            }
-            if (existingPhone) {
-                alert("Worker phone number already registered to another active profile!");
-                return;
-            }
-
             fetch(`${FIREBASE_URL}roster_registry.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: nameInput, phone: cleanPhone })
+                body: JSON.stringify({ name: name, phone: phone })
             })
             .then(() => {
                 document.getElementById('newRegistryWorkerName').value = '';
                 document.getElementById('newRegistryWorkerPhone').value = '';
                 fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
-                triggerSystemNotification("Team Member Added", `${nameInput} was added to the team roster.`);
             });
         }
 
-        function deleteWorkerFromRegistryCloud(id) {
-            if (confirm("Remove worker profile permanently from configuration registry?")) {
+        function deleteWorkerFromRegistryCloud(id, name) {
+            if (confirm(`Remove ${name} from system team roster registry?`)) {
                 fetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
                     method: 'DELETE'
                 })
@@ -2345,6 +2388,7 @@
             .then(data => {
                 globalAttendanceObj = data || {};
                 rebuildFormEmployeeSelectionMenus();
+                evaluateActiveAccountLockState();
             }).catch(() => {});
         }
 
@@ -2352,174 +2396,158 @@
             const tbody = document.getElementById('attendanceTableBodyList');
             tbody.innerHTML = '';
             if (masterDynamicWorkersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No staff members enrolled in team roster registry.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No staff loaded in roster registry.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
-            sortedList.forEach(worker => {
-                const isCheckedIn = globalAttendanceObj[worker.name] === true;
+            sortedList.forEach(w => {
+                const checked = globalAttendanceObj[w.name] === true ? 'checked' : '';
                 tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3 fw-bold">${escapeHtml(worker.name)}</td>
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
                         <td class="text-center">
                             <div class="form-check form-switch d-inline-block">
-                                <input class="form-check-input" type="checkbox" style="cursor:pointer;" ${isCheckedIn ? 'checked' : ''} onchange="toggleWorkerAttendanceStatus('${escapeHtml(worker.name)}', this.checked)">
+                                <input class="form-check-input" type="checkbox" role="switch" ${checked} onchange="toggleMemberAttendanceState('${escapeHtml(w.name)}', this.checked)">
                             </div>
                         </td>
                     </tr>`;
             });
         }
 
-        function toggleWorkerAttendanceStatus(workerName, checkedState) {
-            globalAttendanceObj[workerName] = checkedState;
-            fetch(`${FIREBASE_URL}daily_attendance/${workerName}.json`, {
+        function toggleMemberAttendanceState(memberName, isChecked) {
+            fetch(`${FIREBASE_URL}daily_attendance/${memberName}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(checkedState)
+                body: JSON.stringify(isChecked)
             })
             .then(() => {
+                globalAttendanceObj[memberName] = isChecked;
                 rebuildFormEmployeeSelectionMenus();
+                evaluateActiveAccountLockState();
             });
         }
 
         function launchSecureWorkCancellationPanel() {
-            runWithSecurityGate(() => {
-                renderWorkCancellationTable();
-                const cancelModal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
-                cancelModal.show();
-            });
+            renderWorkCancellationTable();
+            const modal = new bootstrap.Modal(document.getElementById('workCancellationModal'));
+            modal.show();
         }
 
         function renderWorkCancellationTable() {
             const tbody = document.getElementById('workCancellationTableBody');
             tbody.innerHTML = '';
-            const activeLogs = globalLogsArray.filter(l => l.status !== "CANCELLED");
-            if (activeLogs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No active records eligible for cancellation status.</td></tr>`;
+            if (globalLogsArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No entries to void.</td></tr>`;
                 return;
             }
-            activeLogs.forEach(log => {
+            globalLogsArray.forEach(l => {
+                const isCancelled = l.status === 'CANCELLED';
                 tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
-                        <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
-                        <td>${log.totalBoxes} Boxes</td>
+                    <tr class="text-dark ${isCancelled ? 'table-secondary opacity-50' : ''}">
+                        <td class="ps-3 fw-bold">${escapeHtml(l.employeeName)}</td>
+                        <td class="font-monospace small">${formatDateDisplay(l.dateWorked)}</td>
+                        <td>${l.totalBoxes} Boxes</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-danger fw-bold" onclick="cancelWorkLogCloudRecord('${log.id}')">
-                                Void Log
-                            </button>
+                            ${isCancelled ? `<span class="badge bg-danger">Cancelled</span>` : `
+                            <button class="btn btn-sm btn-outline-danger fw-bold" onclick="executeWorkLogCancellationPayload('${l.id}')">Void</button>`}
                         </td>
                     </tr>`;
             });
         }
 
-        function cancelWorkLogCloudRecord(id) {
-            const reasonPrompt = prompt("Enter explicit audit reason for cancelling this record:");
-            if (reasonPrompt === null) return;
-            fetch(`${FIREBASE_URL}logs/${id}.json`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: "CANCELLED", cancellationReason: reasonPrompt || "Unspecified", cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown" })
-            })
-            .then(() => {
-                fetchLogsFromCloud().then(() => renderWorkCancellationTable());
-                triggerSystemNotification("Work Log Cancelled", `Record voided for ${reasonPrompt || 'Unspecified reason'}`);
-            });
+        function executeWorkLogCancellationPayload(id) {
+            const reason = prompt("Enter reason for record voiding/cancellation:");
+            if (reason) {
+                fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'CANCELLED', cancellationReason: reason, cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : 'Admin' })
+                })
+                .then(() => {
+                    fetchLogsFromCloud().then(() => renderWorkCancellationTable());
+                });
+            }
         }
 
         function renderPreviewDeletionTable() {
             const tbody = document.getElementById('previewDeletionTableBody');
             tbody.innerHTML = '';
             if (globalLogsArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No records found inside telemetry storage.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No records available for purging.</td></tr>`;
                 return;
             }
-            globalLogsArray.forEach(log => {
+            globalLogsArray.forEach(l => {
                 tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3 fw-bold">${escapeHtml(log.employeeName)}</td>
-                        <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
-                        <td>${log.totalBoxes} Boxes</td>
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(l.employeeName)}</td>
+                        <td class="font-monospace small">${formatDateDisplay(l.dateWorked)}</td>
+                        <td>${l.totalBoxes} Boxes</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteIndividualWorkLogCloudRecord('${log.id}')">
-                                Purge
-                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="purgeSingleRecordFromCloud('${l.id}')"><i class="bi bi-trash-fill"></i></button>
                         </td>
                     </tr>`;
             });
         }
 
-        function deleteIndividualWorkLogCloudRecord(id) {
-            runWithSecurityGate(() => {
-                if (confirm("Permanently purge record row entry index node from cloud storage database?")) {
+        function purgeSingleRecordFromCloud(id) {
+            if (confirm("Permanently purge this work log record from system cloud databases?")) {
+                runWithSecurityGate(() => {
                     fetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'DELETE'
                     })
                     .then(() => {
                         fetchLogsFromCloud().then(() => renderPreviewDeletionTable());
                     });
-                }
-            });
+                });
+            }
         }
 
         function clearAllData() {
-            runWithSecurityGate(() => {
-                if (confirm("CRITICAL ALERT: Clear entire cloud database transaction logs repository permanently?")) {
+            if (confirm("DANGER: Are you sure you want to clear ALL saved offload records from cloud databases?")) {
+                runWithSecurityGate(() => {
                     fetch(`${FIREBASE_URL}logs.json`, {
                         method: 'DELETE'
                     })
                     .then(() => {
-                        globalLogsArray = [];
-                        executeCalculatedSystemMetrics();
-                        handleLiveSearchFilter();
-                        alert("Cloud database database index records reset cleanly.");
+                        fetchLogsFromCloud();
+                        alert("Cloud registry records cleared successfully.");
                     });
-                }
-            });
+                });
+            }
         }
 
-        function fetchMessagesTimelineFeed(isInitial = false) {
-            return fetch(`${FIREBASE_URL}messages.json`)
+        function fetchMessagesTimelineFeed(forceScroll = false) {
+            return fetch(`${FIREBASE_URL}group_messages.json`)
             .then(res => res.json())
             .then(data => {
                 globalMessagesCacheArray = [];
+                let unreadCounter = 0;
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        const msg = { id: k, ...data[k] };
-                        globalMessagesCacheArray.push(msg);
-                        
-                        // Push automatic Notification if new unread message arrives
-                        if (!renderedMessageIds.has(k)) {
-                            renderedMessageIds.add(k);
-                            if (!isInitial && msg.sender !== (activeLoggedInUser ? activeLoggedInUser.name : '')) {
-                                triggerSystemNotification(`New Message from ${msg.sender}`, msg.text || (msg.mediaUrl ? '[Image Attachment]' : 'Sent a sticker/gift'));
-                            }
+                        const msgObj = { id: k, ...data[k] };
+                        globalMessagesCacheArray.push(msgObj);
+                        if (!clientReadMessagesTrackerObj[k]) {
+                            unreadCounter++;
                         }
                     });
-                    globalMessagesCacheArray.sort((a,b) => a.timestamp - b.timestamp);
+                    globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
                 }
-                updateUnreadMessagesBadgeCount();
+
+                const badge = document.getElementById('globalNavUnreadBadgeCount');
+                if (badge) {
+                    if (unreadCounter > 0) {
+                        badge.innerText = unreadCounter > 99 ? '99+' : unreadCounter;
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                }
+
                 const msgPanel = document.getElementById('view-messages-panel');
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
-                    renderGroupChatTimeline(isInitial);
+                    renderGroupChatTimeline(forceScroll);
                 }
             }).catch(() => {});
-        }
-
-        function updateUnreadMessagesBadgeCount() {
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            if(!badge) return;
-            let unreadCount = 0;
-            globalMessagesCacheArray.forEach(m => {
-                if(!clientReadMessagesTrackerObj[m.id]) unreadCount++;
-            });
-
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
-                badge.classList.remove('d-none');
-            } else {
-                badge.classList.add('d-none');
-            }
         }
 
         function markAllMessagesAsRead() {
@@ -2527,141 +2555,138 @@
                 clientReadMessagesTrackerObj[m.id] = true;
             });
             localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            updateUnreadMessagesBadgeCount();
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            if(badge) badge.classList.add('d-none');
         }
 
-        function renderGroupChatTimeline(scrollToBottom = false) {
-            const container = document.getElementById('groupChatContainer');
-            if (!container) return;
+        function renderGroupChatTimeline(forceScrollToBottom = false) {
+            const chatBox = document.getElementById('groupChatContainer');
+            if (!chatBox) return;
 
-            const shouldScroll = scrollToBottom || (container.scrollHeight - container.scrollTop <= container.clientHeight + 100);
-            container.innerHTML = '';
+            let shouldScroll = forceScrollToBottom;
+            if (!shouldScroll) {
+                const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
+                if (isNearBottom) shouldScroll = true;
+            }
 
+            chatBox.innerHTML = '';
             if (globalMessagesCacheArray.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted my-auto"><i class="bi bi-chat-square-dots display-4 d-block mb-2"></i>No chat messages posted yet. Be the first to start the conversation!</div>';
+                chatBox.innerHTML = `<div class="text-center text-muted my-auto"><i class="bi bi-chat-dots display-4 d-block mb-2"></i>No messages on board yet. Start the conversation!</div>`;
                 return;
             }
 
+            const currentPhone = activeLoggedInUser ? activeLoggedInUser.phone?.trim().replace(/\+/g, '') : '';
+
             globalMessagesCacheArray.forEach(msg => {
-                const isSentByMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name || (msg.phone && activeLoggedInUser.phone && msg.phone.trim().replace(/\+/g, '') === activeLoggedInUser.phone.trim().replace(/\+/g, '')));
+                const isSelf = (currentPhone && msg.senderPhone === currentPhone) || (msg.senderName === (activeLoggedInUser ? activeLoggedInUser.name : ''));
+                const bubbleClass = isSelf ? 'sent' : 'received';
+                
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
                 
                 let avatarSrc = DEFAULT_AVATAR;
-                if (msg.phone) {
-                    const cleanPhone = msg.phone.trim().replace(/\+/g, '');
-                    if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
-                        avatarSrc = globalProfilesCacheObj[cleanPhone].photo;
-                    }
+                if (msg.senderPhone && globalProfilesCacheObj[msg.senderPhone] && globalProfilesCacheObj[msg.senderPhone].photo) {
+                    avatarSrc = globalProfilesCacheObj[msg.senderPhone].photo;
                 }
 
-                let contentHtml = '';
-                if (msg.text) {
-                    contentHtml += `<div>${escapeHtml(msg.text)}</div>`;
-                }
-                if (msg.mediaUrl) {
-                    contentHtml += `<img src="${msg.mediaUrl}" class="media-attachment-img shadow-sm" alt="Attachment" onclick="window.open('${msg.mediaUrl}', '_blank')">`;
-                }
-                if (msg.attachmentType === 'sticker') {
-                    contentHtml += `<div style="font-size:2rem; line-height:1;">${msg.attachmentVal}</div>`;
-                } else if (msg.attachmentType === 'gift') {
-                    contentHtml += `<div style="font-size:2.2rem; line-height:1;"><i class="animated-gift-item">${msg.attachmentVal}</i></div>`;
+                let attachmentHtml = '';
+                if (msg.attachmentType === 'sticker' || msg.attachmentType === 'gift') {
+                    attachmentHtml = `<div class="fs-1 my-1">${msg.attachmentData}</div>`;
+                } else if (msg.attachmentType === 'image') {
+                    attachmentHtml = `<img src="${msg.attachmentData}" class="media-attachment-img shadow-sm" alt="attachment">`;
                 }
 
-                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                container.innerHTML += `
-                    <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} shadow-sm">
+                chatBox.innerHTML += `
+                    <div class="chat-bubble ${bubbleClass}">
                         <div class="chat-sender">
-                            <img src="${avatarSrc}" class="user-avatar-sm" alt="Avatar">
-                            <span>${escapeHtml(msg.sender)}</span>
+                            <img src="${avatarSrc}" class="user-avatar-sm" alt="avatar">
+                            <span>${escapeHtml(msg.senderName)}</span>
                         </div>
-                        ${contentHtml}
+                        ${attachmentHtml}
+                        ${msg.messageText ? `<div>${escapeHtml(msg.messageText)}</div>` : ''}
                         <div class="chat-time">${timeStr}</div>
                     </div>`;
             });
 
             if (shouldScroll) {
-                container.scrollTop = container.scrollHeight;
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
         }
 
-        function appendChatAttachment(type, value) {
-            pendingChatAttachment = { type, value };
-            document.getElementById('chatAttachmentPreviewText').innerText = `${type.toUpperCase()}: ${value}`;
-            document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+        function appendChatAttachment(type, content) {
+            pendingChatAttachment = { type: type, data: content };
+            const previewBox = document.getElementById('chatAttachmentPreview');
+            const previewText = document.getElementById('chatAttachmentPreviewText');
+            if (previewBox && previewText) {
+                previewText.innerText = `${type.toUpperCase()}: ${content}`;
+                previewBox.classList.remove('d-none');
+            }
         }
 
         function handleChatImageSelect(e) {
             const file = e.target.files[0];
-            if(!file) return;
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                pendingChatAttachment = { type: 'image', value: evt.target.result, fileName: file.name };
-                document.getElementById('chatAttachmentPreviewText').innerText = `Image (${file.name})`;
-                document.getElementById('chatAttachmentPreview').classList.remove('d-none');
+                pendingChatAttachment = { type: 'image', data: evt.target.result };
+                const previewBox = document.getElementById('chatAttachmentPreview');
+                const previewText = document.getElementById('chatAttachmentPreviewText');
+                if (previewBox && previewText) {
+                    previewText.innerText = `IMAGE (${file.name})`;
+                    previewBox.classList.remove('d-none');
+                }
             };
             reader.readAsDataURL(file);
         }
 
         function clearChatAttachment() {
             pendingChatAttachment = null;
-            document.getElementById('chatAttachmentPreview').classList.add('d-none');
             document.getElementById('chatMediaFileInput').value = '';
+            document.getElementById('chatAttachmentPreview').classList.add('d-none');
         }
 
         function postGroupChatMessage(e) {
             e.preventDefault();
-            if(!activeLoggedInUser) {
-                alert("Please authenticate to post messages.");
-                return;
-            }
+            if (!activeLoggedInUser) return;
 
-            const inputEl = document.getElementById('chatMessageInput');
-            const textVal = inputEl.value.trim();
+            const textInput = document.getElementById('chatMessageInput');
+            const textVal = textInput.value.trim();
 
             if (!textVal && !pendingChatAttachment) return;
 
             const payload = {
-                sender: activeLoggedInUser.name,
-                phone: activeLoggedInUser.phone || '',
-                text: textVal,
-                timestamp: Date.now(),
-                deviceRef: UNIQUE_DEVICE_ID
+                senderName: activeLoggedInUser.name,
+                senderPhone: activeLoggedInUser.phone ? activeLoggedInUser.phone.trim().replace(/\+/g, '') : '',
+                messageText: textVal,
+                attachmentType: pendingChatAttachment ? pendingChatAttachment.type : null,
+                attachmentData: pendingChatAttachment ? pendingChatAttachment.data : null,
+                timestamp: Date.now()
             };
 
-            if (pendingChatAttachment) {
-                if (pendingChatAttachment.type === 'image') {
-                    payload.mediaUrl = pendingChatAttachment.value;
-                } else {
-                    payload.attachmentType = pendingChatAttachment.type;
-                    payload.attachmentVal = pendingChatAttachment.value;
-                }
-            }
-
-            inputEl.value = '';
-            clearChatAttachment();
-            updateTypingStatusCloud(false);
-
-            fetch(`${FIREBASE_URL}messages.json`, {
+            fetch(`${FIREBASE_URL}group_messages.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(() => {
+                textInput.value = '';
+                clearChatAttachment();
+                isUserCurrentlyTyping = false;
+                updateTypingStatusCloud(false);
                 fetchMessagesTimelineFeed(true);
             });
         }
 
         function formatDateDisplay(dateStr) {
-            if(!dateStr) return 'N/A';
+            if (!dateStr) return 'N/A';
             const parts = dateStr.split('-');
-            if(parts.length === 3) {
+            if (parts.length === 3) {
                 return `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
             return dateStr;
         }
 
         function escapeHtml(str) {
-            if(!str) return '';
+            if (!str) return '';
             return String(str)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
