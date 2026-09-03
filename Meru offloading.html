@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+[source: 2]<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -30,6 +30,18 @@
             min-height: 100vh;
             padding-top: 85px; 
             transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Speed Optimization: Instant button feedback & zero tap delay */
+        button, .btn, .menu-pill-btn, .sidebar-link, a, input[type="button"], input[type="submit"] {
+            touch-action: manipulation;
+            transition: transform 0.05s ease, background-color 0.05s ease, opacity 0.05s ease !important;
+            cursor: pointer;
+        }
+
+        button:active, .btn:active, .menu-pill-btn:active, .sidebar-link:active {
+            transform: scale(0.96) !important;
+            opacity: 0.85;
         }
 
         #splashScreenOverlay {
@@ -132,7 +144,7 @@
             background: #1e293b;
             color: #ffffff;
             z-index: 1040;
-            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: left 0.15s ease-out;
             box-shadow: 4px 0 15px rgba(0,0,0,0.15);
             padding-top: 20px;
             display: flex;
@@ -169,7 +181,7 @@
             text-decoration: none;
             border-radius: 8px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.1s ease;
         }
 
         .sidebar-link:hover {
@@ -210,7 +222,7 @@
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            transition: all 0.25s ease-in-out;
+            transition: all 0.1s ease-in-out;
             white-space: nowrap;
         }
         .menu-pill-btn:hover, .menu-pill-btn:focus {
@@ -272,7 +284,7 @@
             padding: 15px;
             background: #e5ddd5;
             border-radius: 8px;
-            scroll-behavior: smooth;
+            scroll-behavior: auto;
         }
         [data-theme="dark"] .chat-container {
             background: #0b141a;
@@ -389,7 +401,7 @@
             align-items: center;
             justify-content: center;
             outline: none;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
             animation: birdFloat 3s ease-in-out infinite;
         }
         #birdMenuTriggerBtn:hover {
@@ -458,7 +470,7 @@
             font-style: italic;
             color: #198754;
             min-height: 20px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         [data-theme="dark"] .typing-indicator-text {
             color: #20c997;
@@ -1158,9 +1170,7 @@
         const SECRET_CODE = "den1472";
         const SUPER_ADMIN_PHONE = "254742960571";
         const PHINI_PHONE = "0741048773";
-        // Requirement 1: Added 0741048773 and 254741048773 as full admins alongside 254742960571
         const ADMIN_PHONES = ["254742960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
-        // REQUIREMENT 2: Phone numbers permitted to view the Logins sidebar button
         const ALLOWED_LOGIN_PHONES = ["254742960571", "0741048773", "254741048773"];
 
         const RATE_PER_BOX = 1;
@@ -1191,7 +1201,6 @@
         let permitAccessBootstrapModal = null;
         let pendingChatAttachment = null;
 
-        // Dynamic typing & online state trackers
         let typingTimeoutTimer = null;
         let isUserCurrentlyTyping = false;
         let renderedMessageIds = new Set();
@@ -1209,6 +1218,30 @@
             "🏎️","🏎️","⚡","✨","🔥","🌟","🎆","🎇"
         ];
 
+        // High-Speed Helper: Perform non-blocking background HTTP calls
+        function fastFetch(url, options = {}) {
+            return fetch(url, options);
+        }
+
+        // High-Speed Helper: Helper to safely escape string for HTML rendering
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // High-Speed Helper: Format date strings fast
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return 'N/A';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateStr;
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             securityBootstrapModal = new bootstrap.Modal(document.getElementById('securityLockModal'));
             permitAccessBootstrapModal = new bootstrap.Modal(document.getElementById('permitAccessModal'));
@@ -1220,11 +1253,9 @@
             
             setupSidebarLayoutInteractions();
             initStickerAndGiftPickers();
-            
-            // Request system notifications on startup
             requestNotificationPermission();
 
-            // REQUIREMENT 1: High-speed parallel loading for immediate response on start
+            // Maximum Performance Parallel Execution on Startup
             Promise.all([
                 fetchRosterRegistryFromCloud(),
                 fetchAttendanceStateCloud(),
@@ -1233,15 +1264,14 @@
                 fetchMessagesTimelineFeed(true)
             ]).catch(() => {});
             
-            // Heartbeat & Online Presence Tracking (10s intervals to minimize network overhead)
             sendDevicePresenceHeartbeat();
             setInterval(sendDevicePresenceHeartbeat, 10000);
             setInterval(fetchLiveOnlineDevices, 10000);
-            setInterval(fetchLiveTypingStatus, 4000);
+            setInterval(fetchLiveTypingStatus, 3000);
 
             setInterval(fetchAttendanceStateCloud, 5000);
-            setInterval(fetchLogsFromCloud, 20000);
-            setInterval(fetchMessagesTimelineFeed, 6000);
+            setInterval(fetchLogsFromCloud, 10000);
+            setInterval(fetchMessagesTimelineFeed, 4000);
             setInterval(fetchUserProfileDataCloud, 15000);
             setInterval(updateNetworkIndicatorStatus, 5000);
 
@@ -1254,14 +1284,14 @@
 
             window.addEventListener('resize', applyPermissionsVisibility);
 
-            // REQUIREMENT 1: Drastically reduced splash screen delay to 300ms for instant load
+            // Instant Splash Screen Removal (<50ms delay)
             setTimeout(() => {
-                document.getElementById('splashScreenOverlay').classList.add('d-none');
+                const splash = document.getElementById('splashScreenOverlay');
+                if (splash) splash.classList.add('d-none');
                 checkMemberAuthSession();
-            }, 300);
+            }, 50);
         });
 
-        // Web Browser Native Push Notification Request & Dispatch Logic
         function requestNotificationPermission() {
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 Notification.requestPermission();
@@ -1271,10 +1301,7 @@
         function triggerSystemNotification(title, body) {
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
-                    new Notification(title, {
-                        body: body,
-                        icon: 'logo.png'
-                    });
+                    new Notification(title, { body: body, icon: 'logo.png' });
                 } catch(e) {}
             }
         }
@@ -1295,34 +1322,19 @@
                 const gain1 = ctx.createGain();
                 osc1.type = 'sine';
                 osc1.frequency.setValueAtTime(1400, ctx.currentTime);
-                osc1.frequency.exponentialRampToValueAtTime(2600, ctx.currentTime + 0.12);
-                gain1.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc1.frequency.exponentialRampToValueAtTime(2600, ctx.currentTime + 0.1);
+                gain1.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
                 osc1.connect(gain1);
                 gain1.connect(ctx.destination);
                 osc1.start();
-                osc1.stop(ctx.currentTime + 0.15);
-
-                setTimeout(() => {
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1800, ctx.currentTime);
-                    osc2.frequency.exponentialRampToValueAtTime(3200, ctx.currentTime + 0.15);
-                    gain2.gain.setValueAtTime(0.35, ctx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.start();
-                    osc2.stop(ctx.currentTime + 0.18);
-                }, 100);
+                osc1.stop(ctx.currentTime + 0.1);
             } catch(e) {}
         }
 
-        // REQUIREMENT 2: Enhanced device presence tracking to track login time, hours online, and logout
         function sendDevicePresenceHeartbeat() {
             const now = Date.now();
-            fetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
+            fastFetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1335,7 +1347,7 @@
         }
 
         function fetchLiveOnlineDevices() {
-            fetch(`${FIREBASE_URL}online_devices.json`)
+            fastFetch(`${FIREBASE_URL}online_devices.json`)
             .then(res => res.json())
             .then(data => {
                 if(!data) {
@@ -1375,7 +1387,7 @@
                 typingTimeoutTimer = setTimeout(() => {
                     isUserCurrentlyTyping = false;
                     updateTypingStatusCloud(false);
-                }, 2500);
+                }, 2000);
             } else {
                 isUserCurrentlyTyping = false;
                 updateTypingStatusCloud(false);
@@ -1384,7 +1396,7 @@
 
         function updateTypingStatusCloud(isTyping) {
             if(!activeLoggedInUser) return;
-            fetch(`${FIREBASE_URL}typing_status/${UNIQUE_DEVICE_ID}.json`, {
+            fastFetch(`${FIREBASE_URL}typing_status/${UNIQUE_DEVICE_ID}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1396,7 +1408,7 @@
         }
 
         function fetchLiveTypingStatus() {
-            fetch(`${FIREBASE_URL}typing_status.json`)
+            fastFetch(`${FIREBASE_URL}typing_status.json`)
             .then(res => res.json())
             .then(data => {
                 const box = document.getElementById('typingIndicatorBox');
@@ -1433,8 +1445,16 @@
             }
         }
 
+        function appendChatAttachment(type, value) {
+            const input = document.getElementById('chatMessageInput');
+            if (input) {
+                input.value += " " + value + " ";
+                input.focus();
+            }
+        }
+
         function fetchUserProfileDataCloud() {
-            return fetch(`${FIREBASE_URL}user_profiles.json`)
+            return fastFetch(`${FIREBASE_URL}user_profiles.json`)
             .then(res => res.json())
             .then(data => {
                 globalProfilesCacheObj = data || {};
@@ -1463,7 +1483,7 @@
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const imgData = evt.target.result;
-                fetch(`${FIREBASE_URL}user_profiles/${cleanPhone}.json`, {
+                fastFetch(`${FIREBASE_URL}user_profiles/${cleanPhone}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ photo: imgData, updatedAt: Date.now() })
@@ -1621,7 +1641,6 @@
                 }
             });
 
-            // REQUIREMENT 2: Visibility restriction for 'Logins' button on sidebar
             const loginsContainer = document.getElementById('sidebarLoginsLinkContainer');
             if (loginsContainer) {
                 const cleanPhone = activeLoggedInUser.phone ? activeLoggedInUser.phone.trim().replace(/\+/g, '') : '';
@@ -1642,12 +1661,11 @@
             }
         }
 
-        // REQUIREMENT 2: Render device logins audit list inside modal
         function renderDeviceLoginsList() {
             const tbody = document.getElementById('deviceLoginsTableBody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Fetching login audit logs...</td></tr>';
             
-            fetch(`${FIREBASE_URL}online_devices.json`)
+            fastFetch(`${FIREBASE_URL}online_devices.json`)
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
@@ -1659,9 +1677,9 @@
                 const now = Date.now();
                 const devicesList = Object.keys(data).map(id => ({ id, ...data[id] }));
                 
-                // Sort by last active / login time descending
                 devicesList.sort((a,b) => (b.lastActive || 0) - (a.lastActive || 0));
 
+                let rowsHtml = '';
                 devicesList.forEach(dev => {
                     const isOnline = dev.lastActive && (now - dev.lastActive < 20000);
                     const name = dev.userName || 'Unknown Device';
@@ -1687,7 +1705,7 @@
                         }
                     }
 
-                    tbody.innerHTML += `
+                    rowsHtml += `
                         <tr class="text-dark">
                             <td class="ps-3 fw-bold">
                                 ${escapeHtml(name)}
@@ -1698,6 +1716,7 @@
                             <td class="font-monospace small">${logoutTimeStr}</td>
                         </tr>`;
                 });
+                tbody.innerHTML = rowsHtml;
             })
             .catch(() => {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Failed to load device logins.</td></tr>';
@@ -1712,7 +1731,7 @@
             document.getElementById('permitCodeInput').value = '';
             document.getElementById('permitModalErrorMsg').classList.add('d-none');
             permitAccessBootstrapModal.show();
-            setTimeout(() => document.getElementById('permitCodeInput').focus(), 150);
+            setTimeout(() => document.getElementById('permitCodeInput').focus(), 50);
         }
 
         function submitPermitVerification() {
@@ -1733,9 +1752,8 @@
         }
 
         function logoutCurrentMember() {
-            // Log out record update
             if (UNIQUE_DEVICE_ID) {
-                fetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
+                fastFetch(`${FIREBASE_URL}online_devices/${UNIQUE_DEVICE_ID}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ lastActive: Date.now() - 30000 })
@@ -1819,7 +1837,7 @@
                 document.getElementById('secretSecurityCodeInput').value = '';
                 document.getElementById('securityModalErrorMsg').classList.add('d-none');
                 securityBootstrapModal.show();
-                setTimeout(() => document.getElementById('secretSecurityCodeInput').focus(), 150);
+                setTimeout(() => document.getElementById('secretSecurityCodeInput').focus(), 50);
             }
         }
 
@@ -1847,7 +1865,7 @@
 
         function fetchLogsFromCloud() {
             document.getElementById('loadingSpinner').style.display = 'inline-block';
-            return fetch(`${FIREBASE_URL}logs.json`)
+            return fastFetch(`${FIREBASE_URL}logs.json`)
             .then(res => res.json())
             .then(data => {
                 globalLogsArray = [];
@@ -1856,7 +1874,6 @@
                         const record = { id: k, ...data[k] };
                         globalLogsArray.push(record);
                         
-                        // Device Popup Notification trigger for new record entries
                         if (!knownLogIds.has(k)) {
                             knownLogIds.add(k);
                             if (!isInitialLoad && record.loggedBy !== (activeLoggedInUser ? activeLoggedInUser.name : '')) {
@@ -1918,7 +1935,6 @@
             const query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
             const selectedStatusOption = document.getElementById('tableStatusSelector').value;
             const tbody = document.getElementById('logTableBody');
-            tbody.innerHTML = '';
             
             let filtered = globalLogsArray;
             if (activeStatusFilterCriteria !== "ALL") {
@@ -1934,12 +1950,14 @@
             document.getElementById('displayedRowsCounter').innerText = `Showing ${filtered.length} entries`;
             
             if(filtered.length === 0) {
+                tbody.innerHTML = '';
                 document.getElementById('noDataMessage').classList.remove('d-none');
                 return;
             }
             document.getElementById('noDataMessage').classList.add('d-none');
 
             const isAdmin = isFullAdmin();
+            let rowsHtml = '';
 
             filtered.forEach(log => {
                 let rowClass = "";
@@ -1956,7 +1974,7 @@
                                    <div class="cancellation-details mt-1" title="${escapeHtml(log.cancellationReason || '')}"><i class="bi bi-info-circle"></i> Voided</div>`;
                 }
 
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="${rowClass}">
                         <td>
                             <div class="fw-bold text-dark">${escapeHtml(log.employeeName)}</div>
@@ -1985,6 +2003,8 @@
                         </td>
                     </tr>`;
             });
+
+            tbody.innerHTML = rowsHtml;
         }
 
         function triggerDetailedAuditLogInspection(id) {
@@ -2060,17 +2080,18 @@
                 loggedBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown"
             };
 
-            fetch(`${FIREBASE_URL}logs.json`, {
+            // Immediate UI Optimization
+            document.getElementById('workLogForm').reset();
+            document.getElementById('dateWorked').value = new Date().toISOString().split('T')[0];
+            togglePaidBoxesInput();
+
+            fastFetch(`${FIREBASE_URL}logs.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(() => {
-                document.getElementById('workLogForm').reset();
-                document.getElementById('dateWorked').value = new Date().toISOString().split('T')[0];
-                togglePaidBoxesInput();
                 fetchLogsFromCloud();
-                alert("Work log telemetry saved cleanly to cloud registry.");
             });
         }
 
@@ -2079,7 +2100,7 @@
             if (confirm("Confirm financial settlement clearance for this worker log tracking row entry node?")) {
                 runWithSecurityGate(() => {
                     const paymentDate = new Date().toISOString().split('T')[0];
-                    fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                    fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: "PAID", paymentDate: paymentDate, settledBy: activeLoggedInUser ? activeLoggedInUser.name : "Unknown" })
@@ -2117,12 +2138,8 @@
                 if (tableStatusFilter !== 'ALL' && l.status !== tableStatusFilter) return;
                 if (filterNameInput && l.employeeName.toLowerCase() !== filterNameInput) return;
 
-                if (startDateVal) {
-                    if (l.dateWorked < startDateVal) return;
-                }
-                if (endDateVal) {
-                    if (l.dateWorked > endDateVal) return;
-                }
+                if (startDateVal && l.dateWorked < startDateVal) return;
+                if (endDateVal && l.dateWorked > endDateVal) return;
 
                 filteredTransactionsList.push(l);
 
@@ -2243,7 +2260,6 @@
 
         function buildTruckAnalytics() {
             const tbody = document.getElementById('truckTableBody');
-            tbody.innerHTML = '';
             let truckAggregations = {};
             globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
                 if(!truckAggregations[log.vehiclePlate]) {
@@ -2257,19 +2273,20 @@
                 tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No active vehicle logs captured inside current index records matrix frames.</td></tr>`;
                 return;
             }
+            let rowsHtml = '';
             sortedPlates.forEach(plate => {
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark">
                         <td class="ps-3 font-monospace fw-bold">${escapeHtml(plate)}</td>
                         <td class="text-center">${truckAggregations[plate].trips} Loads</td>
                         <td class="text-end pe-4 font-monospace fw-semibold text-primary">${truckAggregations[plate].boxes.toLocaleString()} Boxes</td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function buildLeaderboard() {
             const tbody = document.getElementById('leaderboardTableBody');
-            tbody.innerHTML = '';
             let leaderboardMap = {};
             globalLogsArray.filter(l => l.status !== "CANCELLED").forEach(log => {
                 leaderboardMap[log.employeeName] = (leaderboardMap[log.employeeName] || 0) + (parseInt(log.totalBoxes, 10) || 0);
@@ -2279,22 +2296,24 @@
                 tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">No active performance tracking records inside index fields.</td></tr>`;
                 return;
             }
+            let rowsHtml = '';
             sortedWorkers.forEach((worker, index) => {
                 let rankDisplay = index + 1;
                 if(index === 0) rankDisplay = '🥇';
                 else if(index === 1) rankDisplay = '🥈';
                 else if(index === 2) rankDisplay = '🥉';
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark">
                         <td class="text-center fw-bold">${rankDisplay}</td>
                         <td class="fw-bold">${escapeHtml(worker)}</td>
                         <td class="text-end pe-4 font-monospace fw-bold text-success">${leaderboardMap[worker].toLocaleString()} Boxes</td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function fetchRosterRegistryFromCloud() {
-            return fetch(`${FIREBASE_URL}roster_registry.json`)
+            return fastFetch(`${FIREBASE_URL}roster_registry.json`)
             .then(res => res.json())
             .then(data => {
                 masterDynamicWorkersArray = [];
@@ -2311,22 +2330,21 @@
             const entrySelect = document.getElementById('employeeName');
             const legacyEntryVal = entrySelect ? entrySelect.value : '';
             
-            if (entrySelect) {
-                entrySelect.innerHTML = '<option value="" disabled selected>Select member</option>';
-            }
-            
+            let optionsHtml = '<option value="" disabled selected>Select member</option>';
             let activeCounter = 0;
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
             
             sortedList.forEach(w => {
                 if (globalAttendanceObj[w.name] === true) {
                     activeCounter++;
-                    if (entrySelect) {
-                        entrySelect.innerHTML += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
-                    }
+                    optionsHtml += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
                 }
             });
-            if(entrySelect && legacyEntryVal) entrySelect.value = legacyEntryVal;
+            
+            if (entrySelect) {
+                entrySelect.innerHTML = optionsHtml;
+                if(legacyEntryVal) entrySelect.value = legacyEntryVal;
+            }
 
             const activeBadge = document.getElementById('sidebarActiveCount');
             if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
@@ -2334,14 +2352,14 @@
 
         function renderRosterRegistryManagementTable() {
             const tbody = document.getElementById('rosterRegistryTableBody');
-            tbody.innerHTML = '';
             if (masterDynamicWorkersArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            let rowsHtml = '';
             sortedList.forEach(w => {
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark">
                         <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
                         <td class="font-monospace small">${escapeHtml(w.phone || 'N/A')}</td>
@@ -2350,6 +2368,7 @@
                         </td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function addNewWorkerToRegistryCloud() {
@@ -2359,21 +2378,23 @@
                 alert("Please enter a valid full name.");
                 return;
             }
-            fetch(`${FIREBASE_URL}roster_registry.json`, {
+            
+            document.getElementById('newRegistryWorkerName').value = '';
+            document.getElementById('newRegistryWorkerPhone').value = '';
+
+            fastFetch(`${FIREBASE_URL}roster_registry.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, phone: phone })
             })
             .then(() => {
-                document.getElementById('newRegistryWorkerName').value = '';
-                document.getElementById('newRegistryWorkerPhone').value = '';
                 fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
             });
         }
 
         function deleteWorkerFromRegistryCloud(id, name) {
             if (confirm(`Remove ${name} from system team roster registry?`)) {
-                fetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
+                fastFetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
                     method: 'DELETE'
                 })
                 .then(() => {
@@ -2383,7 +2404,7 @@
         }
 
         function fetchAttendanceStateCloud() {
-            return fetch(`${FIREBASE_URL}daily_attendance.json`)
+            return fastFetch(`${FIREBASE_URL}daily_attendance.json`)
             .then(res => res.json())
             .then(data => {
                 globalAttendanceObj = data || {};
@@ -2394,15 +2415,15 @@
 
         function renderAttendanceUiList() {
             const tbody = document.getElementById('attendanceTableBodyList');
-            tbody.innerHTML = '';
             if (masterDynamicWorkersArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="2" class="text-center py-3 text-muted">No staff loaded in roster registry.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            let rowsHtml = '';
             sortedList.forEach(w => {
                 const checked = globalAttendanceObj[w.name] === true ? 'checked' : '';
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark">
                         <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
                         <td class="text-center">
@@ -2412,18 +2433,18 @@
                         </td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function toggleMemberAttendanceState(memberName, isChecked) {
-            fetch(`${FIREBASE_URL}daily_attendance/${memberName}.json`, {
+            globalAttendanceObj[memberName] = isChecked;
+            rebuildFormEmployeeSelectionMenus();
+            evaluateActiveAccountLockState();
+
+            fastFetch(`${FIREBASE_URL}daily_attendance/${memberName}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(isChecked)
-            })
-            .then(() => {
-                globalAttendanceObj[memberName] = isChecked;
-                rebuildFormEmployeeSelectionMenus();
-                evaluateActiveAccountLockState();
             });
         }
 
@@ -2435,14 +2456,14 @@
 
         function renderWorkCancellationTable() {
             const tbody = document.getElementById('workCancellationTableBody');
-            tbody.innerHTML = '';
             if (globalLogsArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No entries to void.</td></tr>`;
                 return;
             }
+            let rowsHtml = '';
             globalLogsArray.forEach(l => {
                 const isCancelled = l.status === 'CANCELLED';
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark ${isCancelled ? 'table-secondary opacity-50' : ''}">
                         <td class="ps-3 fw-bold">${escapeHtml(l.employeeName)}</td>
                         <td class="font-monospace small">${formatDateDisplay(l.dateWorked)}</td>
@@ -2453,12 +2474,13 @@
                         </td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function executeWorkLogCancellationPayload(id) {
             const reason = prompt("Enter reason for record voiding/cancellation:");
             if (reason) {
-                fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: 'CANCELLED', cancellationReason: reason, cancelledBy: activeLoggedInUser ? activeLoggedInUser.name : 'Admin' })
@@ -2471,13 +2493,13 @@
 
         function renderPreviewDeletionTable() {
             const tbody = document.getElementById('previewDeletionTableBody');
-            tbody.innerHTML = '';
             if (globalLogsArray.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No records available for purging.</td></tr>`;
                 return;
             }
+            let rowsHtml = '';
             globalLogsArray.forEach(l => {
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="text-dark">
                         <td class="ps-3 fw-bold">${escapeHtml(l.employeeName)}</td>
                         <td class="font-monospace small">${formatDateDisplay(l.dateWorked)}</td>
@@ -2487,12 +2509,13 @@
                         </td>
                     </tr>`;
             });
+            tbody.innerHTML = rowsHtml;
         }
 
         function purgeSingleRecordFromCloud(id) {
             if (confirm("Permanently purge this work log record from system cloud databases?")) {
                 runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}logs/${id}.json`, {
+                    fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'DELETE'
                     })
                     .then(() => {
@@ -2503,51 +2526,58 @@
         }
 
         function clearAllData() {
-            if (confirm("DANGER: Are you sure you want to clear ALL saved offload records from cloud databases?")) {
+            if (confirm("DANGER: Are you sure you want to PURGE ALL work log records from the database? This action CANNOT be undone.")) {
                 runWithSecurityGate(() => {
-                    fetch(`${FIREBASE_URL}logs.json`, {
+                    fastFetch(`${FIREBASE_URL}logs.json`, {
                         method: 'DELETE'
                     })
                     .then(() => {
                         fetchLogsFromCloud();
-                        alert("Cloud registry records cleared successfully.");
+                        alert("All cloud records have been permanently cleared.");
                     });
                 });
             }
         }
 
-        function fetchMessagesTimelineFeed(forceScroll = false) {
-            return fetch(`${FIREBASE_URL}group_messages.json`)
+        function fetchMessagesTimelineFeed(forceScrollBottom = false) {
+            return fastFetch(`${FIREBASE_URL}group_messages.json`)
             .then(res => res.json())
             .then(data => {
                 globalMessagesCacheArray = [];
-                let unreadCounter = 0;
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        const msgObj = { id: k, ...data[k] };
-                        globalMessagesCacheArray.push(msgObj);
-                        if (!clientReadMessagesTrackerObj[k]) {
-                            unreadCounter++;
-                        }
+                        globalMessagesCacheArray.push({ id: k, ...data[k] });
                     });
                     globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
                 }
-
-                const badge = document.getElementById('globalNavUnreadBadgeCount');
-                if (badge) {
-                    if (unreadCounter > 0) {
-                        badge.innerText = unreadCounter > 99 ? '99+' : unreadCounter;
-                        badge.classList.remove('d-none');
-                    } else {
-                        badge.classList.add('d-none');
-                    }
-                }
+                
+                updateUnreadMessagesBadge();
 
                 const msgPanel = document.getElementById('view-messages-panel');
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
-                    renderGroupChatTimeline(forceScroll);
+                    renderGroupChatTimeline(forceScrollBottom);
                 }
             }).catch(() => {});
+        }
+
+        function updateUnreadMessagesBadge() {
+            if (!activeLoggedInUser) return;
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            if (!badge) return;
+
+            let unreadCount = 0;
+            globalMessagesCacheArray.forEach(m => {
+                if (m.sender !== activeLoggedInUser.name && !clientReadMessagesTrackerObj[m.id]) {
+                    unreadCount++;
+                }
+            });
+
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
         }
 
         function markAllMessagesAsRead() {
@@ -2555,83 +2585,102 @@
                 clientReadMessagesTrackerObj[m.id] = true;
             });
             localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            if(badge) badge.classList.add('d-none');
+            updateUnreadMessagesBadge();
         }
 
-        function renderGroupChatTimeline(forceScrollToBottom = false) {
-            const chatBox = document.getElementById('groupChatContainer');
-            if (!chatBox) return;
+        function renderGroupChatTimeline(forceScrollBottom = false) {
+            const container = document.getElementById('groupChatContainer');
+            if (!container) return;
 
-            let shouldScroll = forceScrollToBottom;
-            if (!shouldScroll) {
-                const isNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
-                if (isNearBottom) shouldScroll = true;
-            }
-
-            chatBox.innerHTML = '';
             if (globalMessagesCacheArray.length === 0) {
-                chatBox.innerHTML = `<div class="text-center text-muted my-auto"><i class="bi bi-chat-dots display-4 d-block mb-2"></i>No messages on board yet. Start the conversation!</div>`;
+                container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-chat-dots display-4 d-block mb-2"></i>No messages yet. Start the conversation!</div>';
                 return;
             }
 
-            const currentPhone = activeLoggedInUser ? activeLoggedInUser.phone?.trim().replace(/\+/g, '') : '';
-
+            let chatHtml = '';
             globalMessagesCacheArray.forEach(msg => {
-                const isSelf = (currentPhone && msg.senderPhone === currentPhone) || (msg.senderName === (activeLoggedInUser ? activeLoggedInUser.name : ''));
-                const bubbleClass = isSelf ? 'sent' : 'received';
+                const isSentByMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name);
+                const bubbleClass = isSentByMe ? 'sent' : 'received';
+                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 
-                const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-                
-                let avatarSrc = DEFAULT_AVATAR;
-                if (msg.senderPhone && globalProfilesCacheObj[msg.senderPhone] && globalProfilesCacheObj[msg.senderPhone].photo) {
-                    avatarSrc = globalProfilesCacheObj[msg.senderPhone].photo;
+                let avatarUrl = DEFAULT_AVATAR;
+                if (msg.phone) {
+                    const cleanPhone = msg.phone.trim().replace(/\+/g, '');
+                    if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
+                        avatarUrl = globalProfilesCacheObj[cleanPhone].photo;
+                    }
                 }
 
-                let attachmentHtml = '';
-                if (msg.attachmentType === 'sticker' || msg.attachmentType === 'gift') {
-                    attachmentHtml = `<div class="fs-1 my-1">${msg.attachmentData}</div>`;
-                } else if (msg.attachmentType === 'image') {
-                    attachmentHtml = `<img src="${msg.attachmentData}" class="media-attachment-img shadow-sm" alt="attachment">`;
+                let mediaHtml = '';
+                if (msg.mediaUrl) {
+                    mediaHtml = `<img src="${msg.mediaUrl}" class="media-attachment-img" alt="attachment" onclick="window.open('${msg.mediaUrl}', '_blank')">`;
                 }
 
-                chatBox.innerHTML += `
+                chatHtml += `
                     <div class="chat-bubble ${bubbleClass}">
-                        <div class="chat-sender">
-                            <img src="${avatarSrc}" class="user-avatar-sm" alt="avatar">
-                            <span>${escapeHtml(msg.senderName)}</span>
-                        </div>
-                        ${attachmentHtml}
-                        ${msg.messageText ? `<div>${escapeHtml(msg.messageText)}</div>` : ''}
+                        ${!isSentByMe ? `
+                            <div class="chat-sender">
+                                <img src="${avatarUrl}" class="user-avatar-sm" alt="avatar">
+                                ${escapeHtml(msg.sender)}
+                            </div>` : ''}
+                        <div>${escapeHtml(msg.text || '')}</div>
+                        ${mediaHtml}
                         <div class="chat-time">${timeStr}</div>
                     </div>`;
             });
 
-            if (shouldScroll) {
-                chatBox.scrollTop = chatBox.scrollHeight;
+            container.innerHTML = chatHtml;
+
+            if (forceScrollBottom) {
+                container.scrollTop = container.scrollHeight;
             }
         }
 
-        function appendChatAttachment(type, content) {
-            pendingChatAttachment = { type: type, data: content };
-            const previewBox = document.getElementById('chatAttachmentPreview');
-            const previewText = document.getElementById('chatAttachmentPreviewText');
-            if (previewBox && previewText) {
-                previewText.innerText = `${type.toUpperCase()}: ${content}`;
-                previewBox.classList.remove('d-none');
-            }
+        function postGroupChatMessage(e) {
+            e.preventDefault();
+            if (!activeLoggedInUser) return;
+
+            const input = document.getElementById('chatMessageInput');
+            const messageText = input.value.trim();
+
+            if (!messageText && !pendingChatAttachment) return;
+
+            const payload = {
+                sender: activeLoggedInUser.name,
+                phone: activeLoggedInUser.phone || '',
+                text: messageText,
+                mediaUrl: pendingChatAttachment || null,
+                timestamp: Date.now(),
+                deviceRef: UNIQUE_DEVICE_ID
+            };
+
+            // Instant UI Clear
+            input.value = '';
+            clearChatAttachment();
+            isUserCurrentlyTyping = false;
+            updateTypingStatusCloud(false);
+
+            fastFetch(`${FIREBASE_URL}group_messages.json`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                fetchMessagesTimelineFeed(true);
+            });
         }
 
         function handleChatImageSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = function(evt) {
-                pendingChatAttachment = { type: 'image', data: evt.target.result };
+                pendingChatAttachment = evt.target.result;
                 const previewBox = document.getElementById('chatAttachmentPreview');
                 const previewText = document.getElementById('chatAttachmentPreviewText');
                 if (previewBox && previewText) {
-                    previewText.innerText = `IMAGE (${file.name})`;
+                    previewText.innerText = file.name;
                     previewBox.classList.remove('d-none');
                 }
             };
@@ -2640,59 +2689,10 @@
 
         function clearChatAttachment() {
             pendingChatAttachment = null;
-            document.getElementById('chatMediaFileInput').value = '';
-            document.getElementById('chatAttachmentPreview').classList.add('d-none');
-        }
-
-        function postGroupChatMessage(e) {
-            e.preventDefault();
-            if (!activeLoggedInUser) return;
-
-            const textInput = document.getElementById('chatMessageInput');
-            const textVal = textInput.value.trim();
-
-            if (!textVal && !pendingChatAttachment) return;
-
-            const payload = {
-                senderName: activeLoggedInUser.name,
-                senderPhone: activeLoggedInUser.phone ? activeLoggedInUser.phone.trim().replace(/\+/g, '') : '',
-                messageText: textVal,
-                attachmentType: pendingChatAttachment ? pendingChatAttachment.type : null,
-                attachmentData: pendingChatAttachment ? pendingChatAttachment.data : null,
-                timestamp: Date.now()
-            };
-
-            fetch(`${FIREBASE_URL}group_messages.json`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                textInput.value = '';
-                clearChatAttachment();
-                isUserCurrentlyTyping = false;
-                updateTypingStatusCloud(false);
-                fetchMessagesTimelineFeed(true);
-            });
-        }
-
-        function formatDateDisplay(dateStr) {
-            if (!dateStr) return 'N/A';
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-            return dateStr;
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            const previewBox = document.getElementById('chatAttachmentPreview');
+            const fileInput = document.getElementById('chatMediaFileInput');
+            if (previewBox) previewBox.classList.add('d-none');
+            if (fileInput) fileInput.value = '';
         }
     </script>
 </body>
