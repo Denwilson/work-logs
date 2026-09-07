@@ -1156,7 +1156,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </footer>
 
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
@@ -1863,6 +1863,44 @@
             securityBootstrapModal.hide();
         }
 
+        function checkAndAutoCancelUnclaimedLogs() {
+            if (!globalLogsArray || globalLogsArray.length < 3) return;
+
+            const now = Date.now();
+            const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+            for (let i = 1; i < globalLogsArray.length - 1; i++) {
+                const currentLog = globalLogsArray[i];
+                if (currentLog.status === "UNPAID") {
+                    const logAbove = globalLogsArray[i - 1];
+                    const logBelow = globalLogsArray[i + 1];
+
+                    if (logAbove.status === "PAID" && logBelow.status === "PAID") {
+                        const paidTimeAbove = logAbove.paymentDate ? new Date(logAbove.paymentDate).getTime() : (logAbove.timestamp || 0);
+                        const paidTimeBelow = logBelow.paymentDate ? new Date(logBelow.paymentDate).getTime() : (logBelow.timestamp || 0);
+                        
+                        const latestPaidTime = Math.max(paidTimeAbove, paidTimeBelow);
+
+                        if (now - latestPaidTime >= SEVEN_DAYS_MS) {
+                            currentLog.status = "CANCELLED";
+                            currentLog.cancellationReason = "Preview, Unclaimed Entry";
+                            currentLog.cancelledBy = "System Auto-Cancel";
+
+                            fastFetch(`${FIREBASE_URL}logs/${currentLog.id}.json`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    status: "CANCELLED",
+                                    cancellationReason: "Preview, Unclaimed Entry",
+                                    cancelledBy: "System Auto-Cancel"
+                                })
+                            }).catch(() => {});
+                        }
+                    }
+                }
+            }
+        }
+
         function fetchLogsFromCloud() {
             document.getElementById('loadingSpinner').style.display = 'inline-block';
             return fastFetch(`${FIREBASE_URL}logs.json`)
@@ -1882,6 +1920,7 @@
                         }
                     });
                     globalLogsArray.sort((a,b) => new Date(b.dateWorked) - new Date(a.dateWorked));
+                    checkAndAutoCancelUnclaimedLogs();
                 }
                 isInitialLoad = false;
                 document.getElementById('loadingSpinner').style.display = 'none';
@@ -2505,15 +2544,15 @@
                         <td class="font-monospace small">${formatDateDisplay(l.dateWorked)}</td>
                         <td>${l.totalBoxes} Boxes</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-danger" onclick="purgeSingleRecordFromCloud('${l.id}')"><i class="bi bi-trash-fill"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="executePreviewDeletion('${l.id}')"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>`;
             });
             tbody.innerHTML = rowsHtml;
         }
 
-        function purgeSingleRecordFromCloud(id) {
-            if (confirm("Permanently purge this work log record from system cloud databases?")) {
+        function executePreviewDeletion(id) {
+            if (confirm("Permanently purge this record entry?")) {
                 runWithSecurityGate(() => {
                     fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
                         method: 'DELETE'
@@ -2526,21 +2565,20 @@
         }
 
         function clearAllData() {
-            if (confirm("DANGER: Are you sure you want to PURGE ALL work log records from the database? This action CANNOT be undone.")) {
+            if (confirm("Are you sure you want to clear ALL cloud work records? This action cannot be undone.")) {
                 runWithSecurityGate(() => {
                     fastFetch(`${FIREBASE_URL}logs.json`, {
                         method: 'DELETE'
                     })
                     .then(() => {
                         fetchLogsFromCloud();
-                        alert("All cloud records have been permanently cleared.");
                     });
                 });
             }
         }
 
-        function fetchMessagesTimelineFeed(forceScrollBottom = false) {
-            return fastFetch(`${FIREBASE_URL}group_messages.json`)
+        function fetchMessagesTimelineFeed(forceScroll = false) {
+            fastFetch(`${FIREBASE_URL}group_messages.json`)
             .then(res => res.json())
             .then(data => {
                 globalMessagesCacheArray = [];
@@ -2550,115 +2588,92 @@
                     });
                     globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
                 }
-                
-                updateUnreadMessagesBadge();
-
+                updateUnreadMessagesCountBadge();
                 const msgPanel = document.getElementById('view-messages-panel');
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
-                    renderGroupChatTimeline(forceScrollBottom);
+                    renderGroupChatTimeline(forceScroll);
                 }
             }).catch(() => {});
         }
 
-        function updateUnreadMessagesBadge() {
-            if (!activeLoggedInUser) return;
-            const badge = document.getElementById('globalNavUnreadBadgeCount');
-            if (!badge) return;
-
-            let unreadCount = 0;
-            globalMessagesCacheArray.forEach(m => {
-                if (m.sender !== activeLoggedInUser.name && !clientReadMessagesTrackerObj[m.id]) {
-                    unreadCount++;
+        function updateUnreadMessagesCountBadge() {
+            let unread = 0;
+            globalMessagesCacheArray.forEach(msg => {
+                if (!clientReadMessagesTrackerObj[msg.id]) {
+                    unread++;
                 }
             });
-
-            if (unreadCount > 0) {
-                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
-                badge.classList.remove('d-none');
-            } else {
-                badge.classList.add('d-none');
+            const badge = document.getElementById('globalNavUnreadBadgeCount');
+            if (badge) {
+                if (unread > 0) {
+                    badge.innerText = unread > 99 ? '99+' : unread;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
             }
         }
 
         function markAllMessagesAsRead() {
-            globalMessagesCacheArray.forEach(m => {
-                clientReadMessagesTrackerObj[m.id] = true;
+            globalMessagesCacheArray.forEach(msg => {
+                clientReadMessagesTrackerObj[msg.id] = true;
             });
             localStorage.setItem('meru_read_notifications_map', JSON.stringify(clientReadMessagesTrackerObj));
-            updateUnreadMessagesBadge();
+            updateUnreadMessagesCountBadge();
         }
 
         function renderGroupChatTimeline(forceScrollBottom = false) {
-            const container = document.getElementById('groupChatContainer');
-            if (!container) return;
+            const chatContainer = document.getElementById('groupChatContainer');
+            if (!chatContainer) return;
 
-            if (globalMessagesCacheArray.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-chat-dots display-4 d-block mb-2"></i>No messages yet. Start the conversation!</div>';
-                return;
-            }
-
-            let chatHtml = '';
+            let html = '';
             globalMessagesCacheArray.forEach(msg => {
-                const isSentByMe = activeLoggedInUser && (msg.sender === activeLoggedInUser.name);
-                const bubbleClass = isSentByMe ? 'sent' : 'received';
+                const isSent = activeLoggedInUser && (msg.senderPhone === activeLoggedInUser.phone || msg.senderName === activeLoggedInUser.name);
+                const bubbleType = isSent ? 'sent' : 'received';
                 const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 
                 let avatarUrl = DEFAULT_AVATAR;
-                if (msg.phone) {
-                    const cleanPhone = msg.phone.trim().replace(/\+/g, '');
+                if (msg.senderPhone) {
+                    const cleanPhone = msg.senderPhone.trim().replace(/\+/g, '');
                     if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
                         avatarUrl = globalProfilesCacheObj[cleanPhone].photo;
                     }
                 }
 
-                let mediaHtml = '';
-                if (msg.mediaUrl) {
-                    mediaHtml = `<img src="${msg.mediaUrl}" class="media-attachment-img" alt="attachment" onclick="window.open('${msg.mediaUrl}', '_blank')">`;
-                }
-
-                chatHtml += `
-                    <div class="chat-bubble ${bubbleClass}">
-                        ${!isSentByMe ? `
-                            <div class="chat-sender">
-                                <img src="${avatarUrl}" class="user-avatar-sm" alt="avatar">
-                                ${escapeHtml(msg.sender)}
-                            </div>` : ''}
-                        <div>${escapeHtml(msg.text || '')}</div>
-                        ${mediaHtml}
+                html += `
+                    <div class="chat-bubble ${bubbleType}">
+                        <div class="chat-sender">
+                            <img src="${avatarUrl}" class="user-avatar-sm" alt="Avatar">
+                            ${escapeHtml(msg.senderName || 'Anonymous')}
+                        </div>
+                        ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
+                        ${msg.image ? `<img src="${msg.image}" class="media-attachment-img" alt="Attachment" onclick="window.open('${msg.image}', '_blank')">` : ''}
                         <div class="chat-time">${timeStr}</div>
                     </div>`;
             });
 
-            container.innerHTML = chatHtml;
-
+            chatContainer.innerHTML = html;
             if (forceScrollBottom) {
-                container.scrollTop = container.scrollHeight;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
 
         function postGroupChatMessage(e) {
             e.preventDefault();
-            if (!activeLoggedInUser) return;
-
-            const input = document.getElementById('chatMessageInput');
-            const messageText = input.value.trim();
-
-            if (!messageText && !pendingChatAttachment) return;
+            const textInput = document.getElementById('chatMessageInput');
+            const text = textInput.value.trim();
+            if (!text && !pendingChatAttachment) return;
 
             const payload = {
-                sender: activeLoggedInUser.name,
-                phone: activeLoggedInUser.phone || '',
-                text: messageText,
-                mediaUrl: pendingChatAttachment || null,
-                timestamp: Date.now(),
-                deviceRef: UNIQUE_DEVICE_ID
+                senderName: activeLoggedInUser ? activeLoggedInUser.name : 'Guest',
+                senderPhone: activeLoggedInUser ? activeLoggedInUser.phone : '',
+                text: text,
+                image: pendingChatAttachment || null,
+                timestamp: Date.now()
             };
 
-            // Instant UI Clear
-            input.value = '';
+            textInput.value = '';
             clearChatAttachment();
-            isUserCurrentlyTyping = false;
-            updateTypingStatusCloud(false);
 
             fastFetch(`${FIREBASE_URL}group_messages.json`, {
                 method: 'POST',
@@ -2677,11 +2692,11 @@
             const reader = new FileReader();
             reader.onload = function(evt) {
                 pendingChatAttachment = evt.target.result;
-                const previewBox = document.getElementById('chatAttachmentPreview');
                 const previewText = document.getElementById('chatAttachmentPreviewText');
-                if (previewBox && previewText) {
+                const previewContainer = document.getElementById('chatAttachmentPreview');
+                if (previewText && previewContainer) {
                     previewText.innerText = file.name;
-                    previewBox.classList.remove('d-none');
+                    previewContainer.classList.remove('d-none');
                 }
             };
             reader.readAsDataURL(file);
@@ -2689,9 +2704,9 @@
 
         function clearChatAttachment() {
             pendingChatAttachment = null;
-            const previewBox = document.getElementById('chatAttachmentPreview');
+            const previewContainer = document.getElementById('chatAttachmentPreview');
             const fileInput = document.getElementById('chatMediaFileInput');
-            if (previewBox) previewBox.classList.add('d-none');
+            if (previewContainer) previewContainer.classList.add('d-none');
             if (fileInput) fileInput.value = '';
         }
     </script>
