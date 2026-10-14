@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link class="no-print" rel="icon" type="image/png" href="logo.png">
     <title>Meru Dairy Offload</title>
+    <!-- Speed Optimization: Preconnect & DNS-Prefetch external CDNs to eliminate lookup latency -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -456,6 +461,38 @@
             100% { opacity: 0; transform: scale(1.6); }
         }
 
+        /* --- Custom Calculator Floating Button --- */
+        #calculatorFloatingBtn {
+            position: fixed;
+            bottom: 95px;
+            left: 20px;
+            z-index: 9998;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            animation: calcFloat 3s ease-in-out infinite;
+        }
+        #calculatorFloatingBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.7);
+        }
+        #calculatorFloatingBtn:active {
+            transform: scale(0.95);
+        }
+        @keyframes calcFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
         .online-status-badge {
             font-size: 0.75rem;
             color: #20c997;
@@ -476,9 +513,15 @@
             color: #20c997;
         }
 
+        .manual-calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
         @media print {
             body { padding-top: 0 !important; }
-            .custom-sidebar, .hover-trigger-zone, #birdMenuTriggerBtn { display: none !important; }
+            .custom-sidebar, .hover-trigger-zone, #birdMenuTriggerBtn, #calculatorFloatingBtn { display: none !important; }
         }
     </style>
 </head>
@@ -535,6 +578,11 @@
             <div class="sound-wave"></div>
             <div class="sound-wave sound-wave-2"></div>
         </div>
+    </button>
+
+    <!-- Custom Floating Calculator Icon Button -->
+    <button id="calculatorFloatingBtn" data-bs-toggle="modal" data-bs-target="#automatedCalculatorModal" onclick="initAutomatedCalculatorModal()" title="Automated Calculator">
+        <i class="bi bi-calculator-fill text-dark fs-4"></i>
     </button>
 
     <div class="hover-trigger-zone" id="sidebarTriggerZone"></div>
@@ -597,7 +645,7 @@
                     <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                 </ul>
             </li>
-            <!-- REQUIREMENT 2: Added Logins link visible ONLY to 254742960571 and 0741048773 -->
+            <!-- Added Logins link visible ONLY to specific allowed phones -->
             <li id="sidebarLoginsLinkContainer" class="d-none">
                 <a href="#" class="sidebar-link text-warning" data-bs-toggle="modal" data-bs-target="#deviceLoginsModal" onclick="renderDeviceLoginsList()">
                     <i class="bi bi-shield-check text-warning"></i> Logins
@@ -631,6 +679,9 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
+                <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#automatedCalculatorModal" onclick="initAutomatedCalculatorModal()" title="Automated Calculator">
+                    <i class="bi bi-calculator-fill text-warning fs-5"></i>
+                </a>
                 <a class="menu-pill-btn" href="#" data-bs-toggle="modal" data-bs-target="#leaderboardModal" onclick="buildLeaderboard()" title="Leaderboard">
                     <i class="bi bi-trophy-fill text-warning fs-5"></i>
                 </a>
@@ -641,7 +692,6 @@
                     <i class="bi bi-chat-dots-fill text-success fs-5"></i>
                     <span id="globalNavUnreadBadgeCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">0</span>
                 </a>
-                <!-- Updated Force Sync button to Home Icon and Default Home behavior -->
                 <a class="menu-pill-btn" href="index.html" onclick="refreshToDefaultDashboard(); return false;" title="Home / Default Page">
                     <i class="bi bi-house-door-fill text-info fs-5"></i>
                 </a>
@@ -883,7 +933,114 @@
 
     </div>
 
-    <!-- REQUIREMENT 2: Admin Device Logins List Modal -->
+    <!-- Automated Calculator Modal -->
+    <div class="modal fade" id="automatedCalculatorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-warning text-dark py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold mb-0"><i class="bi bi-calculator-fill me-2"></i>Automated Payout & Fee Calculator</h5>
+                    <div>
+                        <button type="button" class="btn btn-dark btn-sm fw-bold me-2" onclick="toggleCalculatorMode()">
+                            <i class="bi bi-arrow-repeat me-1"></i> Calc-1
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Automated Calculator View -->
+                    <div id="automatedCalcViewPanel">
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Filter Member / Individual</label>
+                                <select id="calcMemberSelect" class="form-select form-select-sm" onchange="runAutomatedCalculation()">
+                                    <option value="ALL">All Members</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Start Date</label>
+                                <input type="date" id="calcStartDate" class="form-control form-control-sm" onchange="runAutomatedCalculation()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">End Date</label>
+                                <input type="date" id="calcEndDate" class="form-control form-control-sm" onchange="runAutomatedCalculation()">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 text-center mb-4">
+                            <div class="col-md-6">
+                                <div class="card p-3 border shadow-sm bg-primary text-white">
+                                    <div class="text-uppercase small fw-bold">1. System Total (Without Fee Removed)</div>
+                                    <div class="fs-3 fw-bold mt-2" id="calcSystemTotalDisplay">Ksh 0</div>
+                                    <div class="small mt-1 opacity-75" id="calcTotalBoxesDisplay">0 Boxes</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card p-3 border shadow-sm bg-success text-white">
+                                    <div class="text-uppercase small fw-bold">2. Total with Transaction Cost Removed</div>
+                                    <div class="fs-3 fw-bold mt-2" id="calcNetTotalDisplay">Ksh 0</div>
+                                    <div class="small mt-1 opacity-75" id="calcFeeDeductedDisplay">Transaction Fee: Ksh 0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h6 class="fw-bold text-dark mb-2">Included Filtered Logs Breakdown</h6>
+                            <div class="table-responsive border rounded" style="max-height: 240px; overflow-y: auto;">
+                                <table class="table table-sm table-hover mb-0 align-middle font-monospace" style="font-size: 12px;">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th class="ps-2">Employee / Plate</th>
+                                            <th>Date</th>
+                                            <th>Boxes</th>
+                                            <th class="text-end">Payout</th>
+                                            <th class="text-center pe-2" style="width: 90px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="calcBreakdownTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual / Normal Calculator View (Shift Option) -->
+                    <div id="manualCalcViewPanel" class="d-none">
+                        <div class="card bg-light border p-3">
+                            <div class="mb-3">
+                                <input type="text" id="manualCalcScreen" class="form-control form-control-lg text-end bg-white text-dark fw-bold fs-3" readonly value="0">
+                            </div>
+                            <div class="manual-calc-grid">
+                                <button type="button" class="btn btn-secondary py-3 fw-bold fs-5" onclick="manualAppend('C')">C</button>
+                                <button type="button" class="btn btn-secondary py-3 fw-bold fs-5" onclick="manualAppend('(')">(</button>
+                                <button type="button" class="btn btn-secondary py-3 fw-bold fs-5" onclick="manualAppend(')')">)</button>
+                                <button type="button" class="btn btn-warning py-3 fw-bold fs-5" onclick="manualAppend('/')">÷</button>
+
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('7')">7</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('8')">8</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('9')">9</button>
+                                <button type="button" class="btn btn-warning py-3 fw-bold fs-5" onclick="manualAppend('*')">×</button>
+
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('4')">4</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('5')">5</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('6')">6</button>
+                                <button type="button" class="btn btn-warning py-3 fw-bold fs-5" onclick="manualAppend('-')">-</button>
+
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('1')">1</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('2')">2</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('3')">3</button>
+                                <button type="button" class="btn btn-warning py-3 fw-bold fs-5" onclick="manualAppend('+')">+</button>
+
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5 col-span-2" onclick="manualAppend('0')">0</button>
+                                <button type="button" class="btn btn-light border py-3 fw-bold fs-5" onclick="manualAppend('.')">.</button>
+                                <button type="button" class="btn btn-success py-3 fw-bold fs-5" onclick="manualCalculateResult()">=</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Device Logins List Modal -->
     <div class="modal fade" id="deviceLoginsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content text-dark">
@@ -1156,7 +1313,7 @@
                 </div>
             </div>
         </div>
-    </footer>
+    </div>
 
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
@@ -1185,13 +1342,13 @@
             return id;
         })();
 
-        let globalLogsArray = [];
-        let masterDynamicWorkersArray = [];
-        let globalAttendanceObj = {};
-        let globalMessagesCacheArray = [];
-        let globalProfilesCacheObj = {};
+        let globalLogsArray = JSON.parse(localStorage.getItem('meru_cached_logs') || '[]');
+        let masterDynamicWorkersArray = JSON.parse(localStorage.getItem('meru_cached_workers') || '[]');
+        let globalAttendanceObj = JSON.parse(localStorage.getItem('meru_cached_attendance') || '{}');
+        let globalMessagesCacheArray = JSON.parse(localStorage.getItem('meru_cached_messages') || '[]');
+        let globalProfilesCacheObj = JSON.parse(localStorage.getItem('meru_cached_profiles') || '{}');
         let clientReadMessagesTrackerObj = JSON.parse(localStorage.getItem('meru_read_notifications_map') || '{}');
-        let knownLogIds = new Set();
+        let knownLogIds = new Set(globalLogsArray.map(l => l.id));
         let isInitialLoad = true;
         
         let activeLoggedInUser = null; 
@@ -1203,7 +1360,6 @@
 
         let typingTimeoutTimer = null;
         let isUserCurrentlyTyping = false;
-        let renderedMessageIds = new Set();
         let sessionStartTime = Date.now();
 
         const STICKERS_LIST = [
@@ -1218,9 +1374,12 @@
             "🏎️","🏎️","⚡","✨","🔥","🌟","🎆","🎇"
         ];
 
-        // High-Speed Helper: Perform non-blocking background HTTP calls
+        // High-Speed Helper with Request Caching & Timeout Fallbacks for Slow/Unstable Connections
         function fastFetch(url, options = {}) {
-            return fetch(url, options);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            return fetch(url, { ...options, signal: controller.signal, cache: 'default' })
+                .finally(() => clearTimeout(timeoutId));
         }
 
         // High-Speed Helper: Helper to safely escape string for HTML rendering
@@ -1255,6 +1414,18 @@
             initStickerAndGiftPickers();
             requestNotificationPermission();
 
+            // Render cached data immediately for instant offline/online UI painting
+            if (globalLogsArray.length > 0) {
+                executeCalculatedSystemMetrics();
+                handleLiveSearchFilter();
+            }
+            if (masterDynamicWorkersArray.length > 0) {
+                rebuildFormEmployeeSelectionMenus();
+            }
+            if (globalMessagesCacheArray.length > 0) {
+                renderGroupChatTimeline();
+            }
+
             // Maximum Performance Parallel Execution on Startup
             Promise.all([
                 fetchRosterRegistryFromCloud(),
@@ -1284,12 +1455,12 @@
 
             window.addEventListener('resize', applyPermissionsVisibility);
 
-            // Instant Splash Screen Removal (<50ms delay)
+            // Instant Splash Screen Removal (<30ms delay)
             setTimeout(() => {
                 const splash = document.getElementById('splashScreenOverlay');
                 if (splash) splash.classList.add('d-none');
                 checkMemberAuthSession();
-            }, 50);
+            }, 30);
         });
 
         function requestNotificationPermission() {
@@ -1458,6 +1629,7 @@
             .then(res => res.json())
             .then(data => {
                 globalProfilesCacheObj = data || {};
+                localStorage.setItem('meru_cached_profiles', JSON.stringify(globalProfilesCacheObj));
                 if (activeLoggedInUser && activeLoggedInUser.phone) {
                     const cleanPhone = activeLoggedInUser.phone.trim().replace(/\+/g, '');
                     if (globalProfilesCacheObj[cleanPhone] && globalProfilesCacheObj[cleanPhone].photo) {
@@ -1922,13 +2094,15 @@
                     globalLogsArray.sort((a,b) => new Date(b.dateWorked) - new Date(a.dateWorked));
                     checkAndAutoCancelUnclaimedLogs();
                 }
+                localStorage.setItem('meru_cached_logs', JSON.stringify(globalLogsArray));
                 isInitialLoad = false;
                 document.getElementById('loadingSpinner').style.display = 'none';
                 executeCalculatedSystemMetrics();
                 handleLiveSearchFilter();
             })
             .catch(() => {
-                document.getElementById('loadingSpinner').innerText = "Sync Failed";
+                document.getElementById('loadingSpinner').innerText = "Sync Failed (Cached Mode)";
+                setTimeout(() => { document.getElementById('loadingSpinner').style.display = 'none'; }, 3000);
             });
         }
 
@@ -2146,6 +2320,7 @@
                     })
                     .then(() => {
                         fetchLogsFromCloud();
+                        runAutomatedCalculation();
                     });
                 });
             }
@@ -2361,6 +2536,7 @@
                         masterDynamicWorkersArray.push({ id: k, name: data[k].name, phone: data[k].phone || "" });
                     });
                 }
+                localStorage.setItem('meru_cached_workers', JSON.stringify(masterDynamicWorkersArray));
                 rebuildFormEmployeeSelectionMenus();
             }).catch(() => {});
         }
@@ -2387,6 +2563,16 @@
 
             const activeBadge = document.getElementById('sidebarActiveCount');
             if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
+
+            // Populate calculator member dropdown
+            const calcMemberSelect = document.getElementById('calcMemberSelect');
+            if(calcMemberSelect) {
+                let calcOpts = '<option value="ALL">All Members</option>';
+                sortedList.forEach(w => {
+                    calcOpts += `<option value="${escapeHtml(w.name)}">${escapeHtml(w.name)}</option>`;
+                });
+                calcMemberSelect.innerHTML = calcOpts;
+            }
         }
 
         function renderRosterRegistryManagementTable() {
@@ -2447,6 +2633,7 @@
             .then(res => res.json())
             .then(data => {
                 globalAttendanceObj = data || {};
+                localStorage.setItem('meru_cached_attendance', JSON.stringify(globalAttendanceObj));
                 rebuildFormEmployeeSelectionMenus();
                 evaluateActiveAccountLockState();
             }).catch(() => {});
@@ -2477,6 +2664,7 @@
 
         function toggleMemberAttendanceState(memberName, isChecked) {
             globalAttendanceObj[memberName] = isChecked;
+            localStorage.setItem('meru_cached_attendance', JSON.stringify(globalAttendanceObj));
             rebuildFormEmployeeSelectionMenus();
             evaluateActiveAccountLockState();
 
@@ -2577,6 +2765,158 @@
             }
         }
 
+        // Automated Calculator Fee Determination Function
+        function calculateTransactionFee(amount) {
+            if (amount <= 0) return 0;
+            if (amount <= 100) return 0;
+            if (amount <= 500) return 7;
+            if (amount <= 1000) return 13;
+            if (amount <= 1500) return 23;
+            if (amount <= 2500) return 33;
+            if (amount <= 3500) return 53;
+            if (amount <= 5000) return 57;
+            if (amount <= 7500) return 78;
+            if (amount <= 10000) return 90;
+            if (amount <= 15000) return 100;
+            if (amount <= 20000) return 105;
+            return 108;
+        }
+
+        function initAutomatedCalculatorModal() {
+            const memberSelect = document.getElementById('calcMemberSelect');
+            if (activeLoggedInUser && !isFullAdmin()) {
+                memberSelect.value = activeLoggedInUser.name;
+            } else {
+                memberSelect.value = "ALL";
+            }
+            document.getElementById('calcStartDate').value = '';
+            document.getElementById('calcEndDate').value = '';
+            
+            // Default to automated view on open
+            document.getElementById('automatedCalcViewPanel').classList.remove('d-none');
+            document.getElementById('manualCalcViewPanel').classList.add('d-none');
+            
+            runAutomatedCalculation();
+        }
+
+        function toggleCalculatorMode() {
+            const autoPanel = document.getElementById('automatedCalcViewPanel');
+            const manualPanel = document.getElementById('manualCalcViewPanel');
+            if (autoPanel.classList.contains('d-none')) {
+                autoPanel.classList.remove('d-none');
+                manualPanel.classList.add('d-none');
+                runAutomatedCalculation();
+            } else {
+                autoPanel.classList.add('d-none');
+                manualPanel.classList.remove('d-none');
+            }
+        }
+
+        let manualCalcBuffer = "";
+        function manualAppend(val) {
+            const screen = document.getElementById('manualCalcScreen');
+            if (val === 'C') {
+                manualCalcBuffer = "";
+                screen.value = "0";
+                return;
+            }
+            if (manualCalcBuffer === "" && ['+', '*', '/'].includes(val)) return;
+            manualCalcBuffer += val;
+            screen.value = manualCalcBuffer;
+        }
+
+        function manualCalculateResult() {
+            const screen = document.getElementById('manualCalcScreen');
+            try {
+                // Safe calculation execution
+                let res = Function('"use strict"; return (' + manualCalcBuffer + ')')();
+                screen.value = res;
+                manualCalcBuffer = res.toString();
+            } catch(e) {
+                screen.value = "Error";
+                manualCalcBuffer = "";
+            }
+        }
+
+        function runAutomatedCalculation() {
+            const query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
+            const selectedStatusOption = document.getElementById('tableStatusSelector').value;
+            const memberFilter = document.getElementById('calcMemberSelect').value;
+            const startDate = document.getElementById('calcStartDate').value;
+            const endDate = document.getElementById('calcEndDate').value;
+
+            let filteredLogs = globalLogsArray;
+
+            // Respect main system search & status filters
+            if (activeStatusFilterCriteria !== "ALL") {
+                filteredLogs = filteredLogs.filter(l => l.status === activeStatusFilterCriteria);
+            }
+            if (selectedStatusOption !== "ALL") {
+                filteredLogs = filteredLogs.filter(l => l.status === selectedStatusOption);
+            }
+            if (query) {
+                filteredLogs = filteredLogs.filter(l => l.employeeName.toLowerCase().includes(query) || l.vehiclePlate.toLowerCase().includes(query));
+            }
+
+            // Apply calculator-specific member/individual and date filters
+            if (memberFilter !== "ALL") {
+                filteredLogs = filteredLogs.filter(l => l.employeeName === memberFilter);
+            }
+            if (startDate) {
+                filteredLogs = filteredLogs.filter(l => l.dateWorked >= startDate);
+            }
+            if (endDate) {
+                filteredLogs = filteredLogs.filter(l => l.dateWorked <= endDate);
+            }
+
+            let systemTotal = 0;
+            let totalBoxes = 0;
+            let breakdownHtml = '';
+            const isAdmin = isFullAdmin();
+
+            if (filteredLogs.length === 0) {
+                breakdownHtml = '<tr><td colspan="5" class="text-center text-muted py-3">No records match the current filters.</td></tr>';
+            } else {
+                filteredLogs.forEach(log => {
+                    const payout = parseFloat(log.calculatedPayout) || 0;
+                    systemTotal += payout;
+                    totalBoxes += parseInt(log.totalBoxes, 10) || 0;
+
+                    const showSettleBtn = (log.status === 'UNPAID' && isAdmin);
+
+                    breakdownHtml += `
+                        <tr>
+                            <td class="ps-2">
+                                <strong>${escapeHtml(log.employeeName)}</strong>
+                                <div class="text-muted" style="font-size: 10px;">${escapeHtml(log.vehiclePlate)}</div>
+                            </td>
+                            <td>${formatDateDisplay(log.dateWorked)}</td>
+                            <td>${log.totalBoxes}</td>
+                            <td class="text-end fw-bold">Ksh ${payout.toLocaleString()}</td>
+                            <td class="text-center pe-2">
+                                ${showSettleBtn ? `<button class="btn btn-sm btn-success fw-bold py-0 px-2" style="font-size: 11px;" onclick="processPaymentPayoutAction('${log.id}')">Settle</button>` : `<span class="badge ${log.status==='PAID'?'bg-success':log.status==='UNPAID'?'bg-warning text-dark':'bg-danger'}" style="font-size: 10px;">${log.status}</span>`}
+                            </td>
+                        </tr>`;
+                });
+            }
+
+            // Transaction fee deducted from the final total unless it's a single record being calculated
+            let totalFeeDeducted = 0;
+            if (filteredLogs.length === 1) {
+                totalFeeDeducted = calculateTransactionFee(systemTotal);
+            } else {
+                totalFeeDeducted = calculateTransactionFee(systemTotal);
+            }
+
+            const netTotal = Math.max(0, systemTotal - totalFeeDeducted);
+
+            document.getElementById('calcSystemTotalDisplay').innerText = `Ksh ${systemTotal.toLocaleString()}`;
+            document.getElementById('calcTotalBoxesDisplay').innerText = `${totalBoxes.toLocaleString()} Total Boxes`;
+            document.getElementById('calcNetTotalDisplay').innerText = `Ksh ${netTotal.toLocaleString()}`;
+            document.getElementById('calcFeeDeductedDisplay').innerText = `Transaction Fee: Ksh ${totalFeeDeducted.toLocaleString()}`;
+            document.getElementById('calcBreakdownTableBody').innerHTML = breakdownHtml;
+        }
+
         function fetchMessagesTimelineFeed(forceScroll = false) {
             fastFetch(`${FIREBASE_URL}group_messages.json`)
             .then(res => res.json())
@@ -2588,6 +2928,7 @@
                     });
                     globalMessagesCacheArray.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
                 }
+                localStorage.setItem('meru_cached_messages', JSON.stringify(globalMessagesCacheArray));
                 updateUnreadMessagesCountBadge();
                 const msgPanel = document.getElementById('view-messages-panel');
                 if (msgPanel && !msgPanel.classList.contains('d-none')) {
