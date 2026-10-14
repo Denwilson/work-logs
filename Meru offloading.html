@@ -2381,88 +2381,141 @@
             });
 
             let printWrapper = document.createElement('div');
-            printWrapper.style.padding = '0px 20px 20px 20px';
-            printWrapper.style.color = '#000000';
+            printWrapper.style.padding = '0px 10px 10px 10px';
+            printWrapper.style.color = '#0f172a';
             printWrapper.style.backgroundColor = '#ffffff';
+            printWrapper.style.fontFamily = "'Inter', system-ui, -apple-system, sans-serif";
 
+            // Gorgeous Gradient Header Banner - Starts completely flush at top of page 1
             let reportHeaderMetaData = `
-                <div style="border-bottom:3px solid #000; padding-top:10px; padding-bottom:12px; margin-bottom:20px;">
-                    <h2 style="text-transform:uppercase; margin:0 0 5px 0; letter-spacing:1px;">Meru Dairy Offload System Report</h2>
-                    <p style="margin:2px 0; font-size:13px; color:#555;"><strong>Generated On:</strong> ${currentGenerationTimestamp}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Document Scope: ${nameMatch ? 'Employee Name Filter: ' + nameMatch.toUpperCase() : 'All Active Roster Personnel Summary Statement'}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Filter Status: ${tableStatusFilter === 'ALL' ? activeStatusFilterCriteria : tableStatusFilter}</p>
-                    <p style="margin:2px 0; font-size:13px; color:#555;">Date Range Constraints: [${startMatch || 'Earliest Node'}] to [${endMatch || 'Latest Entry'}]</p>
+                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; padding: 18px 20px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h1 style="margin: 0; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700;">Meru Dairy Offload</h1>
+                            <div style="font-size: 10px; color: #94a3b8; margin-top: 3px; font-weight: 500;">Financial Audit & Performance Statement</div>
+                        </div>
+                        <div style="text-align: right; font-size: 9px; color: #cbd5e1; background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 6px;">
+                            <div><strong>Generated:</strong> ${currentGenerationTimestamp}</div>
+                            <div style="margin-top: 2px;"><strong>Filter Mode:</strong> ${tableStatusFilter}</div>
+                        </div>
+                    </div>
                 </div>
-                <h4>Personnel Aggregations Summary Statement</h4>
-                <table class="table table-bordered" style="width:100%; border-collapse:collapse; margin-bottom:25px; font-size:12px;">
-                    <thead style="background-color:#f8fafc;">
-                        <tr>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:left;">Employee Name</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:center;">Total Offloaded Capacity</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Settled Claims Val</th>
-                            <th style="padding:8px; border:1px solid #ddd; text-align:right;">Outstanding Owed Balance</th>
+
+                <!-- Filter Scope Pill Row -->
+                <div style="display: flex; gap: 10px; margin-bottom: 16px; font-size: 10px;">
+                    <div style="flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; color: #334155;">
+                        <span style="color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 8px; display: block; margin-bottom: 2px;">Personnel Scope</span>
+                        <strong>${nameMatch ? nameMatch.toUpperCase() : 'All Active Personnel'}</strong>
+                    </div>
+                    <div style="flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; color: #334155;">
+                        <span style="color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 8px; display: block; margin-bottom: 2px;">Timeline Window</span>
+                        <strong>${startMatch || 'Beginning'} &rarr; ${endMatch || 'Present'}</strong>
+                    </div>
+                </div>
+
+                <!-- Beautiful KPI Summary Blocks -->
+                <div style="display: flex; gap: 10px; margin-bottom: 18px;">
+                    <div style="flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 6px;">
+                        <div style="font-size: 8px; text-transform: uppercase; color: #1e40af; font-weight: 700; letter-spacing: 0.5px;">Total Volume</div>
+                        <div style="font-size: 16px; font-weight: 800; color: #1d4ed8; margin-top: 3px;">${grandTotalBoxes.toLocaleString()} <span style="font-size: 10px; font-weight: 500;">Boxes</span></div>
+                    </div>
+                    <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 14px; border-radius: 6px;">
+                        <div style="font-size: 8px; text-transform: uppercase; color: #166534; font-weight: 700; letter-spacing: 0.5px;">Total Settled</div>
+                        <div style="font-size: 16px; font-weight: 800; color: #15803d; margin-top: 3px;">Ksh ${grandTotalPaid.toLocaleString()}</div>
+                    </div>
+                    <div style="flex: 1; background: #fef2f2; border: 1px solid #fecaca; padding: 10px 14px; border-radius: 6px;">
+                        <div style="font-size: 8px; text-transform: uppercase; color: #991b1b; font-weight: 700; letter-spacing: 0.5px;">Total Outstanding</div>
+                        <div style="font-size: 16px; font-weight: 800; color: #b91c1c; margin-top: 3px;">Ksh ${grandTotalUnpaid.toLocaleString()}</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 6px; letter-spacing: 0.5px;">
+                    Personnel Performance Breakdown
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10px; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <thead>
+                        <tr style="background-color: #f1f5f9; color: #334155; text-align: left;">
+                            <th style="padding: 8px 12px; font-weight: 700; border-bottom: 2px solid #cbd5e1;">Employee Name</th>
+                            <th style="padding: 8px 12px; font-weight: 700; text-align: center; border-bottom: 2px solid #cbd5e1;">Total Capacity</th>
+                            <th style="padding: 8px 12px; font-weight: 700; text-align: right; border-bottom: 2px solid #cbd5e1;">Settled (Paid)</th>
+                            <th style="padding: 8px 12px; font-weight: 700; text-align: right; border-bottom: 2px solid #cbd5e1;">Outstanding (Unpaid)</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
+            let altRow = false;
             Object.keys(summaryMap).sort().forEach(emp => {
+                const bg = altRow ? '#f8fafc' : '#ffffff';
+                altRow = !altRow;
                 reportHeaderMetaData += `
-                    <tr>
-                        <td style="padding:8px; border:1px solid #ddd;">${escapeHtml(emp)}</td>
-                        <td style="padding:8px; border:1px solid #ddd; text-align:center;">${summaryMap[emp].boxes.toLocaleString()} Boxes</td>
-                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754; font-weight:600;">Ksh ${summaryMap[emp].paidAmt.toLocaleString()}</td>
-                        <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#b45309; font-weight:600;">Ksh ${summaryMap[emp].unpaidAmt.toLocaleString()}</td>
+                    <tr style="background-color: ${bg}; border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 8px 12px; font-weight: 600; color: #0f172a;">${escapeHtml(emp)}</td>
+                        <td style="padding: 8px 12px; text-align: center; color: #475569;">${summaryMap[emp].boxes.toLocaleString()} Boxes</td>
+                        <td style="padding: 8px 12px; text-align: right; color: #16a34a; font-weight: 700;">Ksh ${summaryMap[emp].paidAmt.toLocaleString()}</td>
+                        <td style="padding: 8px 12px; text-align: right; color: #d97706; font-weight: 700;">Ksh ${summaryMap[emp].unpaidAmt.toLocaleString()}</td>
                     </tr>`;
             });
 
             reportHeaderMetaData += `
-                <tr style="background-color:#f1f5f9; font-weight:bold;">
-                    <td style="padding:8px; border:1px solid #ddd;">GRAND SYSTEM TOTALS</td>
-                    <td style="padding:8px; border:1px solid #ddd; text-align:center;">${grandTotalBoxes.toLocaleString()} Boxes</td>
-                    <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#198754;">Ksh ${grandTotalPaid.toLocaleString()}</td>
-                    <td style="padding:8px; border:1px solid #ddd; text-align:right; color:#dc3545;">Ksh ${grandTotalUnpaid.toLocaleString()}</td>
-                </tr>
-                </tbody></table>`;
+                    </tbody>
+                </table>
 
-            let transactionalTimelineLogsTable = `
-                <h4 style="margin-top:30px;">Itemized Auditable Transaction Log Ledger</h4>
-                <table class="table table-striped table-bordered" style="width:100%; border-collapse:collapse; font-size:11px;">
-                    <thead style="background-color:#f8fafc;">
-                        <tr>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:left;">Employee / Vehicle</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Date Logged</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Total Loaded</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Billable Units</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:right;">Payout Value</th>
-                            <th style="padding:6px; border:1px solid #ddd; text-align:center;">Status</th>
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 6px; letter-spacing: 0.5px;">
+                    Itemized Audit Ledger
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 9px; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;">
+                    <thead>
+                        <tr style="background-color: #f1f5f9; color: #334155; text-align: left;">
+                            <th style="padding: 7px 10px; font-weight: 700; border-bottom: 2px solid #cbd5e1;">Employee / Vehicle</th>
+                            <th style="padding: 7px 10px; font-weight: 700; text-align: center; border-bottom: 2px solid #cbd5e1;">Date</th>
+                            <th style="padding: 7px 10px; font-weight: 700; text-align: center; border-bottom: 2px solid #cbd5e1;">Loaded</th>
+                            <th style="padding: 7px 10px; font-weight: 700; text-align: center; border-bottom: 2px solid #cbd5e1;">Billable</th>
+                            <th style="padding: 7px 10px; font-weight: 700; text-align: right; border-bottom: 2px solid #cbd5e1;">Payout Amount</th>
+                            <th style="padding: 7px 10px; font-weight: 700; text-align: center; border-bottom: 2px solid #cbd5e1;">Status</th>
                         </tr>
                     </thead>
                     <tbody>`;
 
             if (filteredTransactionsList.length === 0) {
-                transactionalTimelineLogsTable += `<tr><td colspan="6" style="padding:20px; text-align:center; color:#666;">No auditable records synchronized within configured timeline filters.</td></tr>`;
+                reportHeaderMetaData += `<tr><td colspan="6" style="padding: 12px; text-align: center; color: #94a3b8;">No records matched your selection criteria.</td></tr>`;
             }
 
+            altRow = false;
             filteredTransactionsList.forEach(log => {
-                transactionalTimelineLogsTable += `
-                    <tr>
-                        <td style="padding:6px; border:1px solid #ddd;">
-                            <strong>${escapeHtml(log.employeeName)}</strong>
-                            <div style="font-size:10px; color:#555;">Plate: ${escapeHtml(log.vehiclePlate)}</div>
+                const bg = altRow ? '#f8fafc' : '#ffffff';
+                altRow = !altRow;
+                const statusBadgeBg = log.status === 'PAID' ? '#dcfce7' : log.status === 'UNPAID' ? '#fef9c3' : '#fee2e2';
+                const statusColor = log.status === 'PAID' ? '#15803d' : log.status === 'UNPAID' ? '#a16207' : '#b91c1c';
+
+                reportHeaderMetaData += `
+                    <tr style="background-color: ${bg}; border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 6px 10px;">
+                            <strong style="color: #0f172a;">${escapeHtml(log.employeeName)}</strong>
+                            <div style="font-size: 8px; color: #64748b; font-family: monospace;">${escapeHtml(log.vehiclePlate)}</div>
                         </td>
-                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${formatDateDisplay(log.dateWorked)}</td>
-                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.totalBoxes}</td>
-                        <td style="padding:6px; border:1px solid #ddd; text-align:center;">${log.paidBoxes}</td>
-                        <td style="padding:6px; border:1px solid #ddd; text-align:right; font-weight:600;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
-                        <td style="padding:6px; border:1px solid #ddd; text-align:center; font-weight:bold; color:${log.status==='PAID'?'#198754':log.status==='UNPAID'?'#b45309':'#dc3545'}">${log.status}</td>
+                        <td style="padding: 6px 10px; text-align: center; color: #475569; font-family: monospace;">${formatDateDisplay(log.dateWorked)}</td>
+                        <td style="padding: 6px 10px; text-align: center; color: #475569;">${log.totalBoxes}</td>
+                        <td style="padding: 6px 10px; text-align: center; color: #475569;">${log.paidBoxes}</td>
+                        <td style="padding: 6px 10px; text-align: right; font-weight: 700; color: #0f172a;">Ksh ${log.calculatedPayout.toLocaleString()}</td>
+                        <td style="padding: 6px 10px; text-align: center;">
+                            <span style="background-color: ${statusBadgeBg}; color: ${statusColor}; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 8px;">${log.status}</span>
+                        </td>
                     </tr>`;
             });
 
-            transactionalTimelineLogsTable += `</tbody></table>`;
-            printWrapper.innerHTML = reportHeaderMetaData + transactionalTimelineLogsTable;
+            reportHeaderMetaData += `
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 8px; color: #64748b;">
+                    <div><strong>Meru Dairy Offload Management Suite</strong> &bull; Official Document</div>
+                    <div>Cloud Synchronized &bull; Secure Audit Trail</div>
+                </div>`;
+
+            printWrapper.innerHTML = reportHeaderMetaData;
 
             const printSettingsOptionsObject = {
-                margin: [0, 10, 10, 10],
+                margin: [0, 10, 10, 10], // Zero top margin ensures content begins flush at the top of page 1
                 filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
@@ -2564,7 +2617,6 @@
             const activeBadge = document.getElementById('sidebarActiveCount');
             if(activeBadge) activeBadge.innerText = `${activeCounter} Checked-In`;
 
-            // Populate calculator member dropdown
             const calcMemberSelect = document.getElementById('calcMemberSelect');
             if(calcMemberSelect) {
                 let calcOpts = '<option value="ALL">All Members</option>';
@@ -2765,7 +2817,6 @@
             }
         }
 
-        // Automated Calculator Fee Determination Function
         function calculateTransactionFee(amount) {
             if (amount <= 0) return 0;
             if (amount <= 100) return 0;
@@ -2792,7 +2843,6 @@
             document.getElementById('calcStartDate').value = '';
             document.getElementById('calcEndDate').value = '';
             
-            // Default to automated view on open
             document.getElementById('automatedCalcViewPanel').classList.remove('d-none');
             document.getElementById('manualCalcViewPanel').classList.add('d-none');
             
@@ -2828,7 +2878,6 @@
         function manualCalculateResult() {
             const screen = document.getElementById('manualCalcScreen');
             try {
-                // Safe calculation execution
                 let res = Function('"use strict"; return (' + manualCalcBuffer + ')')();
                 screen.value = res;
                 manualCalcBuffer = res.toString();
@@ -2847,7 +2896,6 @@
 
             let filteredLogs = globalLogsArray;
 
-            // Respect main system search & status filters
             if (activeStatusFilterCriteria !== "ALL") {
                 filteredLogs = filteredLogs.filter(l => l.status === activeStatusFilterCriteria);
             }
@@ -2858,7 +2906,6 @@
                 filteredLogs = filteredLogs.filter(l => l.employeeName.toLowerCase().includes(query) || l.vehiclePlate.toLowerCase().includes(query));
             }
 
-            // Apply calculator-specific member/individual and date filters
             if (memberFilter !== "ALL") {
                 filteredLogs = filteredLogs.filter(l => l.employeeName === memberFilter);
             }
@@ -2900,15 +2947,8 @@
                 });
             }
 
-            // Transaction fee deducted from the final total unless it's a single record being calculated
-            let totalFeeDeducted = 0;
-            if (filteredLogs.length === 1) {
-                totalFeeDeducted = calculateTransactionFee(systemTotal);
-            } else {
-                totalFeeDeducted = calculateTransactionFee(systemTotal);
-            }
-
-            const netTotal = Math.max(0, systemTotal - totalFeeDeducted);
+            let totalFeeDeducted = calculateTransactionFee(systemTotal);
+            let netTotal = Math.max(0, systemTotal - totalFeeDeducted);
 
             document.getElementById('calcSystemTotalDisplay').innerText = `Ksh ${systemTotal.toLocaleString()}`;
             document.getElementById('calcTotalBoxesDisplay').innerText = `${totalBoxes.toLocaleString()} Total Boxes`;
