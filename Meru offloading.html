@@ -989,7 +989,7 @@
                                 <table class="table table-sm table-hover mb-0 align-middle font-monospace" style="font-size: 12px;">
                                     <thead class="table-dark sticky-top">
                                         <tr>
-                                            <th class="ps-2">Employee / Plate</th>
+                                            <th class="ps-2">Employee / Phone / Plate</th>
                                             <th>Date</th>
                                             <th>Boxes</th>
                                             <th class="text-end">Payout</th>
@@ -2386,7 +2386,6 @@
             printWrapper.style.backgroundColor = '#ffffff';
             printWrapper.style.fontFamily = "'Inter', system-ui, -apple-system, sans-serif";
 
-            // Gorgeous Gradient Header Banner - Starts completely flush at top of page 1
             let reportHeaderMetaData = `
                 <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; padding: 18px 20px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2401,7 +2400,6 @@
                     </div>
                 </div>
 
-                <!-- Filter Scope Pill Row -->
                 <div style="display: flex; gap: 10px; margin-bottom: 16px; font-size: 10px;">
                     <div style="flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; color: #334155;">
                         <span style="color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 8px; display: block; margin-bottom: 2px;">Personnel Scope</span>
@@ -2413,7 +2411,6 @@
                     </div>
                 </div>
 
-                <!-- Beautiful KPI Summary Blocks -->
                 <div style="display: flex; gap: 10px; margin-bottom: 18px;">
                     <div style="flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 6px;">
                         <div style="font-size: 8px; text-transform: uppercase; color: #1e40af; font-weight: 700; letter-spacing: 0.5px;">Total Volume</div>
@@ -2515,7 +2512,7 @@
             printWrapper.innerHTML = reportHeaderMetaData;
 
             const printSettingsOptionsObject = {
-                margin: [0, 10, 10, 10], // Zero top margin ensures content begins flush at the top of page 1
+                margin: [0, 10, 10, 10],
                 filename: `Meru_Dairy_Offload_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
@@ -2931,11 +2928,16 @@
 
                     const showSettleBtn = (log.status === 'UNPAID' && isAdmin);
 
+                    // Lookup worker phone number from registry
+                    const workerMatch = masterDynamicWorkersArray.find(w => w.name.toLowerCase() === log.employeeName.toLowerCase());
+                    const workerPhone = workerMatch && workerMatch.phone ? workerMatch.phone : 'No Phone Registered';
+
                     breakdownHtml += `
                         <tr>
                             <td class="ps-2">
                                 <strong>${escapeHtml(log.employeeName)}</strong>
-                                <div class="text-muted" style="font-size: 10px;">${escapeHtml(log.vehiclePlate)}</div>
+                                <div class="text-primary font-monospace" style="font-size: 11px;"><i class="bi bi-telephone-fill me-1"></i>${escapeHtml(workerPhone)}</div>
+                                <div class="text-muted" style="font-size: 10px;">Plate: ${escapeHtml(log.vehiclePlate)}</div>
                             </td>
                             <td>${formatDateDisplay(log.dateWorked)}</td>
                             <td>${log.totalBoxes}</td>
