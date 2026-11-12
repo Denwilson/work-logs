@@ -618,8 +618,13 @@
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item py-2 rounded" href="#" data-bs-toggle="modal" data-bs-target="#previewDeletionModal" onclick="renderPreviewDeletionTable()">
+                        <a class="dropdown-item py-2 rounded mb-1" href="#" data-bs-toggle="modal" data-bs-target="#previewDeletionModal" onclick="renderPreviewDeletionTable()">
                             <i class="bi bi-file-earmark-medical me-2 text-info"></i> Preview
+                        </a>
+                    </li>
+                    <li id="sidebarModifyColumnsItem" class="d-none">
+                        <a class="dropdown-item py-2 rounded text-warning" href="#" data-bs-toggle="modal" data-bs-target="#columnConfigModal" onclick="renderColumnConfigModal()">
+                            <i class="bi bi-layout-three-columns me-2"></i> Modify Columns
                         </a>
                     </li>
                 </ul>
@@ -645,6 +650,12 @@
                     <li><a class="dropdown-item py-2 rounded text-danger" href="#" onclick="filterByStatusSelector('CANCELLED'); return false;"><i class="bi bi-x-octagon-fill me-2"></i> Cancelled Logs</a></li>
                 </ul>
             </li>
+            <!-- Chief Admin (254742960571) Full Website Editor & Control Center -->
+            <li id="sidebarChiefEditorContainer" class="d-none">
+                <a href="#" class="sidebar-link text-info" data-bs-toggle="modal" data-bs-target="#chiefWebsiteEditorModal" onclick="openChiefWebsiteEditorModal()">
+                    <i class="bi bi-sliders text-info"></i> Edit Website
+                </a>
+            </li>
             <!-- Added Logins link visible ONLY to specific allowed phones -->
             <li id="sidebarLoginsLinkContainer" class="d-none">
                 <a href="#" class="sidebar-link text-warning" data-bs-toggle="modal" data-bs-target="#deviceLoginsModal" onclick="renderDeviceLoginsList()">
@@ -669,7 +680,7 @@
                 <div class="d-inline-block text-white text-decoration-none" onclick="refreshToDefaultDashboard()" style="cursor: pointer;" title="Go to Dashboard">
                     <div class="fw-bold" id="navUserGreeting" style="font-size: 1rem;">Hello Member, Welcome back.</div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</span>
+                        <span id="siteBrandSubtitle" class="fw-bold text-warning" style="font-size: 0.85rem; letter-spacing: 0.5px;">Meru DairyOffload</span>
                         <!-- Online devices count after 'Meru DairyOffload' -->
                         <span class="online-status-badge ms-1" id="navOnlineDevicesCount">
                             <span class="pulse-dot online" style="width:7px; height:7px;"></span> <span id="navOnlineCountText">1 online</span>
@@ -702,10 +713,12 @@
         </div>
     </nav>
 
+    <div id="chiefCustomTickerContainer" class="container mt-2 mb-0 no-print"></div>
+    <div id="chiefCustomWidgetContainer" class="container my-2"></div>
     <div class="container my-4 main-content">
         
         <div id="view-dashboard-panel">
-            <div class="row g-3 mb-4 no-print">
+            <div id="appStatsCardsContainer" class="row g-3 mb-4 no-print">
                 <div class="col-md-3">
                     <div class="card shadow-sm p-3 stat-card" style="border-left-color: #0d6efd;">
                         <div class="text-muted small fw-bold text-uppercase">Total Offloaded Boxes</div>
@@ -736,7 +749,7 @@
                 <div class="col-lg-4">
                     <div class="card shadow-sm mb-4" id="logWorkEntryFormContainer">
                         <div class="card-header bg-primary text-white py-3">
-                            <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i>Log Work Entry</h5>
+                            <h5 class="mb-0"><i class="bi bi-plus-circle-fill me-2"></i><span id="siteLogEntryTitle">Log Work Entry</span></h5>
                         </div>
                         <div class="card-body p-4">
                             <form id="workLogForm">
@@ -770,12 +783,13 @@
                                     <label class="form-label fw-semibold text-primary">Specify Boxes to Pay</label>
                                     <input type="number" id="paidBoxes" class="form-control border-primary bg-light text-dark" min="0" placeholder="Boxes to pay for">
                                 </div>
+                                <div id="dynamicCustomFieldsContainer"></div>
                                 <button type="submit" id="submitBtn" class="btn btn-success w-100 py-2 fw-bold">Save Record</button>
                             </form>
                         </div>
                     </div>
 
-                    <div class="card shadow-sm sticky-top" style="top: 100px; z-index:10;">
+                    <div id="appPdfReportCardContainer" class="card shadow-sm sticky-top" style="top: 100px; z-index:10;">
                         <div class="card-header bg-dark text-white py-3">
                             <h5 class="mb-0"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate PDF Report</h5>
                         </div>
@@ -800,7 +814,7 @@
                 </div>
 
                 <div class="col-lg-8">
-                    <div class="activity-banner shadow-sm p-3 mb-3 no-print row g-2">
+                    <div id="appActivityBannerContainer" class="activity-banner shadow-sm p-3 mb-3 no-print row g-2">
                         <div class="col-md-6 border-end-md">
                             <div class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
                                 <i class="bi bi-journal-plus text-primary me-1"></i> Last Entered Record
@@ -815,7 +829,7 @@
                         </div>
                     </div>
 
-                    <div class="card shadow-sm mb-3 p-3 no-print">
+                    <div id="appSearchFilterBarContainer" class="card shadow-sm mb-3 p-3 no-print">
                         <div class="row g-2 align-items-center">
                             <div class="col-md-5">
                                 <div class="input-group">
@@ -846,13 +860,18 @@
                                 <i class="bi bi-collection-fill me-2"></i>Saved Work Logs 
                                 <span id="loadingSpinner" class="badge bg-warning text-dark ms-2" style="display: none;">Loading cloud...</span>
                             </h5>
-                            <button class="btn btn-outline-danger btn-sm text-white shadow-sm" onclick="clearAllData()">Clear Cloud Records</button>
+                            <div class="d-flex gap-2">
+                                <button id="headerModifyColumnsBtn" class="btn btn-outline-warning btn-sm shadow-sm d-none" data-bs-toggle="modal" data-bs-target="#columnConfigModal" onclick="renderColumnConfigModal()">
+                                    <i class="bi bi-layout-three-columns me-1"></i> Columns
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm text-white shadow-sm" onclick="clearAllData()">Clear Cloud Records</button>
+                            </div>
                         </div>
                         
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0" id="mainLogsTable">
-                                    <thead class="table-light">
+                                    <thead class="table-light" id="logTableHead">
                                         <tr>
                                             <th>Employee / Vehicle</th>
                                             <th>Date Worked</th>
@@ -1078,17 +1097,23 @@
                     <div class="p-3 bg-light rounded border mb-3">
                         <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-plus-fill text-primary"></i> Deploy New Member</h6>
                         <div class="row g-2">
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <input type="text" id="newRegistryWorkerName" class="form-control bg-white text-dark" placeholder="Full name...">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <input type="text" id="newRegistryWorkerPhone" class="form-control bg-white text-dark" placeholder="Phone e.g. 254712345678">
                             </div>
                             <div class="col-md-3">
-                                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add Member</button>
+                                <select id="newRegistryWorkerRole" class="form-select bg-white text-dark">
+                                    <option value="worker" selected>Worker</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addNewWorkerToRegistryCloud()">Add</button>
                             </div>
                         </div>
-                        <small class="text-muted mt-2 d-block"><i class="bi bi-shield-exclamation"></i> Names and phone numbers must be unique.</small>
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-shield-exclamation"></i> Names and phone numbers must be unique. Admins have full management privileges.</small>
                     </div>
                     <h6 class="fw-bold text-dark mb-2">Configured Roster Members</h6>
                     <div class="table-responsive border rounded" style="max-height: 280px; overflow-y: auto;">
@@ -1097,11 +1122,361 @@
                                 <tr>
                                     <th class="ps-3">Full Name</th>
                                     <th>Phone Number</th>
+                                    <th>Role</th>
                                     <th class="text-center no-print" style="width: 100px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="rosterRegistryTableBody"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Column Configuration Modal (Super Admin 254742960571 Only) -->
+    <div class="modal fade" id="columnConfigModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-warning py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-layout-three-columns me-2"></i>Modify Saved Work Log Columns</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-light rounded border mb-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-plus-square-fill text-primary me-1"></i> Add Custom Column & Popup Action Form</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="text" id="newCustomColName" class="form-control bg-white text-dark" placeholder="Column Header (e.g. Quality Review, Storage Bin)">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="newCustomColType" class="form-select bg-white text-dark">
+                                    <option value="text" selected>Text Input</option>
+                                    <option value="number">Number Input</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" id="newCustomColAppearance" class="form-control bg-white text-dark" placeholder="Appearance (e.g. badge_success, custom, bold)">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addCustomTableColumn()">Add</button>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="newCustomColPopupTrigger">
+                                    <label class="form-check-label fw-semibold small" for="newCustomColPopupTrigger">Enable Interactive Popup Form Button for this Column (Reviewing / Storing / Checking)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-shield-lock-fill text-warning"></i> Chief Admin custom columns can display as badges/monospace and open interactive review/storing popup forms.</small>
+                    </div>
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <input type="text" id="newCustomColName" class="form-control bg-white text-dark" placeholder="Column Header (e.g. Shift, Notes, Loader)">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="newCustomColType" class="form-select bg-white text-dark">
+                                    <option value="text" selected>Text Input</option>
+                                    <option value="number">Number Input</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="addCustomTableColumn()">Add Column</button>
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-shield-lock-fill text-warning"></i> Restricted to Chief Admin (254742960571). Added columns appear in Log Entry & Saved Work Logs.</small>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-2">Active & Default Columns</h6>
+                    <div class="table-responsive border rounded" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Column Title</th>
+                                    <th>Type</th>
+                                    <th>Visibility / Status</th>
+                                    <th class="text-center" style="width: 130px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="columnConfigTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Chief Admin Edit Work Log Modal (254742960571 Only) -->
+    <div class="modal fade" id="chiefEditWorkLogModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Work Log Entry (No Delete Required)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editWorkLogId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Employee Name</label>
+                            <input type="text" id="editLogEmployeeName" class="form-control bg-light text-dark">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Vehicle Number Plate</label>
+                            <input type="text" id="editLogVehiclePlate" class="form-control bg-light text-dark">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Date of Work</label>
+                            <input type="date" id="editLogDateWorked" class="form-control bg-light text-dark">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Total Boxes Removed</label>
+                            <input type="number" id="editLogTotalBoxes" class="form-control bg-light text-dark" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Billable (Paid) Boxes</label>
+                            <input type="number" id="editLogPaidBoxes" class="form-control bg-light text-dark" min="0" oninput="document.getElementById('editLogPayout').value = (parseInt(this.value || 0, 10) * RATE_PER_BOX)">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Calculated Payout (Ksh)</label>
+                            <input type="number" id="editLogPayout" class="form-control bg-light text-dark" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select id="editLogStatus" class="form-select bg-light text-dark">
+                                <option value="UNPAID">UNPAID</option>
+                                <option value="PAID">PAID</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Payment Date (if Paid)</label>
+                            <input type="date" id="editLogPaymentDate" class="form-control bg-light text-dark">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Cancellation Reason / Audit Note</label>
+                            <input type="text" id="editLogCancellationReason" class="form-control bg-light text-dark" placeholder="Optional note or cancellation reason...">
+                        </div>
+                    </div>
+                    <div id="editLogDynamicCustomFields" class="row g-3 mt-1"></div>
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary fw-bold px-4" onclick="saveChiefEditedWorkLog()">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chief Admin Edit Member Modal (254742960571 Only) -->
+    <div class="modal fade" id="chiefEditMemberModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-person-lines-fill me-2"></i>Edit Team Member Details</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editMemberId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Full Name</label>
+                        <input type="text" id="editMemberName" class="form-control bg-light text-dark">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phone Number</label>
+                        <input type="text" id="editMemberPhone" class="form-control bg-light text-dark">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Role</label>
+                        <select id="editMemberRole" class="form-select bg-light text-dark">
+                            <option value="worker">Worker</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm fw-bold px-3" onclick="saveEditedMemberDetails()">Save Member Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chief Admin Full Website Editor & Control Modal (254742960571 Only) -->
+    <div class="modal fade" id="chiefWebsiteEditorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-info py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-2"></i>Chief Admin Ultimate God-Mode Studio (254742960571)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning py-2 small mb-4">
+                        <i class="bi bi-lightning-charge-fill me-1"></i> <strong>Full God-Mode Control:</strong> Modify backgrounds, colors, brand images/avatars, custom features, HTML widgets, and system settings instantly across all connected devices globally.
+                    </div>
+
+                    <!-- Nav Tabs for God Mode -->
+                    <ul class="nav nav-tabs mb-3" id="chiefStudioTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold" id="tab-general" data-bs-toggle="tab" data-bs-target="#panel-general" type="button" role="tab">General & Text</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="tab-theme" data-bs-toggle="tab" data-bs-target="#panel-theme" type="button" role="tab">Background, Colors & Pictures</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="tab-features" data-bs-toggle="tab" data-bs-target="#panel-features" type="button" role="tab">Widgets</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold text-warning" id="tab-hider" data-bs-toggle="tab" data-bs-target="#panel-hider" type="button" role="tab">Hide / Show Elements</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold text-danger" id="tab-cleanup" data-bs-toggle="tab" data-bs-target="#panel-cleanup" type="button" role="tab">Cleanup</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="chiefStudioTabContent">
+                        <!-- Panel 1: General -->
+                        <div class="tab-pane fade show active" id="panel-general" role="tabpanel">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Browser Tab Title</label>
+                                    <input type="text" id="cfgPageTitle" class="form-control bg-light text-dark">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Navbar Brand Subtitle</label>
+                                    <input type="text" id="cfgBrandSubtitle" class="form-control bg-light text-dark">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Work Entry Card Title</label>
+                                    <input type="text" id="cfgLogEntryTitle" class="form-control bg-light text-dark">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Rate Per Box (Ksh)</label>
+                                    <input type="number" id="cfgRatePerBox" class="form-control bg-light text-dark" min="0" step="0.5">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Footer Copyright / Notice Text</label>
+                                    <input type="text" id="cfgFooterText" class="form-control bg-light text-dark">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Background, Colors & Pictures -->
+                        <div class="tab-pane fade" id="panel-theme" role="tabpanel">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Website Background Color / Gradient</label>
+                                    <input type="text" id="cfgBgColor" class="form-control bg-light text-dark" placeholder="e.g. #f4f6f9 or linear-gradient(...)">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Navbar Color Theme Gradient / Hex</label>
+                                    <input type="text" id="cfgNavbarColor" class="form-control bg-light text-dark" placeholder="e.g. linear-gradient(...) or #0f172a">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Custom Background Image URL (Optional)</label>
+                                    <input type="text" id="cfgBgImage" class="form-control bg-light text-dark" placeholder="https://example.com/bg.jpg">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Global Accent / Highlight Color</label>
+                                    <input type="color" id="cfgAccentColor" class="form-control form-control-color w-100 bg-light" value="#ffc107">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Change / Upload Default Logo or Profile Avatar URL</label>
+                                    <div class="input-group">
+                                        <input type="text" id="cfgDefaultAvatarUrl" class="form-control bg-light text-dark" placeholder="Image URL...">
+                                        <label class="btn btn-outline-secondary mb-0">
+                                            Upload File <input type="file" class="d-none" accept="image/*" onchange="uploadChiefCustomImage(event)">
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 3: Add / Remove Odd Features & Widgets -->
+                        <div class="tab-pane fade" id="panel-features" role="tabpanel">
+                            <div class="alert alert-info small">
+                                <i class="bi bi-info-circle me-1"></i> You can inject any custom widget, ticker, HTML code snippet, or toggle custom odd features on or off instantly.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Custom HTML / Odd Feature Widget Code (Injected Live)</label>
+                                <textarea id="cfgCustomHtmlWidget" class="form-control font-monospace bg-light text-dark" rows="5" placeholder="<div>Your custom ticker, announcement banner, or extra feature widget here...</div>"></textarea>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="cfgEnableTicker">
+                                <label class="form-check-label fw-semibold" for="cfgEnableTicker">Enable Floating Announcement Ticker Bar</label>
+                            </div>
+                            <div class="mb-3" id="tickerTextContainer">
+                                <label class="form-label fw-semibold">Announcement Ticker Text</label>
+                                <input type="text" id="cfgTickerText" class="form-control bg-light text-dark" value="🔥 Welcome to Meru Dairy Offload God-Mode Terminal!">
+                            </div>
+                        </div>
+
+                        <!-- Panel 4: Hide / Show Elements -->
+                        <div class="tab-pane fade" id="panel-hider" role="tabpanel">
+                            <div class="alert alert-warning small">
+                                <i class="bi bi-eye-slash-fill me-1"></i> Instantly hide or show any major section of the application across all connected user devices.
+                            </div>
+                            <div class="row g-2" id="chiefElementHiderCheckboxes">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded border">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="hideEl_statsCards" onchange="toggleAppElementVisibility('statsCards', this.checked)">
+                                        <label class="form-check-label fw-semibold ms-2" for="hideEl_statsCards">Hide Top Stats Cards</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded border">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="hideEl_logEntryForm" onchange="toggleAppElementVisibility('logEntryForm', this.checked)">
+                                        <label class="form-check-label fw-semibold ms-2" for="hideEl_logEntryForm">Hide Log Work Entry Form</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded border">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="hideEl_pdfGenerator" onchange="toggleAppElementVisibility('pdfGenerator', this.checked)">
+                                        <label class="form-check-label fw-semibold ms-2" for="hideEl_pdfGenerator">Hide PDF Report Generator Card</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded border">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="hideEl_activityBanner" onchange="toggleAppElementVisibility('activityBanner', this.checked)">
+                                        <label class="form-check-label fw-semibold ms-2" for="hideEl_activityBanner">Hide Activity Banner</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded border">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="hideEl_searchFilterBar" onchange="toggleAppElementVisibility('searchFilterBar', this.checked)">
+                                        <label class="form-check-label fw-semibold ms-2" for="hideEl_searchFilterBar">Hide Live Search & Status Bar</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 5: Cleanup & Reset -->
+                        <div class="tab-pane fade" id="panel-cleanup" role="tabpanel">
+                            <h6 class="fw-bold text-danger mb-3"><i class="bi bi-exclamation-triangle-fill me-1"></i> God-Mode Management & Cleanup Actions</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-warning btn-sm fw-bold text-dark" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#columnConfigModal" onclick="renderColumnConfigModal()">
+                                    <i class="bi bi-layout-three-columns me-1"></i> Add / Edit / Remove Table Columns
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#rosterRegistryModal" onclick="renderRosterRegistryManagementTable()">
+                                    <i class="bi bi-people-fill me-1"></i> Add / Edit / Remove Team Members
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="chiefClearChatMessages()">
+                                    <i class="bi bi-chat-square-x me-1"></i> Clear All Group Chat
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="chiefClearDeviceLogins()">
+                                    <i class="bi bi-pc-display-horizontal me-1"></i> Clear Device Login History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary fw-bold px-4" onclick="saveChiefWebsiteSettings()">
+                            <i class="bi bi-cloud-check-fill me-1"></i> Apply & Save All Changes Globally
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1317,8 +1692,78 @@
 
     <footer class="bg-dark text-white text-center py-3 mt-auto no-print">
         <div class="container">
-            <small>© 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
+            <small id="siteFooterText">© 2026 Meru Offload System. All Records Synchronized Online Globally.</small>
         </div>
+    
+    <!-- Dynamic Column Interactive Popup Form Modal (Reviewing / Storing / Checking) -->
+    <div class="modal fade" id="columnPopupFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-warning py-3">
+                    <h5 class="modal-title fw-bold" id="colPopupModalTitle"><i class="bi bi-window-stack me-2"></i>Review / Storing Form</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="colPopupLogId">
+                    <input type="hidden" id="colPopupColumnKey">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" id="colPopupFieldLabel">Action / Value</label>
+                        <input type="text" id="colPopupInputValue" class="form-control bg-light text-dark fw-bold" placeholder="Enter review notes, storage bin, status...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Quick Status Select / Check</label>
+                        <select id="colPopupQuickSelect" class="form-select bg-light text-dark" onchange="document.getElementById('colPopupInputValue').value = this.value;">
+                            <option value="" disabled selected>Select option...</option>
+                            <option value="Approved & Checked">Approved & Checked</option>
+                            <option value="Stored in Warehouse A">Stored in Warehouse A</option>
+                            <option value="Stored in Warehouse B">Stored in Warehouse B</option>
+                            <option value="Pending Quality Review">Pending Quality Review</option>
+                            <option value="Rejected / Flagged">Rejected / Flagged</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning btn-sm fw-bold px-4 text-dark" onclick="saveColumnPopupFormValue()">Save & Update Record</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Edit Custom Column Modal -->
+    <div class="modal fade" id="editCustomColumnModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-warning py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Custom Column Display & Popup</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editCustomColIndex">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Column Header Title</label>
+                        <input type="text" id="editCustomColLabelInput" class="form-control bg-light text-dark fw-bold">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Choose How It Appears (Custom Type / Format)</label>
+                        <input type="text" id="editCustomColAppearanceInput" class="form-control bg-light text-dark" placeholder="Type what you want (e.g. badge_success, bold, custom)">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch p-3 bg-light rounded border">
+                            <input class="form-check-input" type="checkbox" role="switch" id="editCustomColPopupCheckbox">
+                            <label class="form-check-label fw-semibold ms-2" for="editCustomColPopupCheckbox">Enable Interactive Popup Form Button (Reviewing / Storing / Checking)</label>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning btn-sm fw-bold px-4 text-dark" onclick="saveEditedCustomColumnConfig()">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1330,7 +1775,7 @@
         const ADMIN_PHONES = ["254742960571", PHINI_PHONE, "254741048773", SUPER_ADMIN_PHONE];
         const ALLOWED_LOGIN_PHONES = ["254742960571", "0741048773", "254741048773"];
 
-        const RATE_PER_BOX = 1;
+        let RATE_PER_BOX = 1;
         const SESSION_DURATION_MS = 45 * 60 * 1000; 
         const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         const UNIQUE_DEVICE_ID = (() => {
@@ -1344,6 +1789,10 @@
 
         let globalLogsArray = JSON.parse(localStorage.getItem('meru_cached_logs') || '[]');
         let masterDynamicWorkersArray = JSON.parse(localStorage.getItem('meru_cached_workers') || '[]');
+        let globalTableColumnsConfig = JSON.parse(localStorage.getItem('meru_cached_columns_config') || 'null') || {
+            hiddenDefaultCols: [],
+            customCols: []
+        };
         let globalAttendanceObj = JSON.parse(localStorage.getItem('meru_cached_attendance') || '{}');
         let globalMessagesCacheArray = JSON.parse(localStorage.getItem('meru_cached_messages') || '[]');
         let globalProfilesCacheObj = JSON.parse(localStorage.getItem('meru_cached_profiles') || '{}');
@@ -1427,8 +1876,12 @@
             }
 
             // Maximum Performance Parallel Execution on Startup
+            applyWebsiteSettingsToUi();
+            renderDynamicFormCustomFields();
             Promise.all([
+                fetchWebsiteSettingsFromCloud(),
                 fetchRosterRegistryFromCloud(),
+                fetchColumnsConfigFromCloud(),
                 fetchAttendanceStateCloud(),
                 fetchUserProfileDataCloud(),
                 fetchLogsFromCloud(),
@@ -1710,7 +2163,8 @@
 
             const matchedMember = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === cleanPhone);
             if (matchedMember) {
-                activeLoggedInUser = { name: matchedMember.name, phone: matchedMember.phone.trim().replace(/\+/g, ''), isAdmin: false };
+                const memberIsAdmin = matchedMember.role === 'admin';
+                activeLoggedInUser = { name: matchedMember.name, phone: matchedMember.phone.trim().replace(/\+/g, ''), isAdmin: memberIsAdmin };
                 localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
                 sessionStartTime = Date.now();
                 sendDevicePresenceHeartbeat();
@@ -1749,16 +2203,28 @@
             evaluateActiveAccountLockState();
         }
 
+        function isColumnChiefAdmin() {
+            if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
+            const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
+            return p === SUPER_ADMIN_PHONE;
+        }
+
         function isSuperAdmin() {
             if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
-            return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
+            if (p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773") return true;
+            const match = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === p);
+            return Boolean(match && match.role === 'admin');
         }
 
         function isFullAdmin() {
-            if (!activeLoggedInUser || !activeLoggedInUser.phone) return false;
+            if (!activeLoggedInUser) return false;
+            if (activeLoggedInUser.isAdmin === true) return true;
+            if (!activeLoggedInUser.phone) return false;
             const p = activeLoggedInUser.phone.trim().replace(/\+/g, '');
-            return p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773";
+            if (p === SUPER_ADMIN_PHONE || p === PHINI_PHONE || p === "254741048773") return true;
+            const match = masterDynamicWorkersArray.find(m => m.phone && m.phone.trim().replace(/\+/g, '') === p);
+            return Boolean(match && match.role === 'admin');
         }
 
         function evaluateActiveAccountLockState() {
@@ -1821,6 +2287,20 @@
                 } else {
                     loginsContainer.classList.add('d-none');
                 }
+            }
+
+            const isChief = isColumnChiefAdmin();
+            const modColSidebar = document.getElementById('sidebarModifyColumnsItem');
+            const modColHeaderBtn = document.getElementById('headerModifyColumnsBtn');
+            const chiefEditorSidebar = document.getElementById('sidebarChiefEditorContainer');
+            if (modColSidebar) {
+                modColSidebar.classList.toggle('d-none', !isChief);
+            }
+            if (modColHeaderBtn) {
+                modColHeaderBtn.classList.toggle('d-none', !isChief);
+            }
+            if (chiefEditorSidebar) {
+                chiefEditorSidebar.classList.toggle('d-none', !isChief);
             }
 
             const clearBtn = document.querySelector('button[onclick="clearAllData()"]');
@@ -2170,6 +2650,26 @@
             document.getElementById('noDataMessage').classList.add('d-none');
 
             const isAdmin = isFullAdmin();
+            const hiddenCols = globalTableColumnsConfig.hiddenDefaultCols || [];
+            const customCols = globalTableColumnsConfig.customCols || [];
+
+            // Render dynamic table header
+            const thead = document.getElementById('logTableHead');
+            if (thead) {
+                let thHtml = '<tr>';
+                const defLabels = globalTableColumnsConfig.defaultColLabels || {};
+                if (!hiddenCols.includes('employee_vehicle')) thHtml += `<th>${escapeHtml(defLabels.employee_vehicle || 'Employee / Vehicle')}</th>`;
+                if (!hiddenCols.includes('date_worked')) thHtml += `<th>${escapeHtml(defLabels.date_worked || 'Date Worked')}</th>`;
+                if (!hiddenCols.includes('boxes_layout')) thHtml += `<th>${escapeHtml(defLabels.boxes_layout || 'Boxes Layout')}</th>`;
+                if (!hiddenCols.includes('status_details')) thHtml += `<th>${escapeHtml(defLabels.status_details || 'Status & Details')}</th>`;
+                customCols.forEach(c => {
+                    thHtml += `<th>${escapeHtml(c.label)}</th>`;
+                });
+                if (!hiddenCols.includes('action')) thHtml += `<th class="text-center no-print">${escapeHtml(defLabels.action || 'Action')}</th>`;
+                thHtml += '</tr>';
+                thead.innerHTML = thHtml;
+            }
+
             let rowsHtml = '';
 
             filtered.forEach(log => {
@@ -2187,34 +2687,85 @@
                                    <div class="cancellation-details mt-1" title="${escapeHtml(log.cancellationReason || '')}"><i class="bi bi-info-circle"></i> Voided</div>`;
                 }
 
-                rowsHtml += `
-                    <tr class="${rowClass}">
+                let rowCells = '';
+                if (!hiddenCols.includes('employee_vehicle')) {
+                    rowCells += `
                         <td>
                             <div class="fw-bold text-dark">${escapeHtml(log.employeeName)}</div>
                             <div class="text-muted small font-monospace">${escapeHtml(log.vehiclePlate)}</div>
                             ${log.loggedBy ? `<div class="text-muted small" style="font-size:10px;">By: ${escapeHtml(log.loggedBy)}</div>` : ''}
-                        </td>
-                        <td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>
+                        </td>`;
+                }
+                if (!hiddenCols.includes('date_worked')) {
+                    rowCells += `<td class="font-monospace">${formatDateDisplay(log.dateWorked)}</td>`;
+                }
+                if (!hiddenCols.includes('boxes_layout')) {
+                    rowCells += `
                         <td>
                             <span class="badge bg-dark px-2 py-1 box-count">${log.totalBoxes} Count</span>
                             <div class="text-muted small mt-1" style="font-size:11px;">Billable Units: ${log.paidBoxes}</div>
-                        </td>
+                        </td>`;
+                }
+                if (!hiddenCols.includes('status_details')) {
+                    rowCells += `
                         <td>
                             <div class="fw-bold text-dark mb-1">Ksh ${log.calculatedPayout.toLocaleString()}</div>
                             <div>${statusBadge}</div>
-                        </td>
+                        </td>`;
+                }
+                customCols.forEach(c => {
+                    let rawVal = (log.customFields && log.customFields[c.key] !== undefined && log.customFields[c.key] !== '') ? log.customFields[c.key] : '';
+                    let displayContent = '';
+                    if (!rawVal) {
+                        displayContent = '<span class="text-muted">-</span>';
+                    } else if (c.appearance === 'badge_success' || c.appearance === 'success') {
+                        displayContent = `<span class="badge bg-success">${escapeHtml(rawVal)}</span>`;
+                    } else if (c.appearance === 'badge_warning' || c.appearance === 'warning') {
+                        displayContent = `<span class="badge bg-warning text-dark">${escapeHtml(rawVal)}</span>`;
+                    } else if (c.appearance === 'badge_info' || c.appearance === 'info') {
+                        displayContent = `<span class="badge bg-info text-dark">${escapeHtml(rawVal)}</span>`;
+                    } else if (c.appearance === 'monospace' || c.appearance === 'mono') {
+                        displayContent = `<span class="font-monospace fw-bold">${escapeHtml(rawVal)}</span>`;
+                    } else if (c.appearance && c.appearance.startsWith('badge_')) {
+                        const badgeColor = c.appearance.replace('badge_', '');
+                        displayContent = `<span class="badge bg-${escapeHtml(badgeColor)}">${escapeHtml(rawVal)}</span>`;
+                    } else if (c.appearance && c.appearance !== 'text') {
+                        // Fully custom user-defined style or class
+                        displayContent = `<span class="${escapeHtml(c.appearance)}">${escapeHtml(rawVal)}</span>`;
+                    } else {
+                        displayContent = escapeHtml(rawVal);
+                    }
+
+                    if (c.hasPopupForm) {
+                        displayContent += ` <button class="btn btn-sm btn-outline-dark py-0 px-1 ms-1" title="Open Review/Storage Popup Form" onclick="openColumnPopupForm('${log.id}', '${c.key}', '${escapeHtml(c.label)}')"><i class="bi bi-window-stack"></i></button>`;
+                    }
+
+                    rowCells += `<td>${displayContent}</td>`;
+                });
+                const isChief = isColumnChiefAdmin();
+                if (!hiddenCols.includes('action')) {
+                    rowCells += `
                         <td class="text-center no-print">
                             <div class="d-flex justify-content-center gap-1">
                                 <button class="btn btn-sm btn-outline-secondary" title="Inspect Record" onclick="triggerDetailedAuditLogInspection('${log.id}')">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                                ${isChief ? `
+                                <button class="btn btn-sm btn-outline-primary" title="Edit Record" onclick="openChiefEditWorkLogModal('${log.id}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete Record" onclick="chiefDirectDeleteWorkLog('${log.id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>` : ''}
                                 ${(log.status === 'UNPAID' && isAdmin) ? `
                                 <button class="btn btn-sm btn-success fw-bold" onclick="processPaymentPayoutAction('${log.id}')">
                                     Settle
                                 </button>` : ''}
                             </div>
-                        </td>
-                    </tr>`;
+                        </td>`;
+                }
+
+                rowsHtml += `<tr class="${rowClass}">${rowCells}</tr>`;
             });
 
             tbody.innerHTML = rowsHtml;
@@ -2234,6 +2785,7 @@
                         <tr><th class="bg-light">Total Capacity</th><td>${record.totalBoxes} Boxes Handled</td></tr>
                         <tr><th class="bg-light">Calculated Revenue</th><td>Ksh ${record.calculatedPayout.toLocaleString()}</td></tr>
                         <tr><th class="bg-light">Status Profile</th><td><span class="badge ${record.status==='PAID'?'bg-success':record.status==='UNPAID'?'bg-warning text-dark':'bg-danger'}">${record.status}</span></td></tr>
+                        ${(globalTableColumnsConfig.customCols || []).map(c => `<tr><th class="bg-light">${escapeHtml(c.label)}</th><td>${escapeHtml((record.customFields && record.customFields[c.key]) || '-')}</td></tr>`).join('')}
                         ${record.status === 'PAID' ? `<tr><th class="bg-light text-success">Settlement Point</th><td>${formatDateDisplay(record.paymentDate)}</td></tr>` : ''}
                         ${record.status === 'CANCELLED' ? `<tr><th class="bg-light text-danger">Void Audit Context</th><td>${escapeHtml(record.cancellationReason || 'None')}</td></tr>` : ''}
                     </table>
@@ -2280,6 +2832,14 @@
 
             const calculatedPayout = paidBoxes * RATE_PER_BOX;
 
+            const customFieldsData = {};
+            (globalTableColumnsConfig.customCols || []).forEach(c => {
+                const inp = document.getElementById(`customFieldInput_${c.key}`);
+                if (inp && inp.value.trim() !== '') {
+                    customFieldsData[c.key] = inp.value.trim();
+                }
+            });
+
             const payload = {
                 employeeName,
                 vehiclePlate,
@@ -2287,6 +2847,7 @@
                 totalBoxes,
                 paidBoxes,
                 calculatedPayout,
+                customFields: customFieldsData,
                 status: "UNPAID",
                 timestamp: Date.now(),
                 deviceRef: UNIQUE_DEVICE_ID,
@@ -2583,11 +3144,19 @@
                 masterDynamicWorkersArray = [];
                 if (data) {
                     Object.keys(data).forEach(k => {
-                        masterDynamicWorkersArray.push({ id: k, name: data[k].name, phone: data[k].phone || "" });
+                        masterDynamicWorkersArray.push({
+                            id: k,
+                            name: data[k].name,
+                            phone: data[k].phone || "",
+                            role: data[k].role || "worker"
+                        });
                     });
                 }
                 localStorage.setItem('meru_cached_workers', JSON.stringify(masterDynamicWorkersArray));
                 rebuildFormEmployeeSelectionMenus();
+                if (activeLoggedInUser) {
+                    applyPermissionsVisibility();
+                }
             }).catch(() => {});
         }
 
@@ -2627,39 +3196,72 @@
         function renderRosterRegistryManagementTable() {
             const tbody = document.getElementById('rosterRegistryTableBody');
             if (masterDynamicWorkersArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-muted">No configuration records matching global roster. Add a member above.</td></tr>`;
                 return;
             }
             const sortedList = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
             let rowsHtml = '';
+            const isChief = isColumnChiefAdmin();
             sortedList.forEach(w => {
+                const isAdm = w.role === 'admin';
+                const roleBadge = isAdm
+                    ? `<span class="badge bg-warning text-dark"><i class="bi bi-shield-fill-check me-1"></i>Admin</span>`
+                    : `<span class="badge bg-secondary"><i class="bi bi-person-badge me-1"></i>Worker</span>`;
                 rowsHtml += `
                     <tr class="text-dark">
                         <td class="ps-3 fw-bold">${escapeHtml(w.name)}</td>
                         <td class="font-monospace small">${escapeHtml(w.phone || 'N/A')}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1">
+                                ${roleBadge}
+                                <button class="btn btn-sm btn-link p-0 ms-1 text-decoration-none" title="Switch Role" onclick="toggleMemberRoleCloud('${w.id}', '${isAdm ? 'worker' : 'admin'}')">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </div>
+                        </td>
                         <td class="text-center no-print">
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkerFromRegistryCloud('${w.id}', '${escapeHtml(w.name)}')"><i class="bi bi-trash"></i></button>
+                            <div class="d-flex justify-content-center gap-1">
+                                ${isChief ? `<button class="btn btn-sm btn-outline-primary" title="Edit Member" onclick="openEditMemberModal('${w.id}')"><i class="bi bi-pencil-square"></i></button>` : ''}
+                                <button class="btn btn-sm btn-outline-danger" title="Remove Member" onclick="deleteWorkerFromRegistryCloud('${w.id}', '${escapeHtml(w.name)}')"><i class="bi bi-trash"></i></button>
+                            </div>
                         </td>
                     </tr>`;
             });
             tbody.innerHTML = rowsHtml;
         }
 
+        function toggleMemberRoleCloud(id, newRole) {
+            fastFetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole })
+            })
+            .then(() => {
+                fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
+            });
+        }
+
         function addNewWorkerToRegistryCloud() {
             const name = document.getElementById('newRegistryWorkerName').value.trim();
-            const phone = document.getElementById('newRegistryWorkerPhone').value.trim();
+            const phone = document.getElementById('newRegistryWorkerPhone').value.trim().replace(/\+/g, '');
+            const role = document.getElementById('newRegistryWorkerRole').value || 'worker';
             if (!name) {
                 alert("Please enter a valid full name.");
+                return;
+            }
+            if (phone && masterDynamicWorkersArray.some(m => m.phone && m.phone.trim().replace(/\+/g, '') === phone)) {
+                alert("A member with this phone number already exists.");
                 return;
             }
             
             document.getElementById('newRegistryWorkerName').value = '';
             document.getElementById('newRegistryWorkerPhone').value = '';
+            document.getElementById('newRegistryWorkerRole').value = 'worker';
 
             fastFetch(`${FIREBASE_URL}roster_registry.json`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, phone: phone })
+                body: JSON.stringify({ name: name, phone: phone, role: role })
             })
             .then(() => {
                 fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
@@ -2675,6 +3277,669 @@
                     fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
                 });
             }
+        }
+
+
+        const DEFAULT_WORK_LOG_COLUMNS = [
+            { key: 'employee_vehicle', label: 'Employee / Vehicle', isDefault: true },
+            { key: 'date_worked', label: 'Date Worked', isDefault: true },
+            { key: 'boxes_layout', label: 'Boxes Layout', isDefault: true },
+            { key: 'status_details', label: 'Status & Details', isDefault: true },
+            { key: 'action', label: 'Action', isDefault: true }
+        ];
+
+
+        let globalWebsiteSettings = JSON.parse(localStorage.getItem('meru_cached_site_settings') || 'null') || {
+            pageTitle: 'Meru Dairy Offload',
+            brandSubtitle: 'Meru DairyOffload',
+            logEntryTitle: 'Log Work Entry',
+            footerText: '© 2026 Meru Offload System. All Records Synchronized Online Globally.',
+            ratePerBox: 1,
+            bgColor: '',
+            navbarColor: '',
+            bgImage: '',
+            accentColor: '#ffc107',
+            defaultAvatarUrl: '',
+            customHtmlWidget: '',
+            enableTicker: false,
+            tickerText: '🔥 Welcome to Meru Dairy Offload God-Mode Terminal!',
+            hiddenElements: {}
+        };
+
+        function applyWebsiteSettingsToUi() {
+            if (!globalWebsiteSettings) return;
+            if (globalWebsiteSettings.pageTitle) document.title = globalWebsiteSettings.pageTitle;
+            const brandEl = document.getElementById('siteBrandSubtitle');
+            if (brandEl && globalWebsiteSettings.brandSubtitle) brandEl.innerText = globalWebsiteSettings.brandSubtitle;
+            const logTitleEl = document.getElementById('siteLogEntryTitle');
+            if (logTitleEl && globalWebsiteSettings.logEntryTitle) logTitleEl.innerText = globalWebsiteSettings.logEntryTitle;
+            const footerEl = document.getElementById('siteFooterText');
+            if (footerEl && globalWebsiteSettings.footerText) footerEl.innerText = globalWebsiteSettings.footerText;
+            if (globalWebsiteSettings.ratePerBox !== undefined && !isNaN(parseFloat(globalWebsiteSettings.ratePerBox))) {
+                RATE_PER_BOX = parseFloat(globalWebsiteSettings.ratePerBox);
+            }
+
+            if (globalWebsiteSettings.bgColor) {
+                document.body.style.backgroundColor = globalWebsiteSettings.bgColor;
+            }
+            if (globalWebsiteSettings.bgImage) {
+                document.body.style.backgroundImage = `url('${globalWebsiteSettings.bgImage}')`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundAttachment = 'fixed';
+            }
+            if (globalWebsiteSettings.navbarColor) {
+                const nav = document.querySelector('.custom-navbar');
+                if (nav) {
+                    nav.style.background = globalWebsiteSettings.navbarColor;
+                    nav.style.animation = 'none';
+                }
+            }
+            if (globalWebsiteSettings.accentColor) {
+                document.documentElement.style.setProperty('--bs-primary', globalWebsiteSettings.accentColor);
+            }
+            if (globalWebsiteSettings.defaultAvatarUrl) {
+                const navAvatar = document.getElementById('navUserProfileImage');
+                if (navAvatar && !navAvatar.dataset.customUploaded) {
+                    navAvatar.src = globalWebsiteSettings.defaultAvatarUrl;
+                }
+            }
+
+            const tickerContainer = document.getElementById('chiefCustomTickerContainer');
+            if (tickerContainer) {
+                if (globalWebsiteSettings.enableTicker && globalWebsiteSettings.tickerText) {
+                    tickerContainer.innerHTML = `
+                        <div class="alert alert-warning py-2 mb-2 d-flex align-items-center justify-content-between shadow-sm" role="alert">
+                            <div class="text-dark fw-bold text-truncate"><i class="bi bi-megaphone-fill me-2"></i>${escapeHtml(globalWebsiteSettings.tickerText)}</div>
+                            <span class="badge bg-dark text-warning">Announcement</span>
+                        </div>`;
+                } else {
+                    tickerContainer.innerHTML = '';
+                }
+            }
+
+            const widgetContainer = document.getElementById('chiefCustomWidgetContainer');
+            if (widgetContainer) {
+                widgetContainer.innerHTML = globalWebsiteSettings.customHtmlWidget || '';
+            }
+
+            // Apply hidden elements visibility
+            const hiddenMap = globalWebsiteSettings.hiddenElements || {};
+            const statsEl = document.getElementById('appStatsCardsContainer');
+            const logFormEl = document.getElementById('logWorkEntryFormContainer');
+            const pdfEl = document.getElementById('appPdfReportCardContainer');
+            const bannerEl = document.getElementById('appActivityBannerContainer');
+            const searchBarEl = document.getElementById('appSearchFilterBarContainer');
+
+            if (statsEl) statsEl.style.display = hiddenMap.statsCards ? 'none' : '';
+            if (logFormEl) logFormEl.style.display = hiddenMap.logEntryForm ? 'none' : '';
+            if (pdfEl) pdfEl.style.display = hiddenMap.pdfGenerator ? 'none' : '';
+            if (bannerEl) bannerEl.style.display = hiddenMap.activityBanner ? 'none' : '';
+            if (searchBarEl) searchBarEl.style.display = hiddenMap.searchFilterBar ? 'none' : '';
+        }
+
+        function toggleAppElementVisibility(elementKey, isHidden) {
+            if (!globalWebsiteSettings.hiddenElements) globalWebsiteSettings.hiddenElements = {};
+            globalWebsiteSettings.hiddenElements[elementKey] = isHidden;
+            applyWebsiteSettingsToUi();
+        }
+
+        function uploadChiefCustomImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('cfgDefaultAvatarUrl').value = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function openChiefWebsiteEditorModal() {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Restricted to Chief Admin (254742960571).");
+                return;
+            }
+            document.getElementById('cfgPageTitle').value = globalWebsiteSettings.pageTitle || document.title;
+            document.getElementById('cfgBrandSubtitle').value = globalWebsiteSettings.brandSubtitle || 'Meru DairyOffload';
+            document.getElementById('cfgLogEntryTitle').value = globalWebsiteSettings.logEntryTitle || 'Log Work Entry';
+            document.getElementById('cfgRatePerBox').value = globalWebsiteSettings.ratePerBox !== undefined ? globalWebsiteSettings.ratePerBox : RATE_PER_BOX;
+            document.getElementById('cfgFooterText').value = globalWebsiteSettings.footerText || '© 2026 Meru Offload System. All Records Synchronized Online Globally.';
+            document.getElementById('cfgBgColor').value = globalWebsiteSettings.bgColor || '';
+            document.getElementById('cfgNavbarColor').value = globalWebsiteSettings.navbarColor || '';
+            document.getElementById('cfgBgImage').value = globalWebsiteSettings.bgImage || '';
+            document.getElementById('cfgAccentColor').value = globalWebsiteSettings.accentColor || '#ffc107';
+            document.getElementById('cfgDefaultAvatarUrl').value = globalWebsiteSettings.defaultAvatarUrl || '';
+            document.getElementById('cfgCustomHtmlWidget').value = globalWebsiteSettings.customHtmlWidget || '';
+            document.getElementById('cfgEnableTicker').checked = Boolean(globalWebsiteSettings.enableTicker);
+            document.getElementById('cfgTickerText').value = globalWebsiteSettings.tickerText || '';
+
+            const hiddenMap = globalWebsiteSettings.hiddenElements || {};
+            document.getElementById('hideEl_statsCards').checked = Boolean(hiddenMap.statsCards);
+            document.getElementById('hideEl_logEntryForm').checked = Boolean(hiddenMap.logEntryForm);
+            document.getElementById('hideEl_pdfGenerator').checked = Boolean(hiddenMap.pdfGenerator);
+            document.getElementById('hideEl_activityBanner').checked = Boolean(hiddenMap.activityBanner);
+            document.getElementById('hideEl_searchFilterBar').checked = Boolean(hiddenMap.searchFilterBar);
+        }
+
+        function saveChiefWebsiteSettings() {
+            if (!isColumnChiefAdmin()) return;
+            globalWebsiteSettings = {
+                pageTitle: document.getElementById('cfgPageTitle').value.trim() || 'Meru Dairy Offload',
+                brandSubtitle: document.getElementById('cfgBrandSubtitle').value.trim() || 'Meru DairyOffload',
+                logEntryTitle: document.getElementById('cfgLogEntryTitle').value.trim() || 'Log Work Entry',
+                ratePerBox: parseFloat(document.getElementById('cfgRatePerBox').value) || 1,
+                footerText: document.getElementById('cfgFooterText').value.trim() || '© 2026 Meru Offload System. All Records Synchronized Online Globally.',
+                bgColor: document.getElementById('cfgBgColor').value.trim(),
+                navbarColor: document.getElementById('cfgNavbarColor').value.trim(),
+                bgImage: document.getElementById('cfgBgImage').value.trim(),
+                accentColor: document.getElementById('cfgAccentColor').value,
+                defaultAvatarUrl: document.getElementById('cfgDefaultAvatarUrl').value.trim(),
+                customHtmlWidget: document.getElementById('cfgCustomHtmlWidget').value.trim(),
+                enableTicker: document.getElementById('cfgEnableTicker').checked,
+                tickerText: document.getElementById('cfgTickerText').value.trim(),
+                hiddenElements: {
+                    statsCards: document.getElementById('hideEl_statsCards').checked,
+                    logEntryForm: document.getElementById('hideEl_logEntryForm').checked,
+                    pdfGenerator: document.getElementById('hideEl_pdfGenerator').checked,
+                    activityBanner: document.getElementById('hideEl_activityBanner').checked,
+                    searchFilterBar: document.getElementById('hideEl_searchFilterBar').checked
+                }
+            };
+            localStorage.setItem('meru_cached_site_settings', JSON.stringify(globalWebsiteSettings));
+            applyWebsiteSettingsToUi();
+
+            fastFetch(`${FIREBASE_URL}website_settings.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalWebsiteSettings)
+            }).then(() => {
+                const modalEl = document.getElementById('chiefWebsiteEditorModal');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            });
+        }
+
+        function fetchWebsiteSettingsFromCloud() {
+            return fastFetch(`${FIREBASE_URL}website_settings.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data) {
+                    globalWebsiteSettings = { ...globalWebsiteSettings, ...data };
+                    localStorage.setItem('meru_cached_site_settings', JSON.stringify(globalWebsiteSettings));
+                    applyWebsiteSettingsToUi();
+                }
+            }).catch(() => {});
+        }
+
+        function openChiefWebsiteEditorModal() {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Restricted to Chief Admin (254742960571).");
+                return;
+            }
+            document.getElementById('cfgPageTitle').value = globalWebsiteSettings.pageTitle || document.title;
+            document.getElementById('cfgBrandSubtitle').value = globalWebsiteSettings.brandSubtitle || 'Meru DairyOffload';
+            document.getElementById('cfgLogEntryTitle').value = globalWebsiteSettings.logEntryTitle || 'Log Work Entry';
+            document.getElementById('cfgRatePerBox').value = globalWebsiteSettings.ratePerBox !== undefined ? globalWebsiteSettings.ratePerBox : RATE_PER_BOX;
+            document.getElementById('cfgFooterText').value = globalWebsiteSettings.footerText || '© 2026 Meru Offload System. All Records Synchronized Online Globally.';
+        }
+
+        function saveChiefWebsiteSettings() {
+            if (!isColumnChiefAdmin()) return;
+            globalWebsiteSettings = {
+                pageTitle: document.getElementById('cfgPageTitle').value.trim() || 'Meru Dairy Offload',
+                brandSubtitle: document.getElementById('cfgBrandSubtitle').value.trim() || 'Meru DairyOffload',
+                logEntryTitle: document.getElementById('cfgLogEntryTitle').value.trim() || 'Log Work Entry',
+                ratePerBox: parseFloat(document.getElementById('cfgRatePerBox').value) || 1,
+                footerText: document.getElementById('cfgFooterText').value.trim() || '© 2026 Meru Offload System. All Records Synchronized Online Globally.'
+            };
+            localStorage.setItem('meru_cached_site_settings', JSON.stringify(globalWebsiteSettings));
+            applyWebsiteSettingsToUi();
+
+            fastFetch(`${FIREBASE_URL}website_settings.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalWebsiteSettings)
+            }).then(() => {
+                const modalEl = document.getElementById('chiefWebsiteEditorModal');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            });
+        }
+
+        function openChiefEditWorkLogModal(id) {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Only Chief Admin (254742960571) can edit records.");
+                return;
+            }
+            const log = globalLogsArray.find(l => l.id === id);
+            if (!log) return;
+
+            document.getElementById('editWorkLogId').value = log.id;
+            document.getElementById('editLogEmployeeName').value = log.employeeName || '';
+            document.getElementById('editLogVehiclePlate').value = log.vehiclePlate || '';
+            document.getElementById('editLogDateWorked').value = log.dateWorked || '';
+            document.getElementById('editLogTotalBoxes').value = log.totalBoxes !== undefined ? log.totalBoxes : 0;
+            document.getElementById('editLogPaidBoxes').value = log.paidBoxes !== undefined ? log.paidBoxes : 0;
+            document.getElementById('editLogPayout').value = log.calculatedPayout !== undefined ? log.calculatedPayout : 0;
+            document.getElementById('editLogStatus').value = log.status || 'UNPAID';
+            document.getElementById('editLogPaymentDate').value = log.paymentDate || '';
+            document.getElementById('editLogCancellationReason').value = log.cancellationReason || '';
+
+            const customContainer = document.getElementById('editLogDynamicCustomFields');
+            const customCols = globalTableColumnsConfig.customCols || [];
+            if (customCols.length > 0) {
+                customContainer.innerHTML = customCols.map(c => {
+                    const existingVal = (log.customFields && log.customFields[c.key] !== undefined) ? log.customFields[c.key] : '';
+                    return `
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">${escapeHtml(c.label)}</label>
+                            <input type="${c.type === 'number' ? 'number' : 'text'}" id="editCustomField_${c.key}" class="form-control bg-light text-dark" value="${escapeHtml(existingVal)}">
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                customContainer.innerHTML = '';
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('chiefEditWorkLogModal'));
+            modal.show();
+        }
+
+        function saveChiefEditedWorkLog() {
+            if (!isColumnChiefAdmin()) return;
+            const id = document.getElementById('editWorkLogId').value;
+            if (!id) return;
+
+            const updatedCustomFields = {};
+            (globalTableColumnsConfig.customCols || []).forEach(c => {
+                const inp = document.getElementById(`editCustomField_${c.key}`);
+                if (inp) {
+                    updatedCustomFields[c.key] = inp.value.trim();
+                }
+            });
+
+            const status = document.getElementById('editLogStatus').value;
+            const paymentDate = document.getElementById('editLogPaymentDate').value;
+            const cancellationReason = document.getElementById('editLogCancellationReason').value.trim();
+
+            const patchPayload = {
+                employeeName: document.getElementById('editLogEmployeeName').value.trim(),
+                vehiclePlate: document.getElementById('editLogVehiclePlate').value.trim().toUpperCase(),
+                dateWorked: document.getElementById('editLogDateWorked').value,
+                totalBoxes: parseInt(document.getElementById('editLogTotalBoxes').value, 10) || 0,
+                paidBoxes: parseInt(document.getElementById('editLogPaidBoxes').value, 10) || 0,
+                calculatedPayout: parseFloat(document.getElementById('editLogPayout').value) || 0,
+                status: status,
+                paymentDate: status === 'PAID' ? (paymentDate || new Date().toISOString().split('T')[0]) : '',
+                cancellationReason: cancellationReason,
+                customFields: updatedCustomFields,
+                editedByChief: true
+            };
+
+            fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patchPayload)
+            }).then(() => {
+                const modalEl = document.getElementById('chiefEditWorkLogModal');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+                fetchLogsFromCloud();
+            });
+        }
+
+        function chiefDirectDeleteWorkLog(id) {
+            if (!isColumnChiefAdmin()) return;
+            if (confirm("Delete this work log permanently?")) {
+                fastFetch(`${FIREBASE_URL}logs/${id}.json`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    fetchLogsFromCloud();
+                });
+            }
+        }
+
+        function openEditMemberModal(id) {
+            if (!isColumnChiefAdmin()) return;
+            const member = masterDynamicWorkersArray.find(m => m.id === id);
+            if (!member) return;
+
+            document.getElementById('editMemberId').value = member.id;
+            document.getElementById('editMemberName').value = member.name || '';
+            document.getElementById('editMemberPhone').value = member.phone || '';
+            document.getElementById('editMemberRole').value = member.role || 'worker';
+
+            const modal = new bootstrap.Modal(document.getElementById('chiefEditMemberModal'));
+            modal.show();
+        }
+
+        function saveEditedMemberDetails() {
+            if (!isColumnChiefAdmin()) return;
+            const id = document.getElementById('editMemberId').value;
+            const name = document.getElementById('editMemberName').value.trim();
+            const phone = document.getElementById('editMemberPhone').value.trim().replace(/\+/g, '');
+            const role = document.getElementById('editMemberRole').value || 'worker';
+
+            if (!name) {
+                alert("Name cannot be empty.");
+                return;
+            }
+
+            fastFetch(`${FIREBASE_URL}roster_registry/${id}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, role })
+            }).then(() => {
+                const modalEl = document.getElementById('chiefEditMemberModal');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+                fetchRosterRegistryFromCloud().then(() => renderRosterRegistryManagementTable());
+            });
+        }
+
+        function renameDefaultTableColumn(colKey) {
+            if (!isColumnChiefAdmin()) return;
+            const defCol = DEFAULT_WORK_LOG_COLUMNS.find(c => c.key === colKey);
+            if (!defCol) return;
+            if (!globalTableColumnsConfig.defaultColLabels) {
+                globalTableColumnsConfig.defaultColLabels = {};
+            }
+            const currentLabel = globalTableColumnsConfig.defaultColLabels[colKey] || defCol.label;
+            const newLabel = prompt("Enter new title for this column:", currentLabel);
+            if (newLabel !== null && newLabel.trim() !== '') {
+                globalTableColumnsConfig.defaultColLabels[colKey] = newLabel.trim();
+                saveColumnsConfigToCloud().then(() => renderColumnConfigModal());
+            }
+        }
+
+        let activeEditCustomColModalInstance = null;
+
+        function editCustomTableColumn(index) {
+            if (!isColumnChiefAdmin()) return;
+            const col = globalTableColumnsConfig.customCols[index];
+            if (!col) return;
+
+            document.getElementById('editCustomColIndex').value = index;
+            document.getElementById('editCustomColLabelInput').value = col.label || '';
+            document.getElementById('editCustomColAppearanceInput').value = col.appearance || 'text';
+            document.getElementById('editCustomColPopupCheckbox').checked = Boolean(col.hasPopupForm);
+
+            if (!activeEditCustomColModalInstance) {
+                activeEditCustomColModalInstance = new bootstrap.Modal(document.getElementById('editCustomColumnModal'));
+            }
+            activeEditCustomColModalInstance.show();
+        }
+
+        function saveEditedCustomColumnConfig() {
+            const index = parseInt(document.getElementById('editCustomColIndex').value, 10);
+            const newLabel = document.getElementById('editCustomColLabelInput').value.trim();
+            const newAppearance = document.getElementById('editCustomColAppearanceInput').value.trim() || 'text';
+            const newPopupFlag = document.getElementById('editCustomColPopupCheckbox').checked;
+
+            if (isNaN(index) || !newLabel) return;
+
+            const col = globalTableColumnsConfig.customCols[index];
+            if (!col) return;
+
+            col.label = newLabel;
+            col.appearance = newAppearance;
+            col.hasPopupForm = newPopupFlag;
+
+            saveColumnsConfigToCloud().then(() => {
+                if (activeEditCustomColModalInstance) activeEditCustomColModalInstance.hide();
+                renderColumnConfigModal();
+            });
+        }
+
+        function chiefEditGroupMessage(msgId) {
+            if (!isColumnChiefAdmin()) return;
+            const msg = globalMessagesCacheArray.find(m => m.id === msgId);
+            if (!msg) return;
+            const newText = prompt("Edit message text:", msg.text || '');
+            if (newText !== null) {
+                fastFetch(`${FIREBASE_URL}group_messages/${msgId}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: newText.trim(), editedByChief: true })
+                }).then(() => fetchMessagesTimelineFeed(false));
+            }
+        }
+
+        function chiefDeleteGroupMessage(msgId) {
+            if (!isColumnChiefAdmin()) return;
+            if (confirm("Delete this message from Group Chat?")) {
+                fastFetch(`${FIREBASE_URL}group_messages/${msgId}.json`, {
+                    method: 'DELETE'
+                }).then(() => fetchMessagesTimelineFeed(false));
+            }
+        }
+
+        function chiefClearChatMessages() {
+            if (!isColumnChiefAdmin()) return;
+            if (confirm("Clear ALL group chat messages permanently?")) {
+                fastFetch(`${FIREBASE_URL}group_messages.json`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    fetchMessagesTimelineFeed(false);
+                    alert("All group chat messages cleared.");
+                });
+            }
+        }
+
+        function chiefClearDeviceLogins() {
+            if (!isColumnChiefAdmin()) return;
+            if (confirm("Clear ALL recorded device login history?")) {
+                fastFetch(`${FIREBASE_URL}online_devices.json`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    sendDevicePresenceHeartbeat();
+                    alert("Device login history cleared.");
+                });
+            }
+        }
+
+        function fetchColumnsConfigFromCloud() {
+            return fastFetch(`${FIREBASE_URL}table_columns_config.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data) {
+                    globalTableColumnsConfig = {
+                        hiddenDefaultCols: Array.isArray(data.hiddenDefaultCols) ? data.hiddenDefaultCols : [],
+                        customCols: Array.isArray(data.customCols) ? data.customCols : [],
+                        defaultColLabels: (data.defaultColLabels && typeof data.defaultColLabels === 'object') ? data.defaultColLabels : {}
+                    };
+                } else {
+                    globalTableColumnsConfig = { hiddenDefaultCols: [], customCols: [], defaultColLabels: {} };
+                }
+                localStorage.setItem('meru_cached_columns_config', JSON.stringify(globalTableColumnsConfig));
+                renderDynamicFormCustomFields();
+                handleLiveSearchFilter();
+            }).catch(() => {});
+        }
+
+        function saveColumnsConfigToCloud() {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Only Chief Admin (254742960571) can modify Saved Work Log columns.");
+                return Promise.reject();
+            }
+            localStorage.setItem('meru_cached_columns_config', JSON.stringify(globalTableColumnsConfig));
+            renderDynamicFormCustomFields();
+            handleLiveSearchFilter();
+            return fastFetch(`${FIREBASE_URL}table_columns_config.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalTableColumnsConfig)
+            });
+        }
+
+        function renderDynamicFormCustomFields() {
+            const container = document.getElementById('dynamicCustomFieldsContainer');
+            if (!container) return;
+            const customCols = globalTableColumnsConfig.customCols || [];
+            if (customCols.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const themeClasses = theme === 'dark' ? 'bg-dark text-white' : 'bg-light text-dark';
+            container.innerHTML = customCols.map(c => `
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">${escapeHtml(c.label)}</label>
+                    <input type="${c.type === 'number' ? 'number' : 'text'}" id="customFieldInput_${c.key}" class="form-control ${themeClasses}" placeholder="Enter ${escapeHtml(c.label)}...">
+                </div>
+            `).join('');
+        }
+
+        function renderColumnConfigModal() {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Only Chief Admin (254742960571) can modify columns.");
+                return;
+            }
+            const tbody = document.getElementById('columnConfigTableBody');
+            if (!tbody) return;
+            const hiddenCols = globalTableColumnsConfig.hiddenDefaultCols || [];
+            const customCols = globalTableColumnsConfig.customCols || [];
+
+            let rowsHtml = '';
+            const customLabels = globalTableColumnsConfig.defaultColLabels || {};
+            DEFAULT_WORK_LOG_COLUMNS.forEach(col => {
+                const isHidden = hiddenCols.includes(col.key);
+                const displayLabel = customLabels[col.key] || col.label;
+                rowsHtml += `
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(displayLabel)}</td>
+                        <td><span class="badge bg-secondary">System Default</span></td>
+                        <td>${isHidden ? '<span class="badge bg-danger">Removed / Hidden</span>' : '<span class="badge bg-success">Visible</span>'}</td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-sm btn-outline-primary" title="Rename Column" onclick="renameDefaultTableColumn('${col.key}')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm ${isHidden ? 'btn-outline-success' : 'btn-outline-danger'}" onclick="toggleDefaultTableColumn('${col.key}')">
+                                    ${isHidden ? '<i class="bi bi-eye-fill"></i>' : '<i class="bi bi-eye-slash-fill"></i>'}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+
+            customCols.forEach((col, idx) => {
+                rowsHtml += `
+                    <tr class="text-dark">
+                        <td class="ps-3 fw-bold">${escapeHtml(col.label)}</td>
+                        <td><span class="badge bg-info text-dark">Custom (${escapeHtml(col.type || 'text')})</span></td>
+                        <td><span class="badge bg-success">Visible</span></td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button class="btn btn-sm btn-outline-primary" title="Edit Column" onclick="editCustomTableColumn(${idx})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete Column" onclick="removeCustomTableColumn(${idx})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        function addCustomTableColumn() {
+            if (!isColumnChiefAdmin()) {
+                alert("Access Denied. Only Chief Admin (254742960571) can add columns.");
+                return;
+            }
+            const nameInput = document.getElementById('newCustomColName');
+            const typeSelect = document.getElementById('newCustomColType');
+            const appearanceInput = document.getElementById('newCustomColAppearance');
+            const popupTriggerCheckbox = document.getElementById('newCustomColPopupTrigger');
+
+            const label = nameInput.value.trim();
+            const type = typeSelect.value || 'text';
+            const appearance = appearanceInput.value.trim() || 'text';
+            const hasPopupForm = popupTriggerCheckbox.checked;
+
+            if (!label) {
+                alert("Please enter a column header title.");
+                return;
+            }
+
+            const key = 'col_' + label.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now().toString(36).slice(-4);
+            if (!Array.isArray(globalTableColumnsConfig.customCols)) {
+                globalTableColumnsConfig.customCols = [];
+            }
+            globalTableColumnsConfig.customCols.push({ key, label, type, appearance, hasPopupForm });
+            nameInput.value = '';
+            typeSelect.value = 'text';
+            appearanceInput.value = '';
+            popupTriggerCheckbox.checked = false;
+
+            saveColumnsConfigToCloud().then(() => renderColumnConfigModal());
+        }
+
+        let activePopupModalInstance = null;
+
+        function openColumnPopupForm(logId, colKey, colLabel) {
+            const log = globalLogsArray.find(l => l.id === logId);
+            if (!log) return;
+            document.getElementById('colPopupLogId').value = logId;
+            document.getElementById('colPopupColumnKey').value = colKey;
+            document.getElementById('colPopupModalTitle').innerHTML = `<i class="bi bi-window-stack me-2"></i>Form: ${escapeHtml(colLabel)}`;
+            document.getElementById('colPopupFieldLabel').innerText = `Value for ${colLabel}`;
+            
+            const existingVal = (log.customFields && log.customFields[colKey] !== undefined) ? log.customFields[colKey] : '';
+            document.getElementById('colPopupInputValue').value = existingVal;
+
+            if (!activePopupModalInstance) {
+                activePopupModalInstance = new bootstrap.Modal(document.getElementById('columnPopupFormModal'));
+            }
+            activePopupModalInstance.show();
+        }
+
+        function saveColumnPopupFormValue() {
+            const logId = document.getElementById('colPopupLogId').value;
+            const colKey = document.getElementById('colPopupColumnKey').value;
+            const val = document.getElementById('colPopupInputValue').value.trim();
+            if (!logId || !colKey) return;
+
+            const log = globalLogsArray.find(l => l.id === logId);
+            if (!log) return;
+
+            if (!log.customFields) log.customFields = {};
+            log.customFields[colKey] = val;
+
+            fastFetch(`${FIREBASE_URL}logs/${logId}.json`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customFields: log.customFields })
+            }).then(() => {
+                if (activePopupModalInstance) activePopupModalInstance.hide();
+                fetchLogsFromCloud();
+            });
+        }
+
+        function removeCustomTableColumn(index) {
+            if (!isColumnChiefAdmin()) return;
+            const col = globalTableColumnsConfig.customCols[index];
+            if (!col) return;
+            if (confirm(`Remove custom column "${col.label}" from Saved Work Logs?`)) {
+                globalTableColumnsConfig.customCols.splice(index, 1);
+                saveColumnsConfigToCloud().then(() => renderColumnConfigModal());
+            }
+        }
+
+        function toggleDefaultTableColumn(colKey) {
+            if (!isColumnChiefAdmin()) return;
+            if (!Array.isArray(globalTableColumnsConfig.hiddenDefaultCols)) {
+                globalTableColumnsConfig.hiddenDefaultCols = [];
+            }
+            const idx = globalTableColumnsConfig.hiddenDefaultCols.indexOf(colKey);
+            if (idx === -1) {
+                globalTableColumnsConfig.hiddenDefaultCols.push(colKey);
+            } else {
+                globalTableColumnsConfig.hiddenDefaultCols.splice(idx, 1);
+            }
+            saveColumnsConfigToCloud().then(() => renderColumnConfigModal());
         }
 
         function fetchAttendanceStateCloud() {
@@ -3023,15 +4288,23 @@
                     }
                 }
 
+                const isChief = isColumnChiefAdmin();
                 html += `
                     <div class="chat-bubble ${bubbleType}">
-                        <div class="chat-sender">
-                            <img src="${avatarUrl}" class="user-avatar-sm" alt="Avatar">
-                            ${escapeHtml(msg.senderName || 'Anonymous')}
+                        <div class="chat-sender justify-content-between">
+                            <span class="d-flex align-items-center gap-1">
+                                <img src="${avatarUrl}" class="user-avatar-sm" alt="Avatar">
+                                ${escapeHtml(msg.senderName || 'Anonymous')}
+                            </span>
+                            ${isChief ? `
+                            <span class="ms-2">
+                                <i class="bi bi-pencil-square text-primary me-1" style="cursor:pointer;" title="Edit Message" onclick="chiefEditGroupMessage('${msg.id}')"></i>
+                                <i class="bi bi-trash text-danger" style="cursor:pointer;" title="Delete Message" onclick="chiefDeleteGroupMessage('${msg.id}')"></i>
+                            </span>` : ''}
                         </div>
                         ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ''}
                         ${msg.image ? `<img src="${msg.image}" class="media-attachment-img" alt="Attachment" onclick="window.open('${msg.image}', '_blank')">` : ''}
-                        <div class="chat-time">${timeStr}</div>
+                        <div class="chat-time">${timeStr}${msg.editedByChief ? ' (edited)' : ''}</div>
                     </div>`;
             });
 
