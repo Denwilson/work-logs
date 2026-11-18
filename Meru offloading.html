@@ -662,6 +662,11 @@
                     <i class="bi bi-shield-check text-warning"></i> Logins
                 </a>
             </li>
+            <li id="sidebarReturnChiefAdminItem" class="d-none">
+                <a href="#" class="sidebar-link text-warning fw-bold bg-dark border border-warning" onclick="returnDirectlyToChiefAdminPortal(); return false;">
+                    <i class="bi bi-shield-fill-check text-warning"></i> Return to Admin Portal
+                </a>
+            </li>
             <li>
                 <a href="#" class="sidebar-link text-danger" onclick="triggerSwitchUserPrompt(); return false;">
                     <i class="bi bi-box-arrow-right text-danger"></i> Switch User
@@ -1764,6 +1769,32 @@
         </div>
     </div>
 
+    
+    <!-- Chief Admin Instant Portal Switcher Modal -->
+    <div class="modal fade" id="chiefPortalSwitcherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-dark">
+                <div class="modal-header bg-dark text-warning py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2"></i>Chief Admin Portal Switcher</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Instantly shift to any team member's portal view or return to Chief Admin mode with 1 click (No permit code required).</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Member Portal</label>
+                        <select id="portalSwitcherSelect" class="form-select bg-light text-dark fw-bold">
+                            <option value="ADMIN_CHIEF">Chief Admin (254742960571 - Full Access)</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning btn-sm fw-bold px-4 text-dark" onclick="executeChiefPortalShift()">Shift Portal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2230,7 +2261,7 @@
         function evaluateActiveAccountLockState() {
             if (!activeLoggedInUser) return;
             
-            if (isFullAdmin()) {
+            if (isFullAdmin() || isChiefAdminSessionActive()) {
                 document.getElementById('accountDisabledOverlay').classList.add('d-none');
                 return;
             }
@@ -2301,6 +2332,11 @@
             }
             if (chiefEditorSidebar) {
                 chiefEditorSidebar.classList.toggle('d-none', !isChief);
+            }
+            const returnChiefItem = document.getElementById('sidebarReturnChiefAdminItem');
+            if (returnChiefItem) {
+                const isShiftedToWorker = isChiefAdminSessionActive() && !isChief;
+                returnChiefItem.classList.toggle('d-none', !isShiftedToWorker);
             }
 
             const clearBtn = document.querySelector('button[onclick="clearAllData()"]');
@@ -2375,7 +2411,82 @@
             });
         }
 
+        
+        let originalChiefAdminProfile = JSON.parse(localStorage.getItem('meru_chief_admin_session') || 'null');
+
+        function isChiefAdminSessionActive() {
+            if (isColumnChiefAdmin()) return true;
+            if (originalChiefAdminProfile && originalChiefAdminProfile.phone && originalChiefAdminProfile.phone.trim().replace(/\+/g, '') === SUPER_ADMIN_PHONE) {
+                return true;
+            }
+            return false;
+        }
+
+        function openChiefPortalSwitcherModal() {
+            if (activeLoggedInUser && activeLoggedInUser.phone && activeLoggedInUser.phone.trim().replace(/\+/g, '') === SUPER_ADMIN_PHONE) {
+                originalChiefAdminProfile = activeLoggedInUser;
+                localStorage.setItem('meru_chief_admin_session', JSON.stringify(originalChiefAdminProfile));
+            }
+            if (!originalChiefAdminProfile) {
+                originalChiefAdminProfile = { name: 'Admin', phone: SUPER_ADMIN_PHONE, isAdmin: true };
+                localStorage.setItem('meru_chief_admin_session', JSON.stringify(originalChiefAdminProfile));
+            }
+
+            const selectEl = document.getElementById('portalSwitcherSelect');
+            let opts = `<option value="ADMIN_CHIEF">⭐ Chief Admin (254742960571 - Full God-Mode)</option>`;
+            
+            const sortedWorkers = [...masterDynamicWorkersArray].sort((a,b) => a.name.localeCompare(b.name));
+            sortedWorkers.forEach(w => {
+                opts += `<option value="${escapeHtml(w.name)}|${escapeHtml(w.phone || '')}|${w.role}">Portal: ${escapeHtml(w.name)} (${w.role})</option>`;
+            });
+            selectEl.innerHTML = opts;
+
+            const modal = new bootstrap.Modal(document.getElementById('chiefPortalSwitcherModal'));
+            modal.show();
+        }
+
+        function executeChiefPortalShift() {
+            const val = document.getElementById('portalSwitcherSelect').value;
+            const modalEl = document.getElementById('chiefPortalSwitcherModal');
+            const inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+
+            if (val === 'ADMIN_CHIEF') {
+                activeLoggedInUser = originalChiefAdminProfile || { name: 'Admin', phone: SUPER_ADMIN_PHONE, isAdmin: true };
+                localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+                localStorage.removeItem('meru_chief_admin_session');
+                originalChiefAdminProfile = null;
+                applyMemberSessionToUi();
+                return;
+            }
+
+            const parts = val.split('|');
+            const targetName = parts[0];
+            const targetPhone = parts[1] || '';
+            const targetRole = parts[2] || 'worker';
+
+            activeLoggedInUser = {
+                name: targetName,
+                phone: targetPhone,
+                isAdmin: targetRole === 'admin'
+            };
+            localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+            applyMemberSessionToUi();
+        }
+
+        function returnDirectlyToChiefAdminPortal() {
+            activeLoggedInUser = originalChiefAdminProfile || { name: 'Admin', phone: SUPER_ADMIN_PHONE, isAdmin: true };
+            localStorage.setItem('meru_active_member', JSON.stringify(activeLoggedInUser));
+            localStorage.removeItem('meru_chief_admin_session');
+            originalChiefAdminProfile = null;
+            applyMemberSessionToUi();
+        }
+
         function triggerSwitchUserPrompt() {
+            if (isChiefAdminSessionActive()) {
+                openChiefPortalSwitcherModal();
+                return;
+            }
             if (globalAttendanceObj[activeLoggedInUser?.name] === false) {
                 alert("Account Disabled. System access and user switching are disabled by Administrator.");
                 return;
